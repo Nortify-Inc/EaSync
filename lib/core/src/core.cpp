@@ -114,7 +114,7 @@ int sendEvent(int deviceId, int capability, int value) {
         globalCallback(deviceId, capability, value);
         return 0;
     }
-    return -1;
+    return 1;
 }
 
 void poll() {
