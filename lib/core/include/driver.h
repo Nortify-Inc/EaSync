@@ -1,11 +1,11 @@
 #pragma once
+#include <string>
 #include "event.h"
 
 class Driver {
 public:
-    virtual void sendEvent(const Event& event) = 0;
-    virtual void poll() {}
     virtual ~Driver() = default;
+    virtual int sendEvent(const Event& event) = 0;
 };
 
 class MQTTDriver : public Driver {
