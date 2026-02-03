@@ -1,5 +1,7 @@
 #pragma once
 
+#include "driver.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

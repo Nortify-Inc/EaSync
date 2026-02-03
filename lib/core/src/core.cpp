@@ -1,21 +1,17 @@
 #include "core.h"
+#include "device.h"
 #include <vector>
 #include <string>
 #include <mutex>
 
-struct Device {
-    int id;
-    std::string name;
-    int protocol;
-    std::string address;
-    int power = 0;
-    std::vector<int> capabilities;
-    std::vector<int> capabilityValues;
-};
-
 static std::vector<Device> devices;
 static CoreEventCallback globalCallback = nullptr;
 static std::mutex devicesMutex;
+
+static WiFiDriver wifi;
+static MQTTDriver mqtt;
+static ZigbeeDriver zigbee;
+static BLEDriver ble;
 
 void init() {
     std::lock_guard<std::mutex> lock(devicesMutex);
@@ -114,6 +110,58 @@ int sendEvent(int deviceId, int capability, int value) {
         globalCallback(deviceId, capability, value);
         return 0;
     }
+
+    std::lock_guard<std::mutex> lock(devicesMutex);
+    
+    for (auto& device : devices) {
+        if (device.id == deviceId) {
+            if(hasCapability(device.id, capability)){
+                switch(device.protocol){
+                    case 0:
+                        wifi.sendEvent(
+                            Event({
+                                device.id,
+                                capability,
+                                value,
+                                device.address
+                            })
+                        );
+                    break;
+                    case 1:
+                        mqtt.sendEvent(
+                            Event({
+                                device.id,
+                                capability,
+                                value,
+                                device.address
+                            })
+                        );
+                    break;
+                    case 2:
+                        zigbee.sendEvent(
+                            Event({
+                                device.id,
+                                capability,
+                                value,
+                                device.address
+                            })
+                        );
+                    break;
+                    case 3:
+                        ble.sendEvent(
+                            Event({
+                                device.id,
+                                capability,
+                                value,
+                                device.address
+                            })
+                        );
+                    break;
+                }
+            }
+        }
+    }
+
     return 1;
 }
 
