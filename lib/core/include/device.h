@@ -3,9 +3,10 @@
 #include <vector>
 
 enum class DeviceProtocol {
-    MQTT = 0,
-    ZIGBEE = 1,
-    BLE = 2
+    WIFI = 0,
+    MQTT = 1,
+    ZIGBEE = 2,
+    BLE = 3
 };
 
 enum class Capability {
@@ -17,8 +18,10 @@ enum class Capability {
 
 struct Device {
     int id;
-    char* name;
-    DeviceProtocol protocol;
+    std::string name;
+    int protocol;
     std::string address;
-    std::vector<Capability> capabilities;
+    int power = 0;
+    std::vector<int> capabilities;
+    std::vector<int> capabilityValues;
 };
