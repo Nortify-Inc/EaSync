@@ -10,7 +10,7 @@
 #include <mutex>
 
 
-namespace Easync {
+namespace drivers {
 
 /* ============================================================
    Driver Registry
@@ -20,7 +20,7 @@ static std::mutex gDriverMutex;
 
 static std::unordered_map<
     CoreProtocol,
-    std::unique_ptr<EaSync::Driver>
+    std::unique_ptr<drivers::Driver>
 > gDrivers;
 
 
@@ -33,7 +33,7 @@ static std::unordered_map<
  */
 bool registerDriver(
     CoreProtocol protocol,
-    std::unique_ptr<EaSync::Driver> driver
+    std::unique_ptr<drivers::Driver> driver
 ) {
 
     if (!driver)
@@ -50,7 +50,7 @@ bool registerDriver(
 /**
  * @brief Get driver by protocol.
  */
-EaSync::Driver* getDriver(
+drivers::Driver* getDriver(
     CoreProtocol protocol
 ) {
 

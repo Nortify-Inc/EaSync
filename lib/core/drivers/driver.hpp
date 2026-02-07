@@ -13,7 +13,7 @@
  */
 
 
-namespace EaSync {
+namespace drivers {
 
 /**
  * @brief Abstract device driver.
