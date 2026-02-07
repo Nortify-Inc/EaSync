@@ -151,15 +151,15 @@ CoreContext* core_create(void) {
 
     try {
 
-        CoreContext* ctx = new CoreContext();
+        CoreContext* context = new CoreContext();
 
-        ctx->drivers[CORE_PROTOCOL_WIFI] =
+        context->drivers[CORE_PROTOCOL_WIFI] =
             std::make_shared<EaSync::MockDriver>();
 
-        ctx->drivers[CORE_PROTOCOL_BLE] =
+        context->drivers[CORE_PROTOCOL_BLE] =
             std::make_shared<EaSync::MockDriver>();
 
-        return ctx;
+        return context;
     }
     catch (...) {
         return nullptr;
