@@ -4,12 +4,13 @@
 
 #include <unordered_map>
 #include <mutex>
+#include <string>
 
 namespace drivers {
 
-class MockDriver : public Driver {
+class WifiDriver : public Driver {
 public:
-    MockDriver();
+    WifiDriver();
 
     bool init() override;
 
@@ -43,12 +44,33 @@ public:
     ) override;
 
 private:
+    bool httpPost(
+        const std::string& url,
+        const std::string& body
+    );
+
+    bool httpGet(
+        const std::string& url,
+        std::string& out
+    );
+
+    void parseState(
+        const std::string& uuid,
+        const std::string& json
+    );
+
+private:
     std::mutex mutex;
 
     std::unordered_map<
         std::string,
         CoreDeviceState
     > states;
+
+    std::unordered_map<
+        std::string,
+        std::string
+    > deviceIps;
 };
 
 }

@@ -15,6 +15,7 @@
 #include "core.h"
 #include "driver.hpp"
 #include "mock.hpp"
+#include "mqtt.hpp"
 
 #include <unordered_map>
 #include <string>
@@ -43,7 +44,7 @@ struct InternalDevice {
 
     std::vector<CoreCapability> capabilities;
 
-    std::shared_ptr<EaSync::Driver> driver;
+    std::shared_ptr<drivers::Driver> driver;
 
     CoreDeviceState state;
 };
@@ -60,7 +61,8 @@ struct CoreContext {
 
     std::unordered_map<
         CoreProtocol,
-        std::shared_ptr<EaSync::MockDriver>
+        std::shared_ptr<drivers::MockDriver>,
+        std::shared_ptr<drivers::MqttDriver>
     > drivers;
 
     std::mutex mutex;
@@ -154,10 +156,10 @@ CoreContext* core_create(void) {
         CoreContext* context = new CoreContext();
 
         context->drivers[CORE_PROTOCOL_WIFI] =
-            std::make_shared<EaSync::MockDriver>();
+            std::make_shared<drivers::MockDriver>();
 
         context->drivers[CORE_PROTOCOL_BLE] =
-            std::make_shared<EaSync::MockDriver>();
+            std::make_shared<drivers::MockDriver>();
 
         return context;
     }

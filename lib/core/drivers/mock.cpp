@@ -1,6 +1,6 @@
 #include "mock.hpp"
 
-namespace EaSync {
+namespace drivers {
 
 bool MockDriver::init() {
     return true;
