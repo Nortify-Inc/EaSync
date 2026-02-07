@@ -43,7 +43,9 @@ struct InternalDevice {
 
     std::vector<CoreCapability> capabilities;
 
-    std::shared_ptr<EaSync::MockDriver> driver;
+    std::shared_ptr<EaSync::Driver> driver;
+
+    CoreDeviceState state;
 };
 
 
@@ -263,6 +265,8 @@ CoreResult core_register_device(
     );
 
     dev.driver = core->drivers[protocol];
+
+    std::memset(&dev.state, 0, sizeof(CoreDeviceState));
 
     if (!dev.driver->connect(dev.uuid)) {
 
@@ -537,6 +541,15 @@ CoreResult core_set_power(
     if (!it->second.driver->setPower(uuid, value))
         return CORE_ERROR;
 
+        it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
     return CORE_OK;
 }
 
@@ -568,6 +581,15 @@ CoreResult core_set_brightness(
     if (!it->second.driver->setBrightness(uuid, value))
         return CORE_ERROR;
 
+        it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
     return CORE_OK;
 }
 
@@ -597,6 +619,14 @@ CoreResult core_set_color(
     if (!it->second.driver->setColor(uuid, value))
         return CORE_ERROR;
 
+        it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
     return CORE_OK;
 }
 
@@ -625,6 +655,13 @@ CoreResult core_set_temperature(
 
     if (!it->second.driver->setTemperature(uuid, value))
         return CORE_ERROR;
+
+    CoreEvent ev{};
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
 
     return CORE_OK;
 }
