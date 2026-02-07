@@ -1,176 +1,634 @@
+/**
+ * @file core.cpp
+ * @brief Implementation of EaSync core system.
+ *
+ * Implements the internal runtime responsible for:
+ * - Device registry
+ * - State management
+ * - Event dispatching
+ * - Thread synchronization
+ *
+ * This layer is not exposed directly through FFI.
+ */
+
 #include "core.h"
-#include "device.h"
-#include <vector>
+
+#include <unordered_map>
 #include <string>
+#include <vector>
 #include <mutex>
+#include <cstring>
 
-static std::vector<Device> devices;
-static CoreEventCallback globalCallback = nullptr;
-static std::mutex devicesMutex;
 
-static WiFiDriver wifi;
-static MQTTDriver mqtt;
-static ZigbeeDriver zigbee;
-static BLEDriver ble;
+/* ============================================================
+   Internal Structures
+============================================================ */
 
-void init() {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (globalCallback) globalCallback(device.id, 0, device.power);
-        for (size_t i = 0; i < device.capabilities.size(); ++i) {
-            if (globalCallback) globalCallback(device.id, device.capabilities[i], device.capabilityValues[i]);
-        }
+/**
+ * @brief Internal representation of a device.
+ */
+struct InternalDevice {
+
+    /** Unique device identifier */
+    std::string uuid;
+
+    /** Human-readable name */
+    std::string name;
+
+    /** Communication protocol */
+    EasProtocol protocol;
+
+    /** Supported capabilities */
+    std::vector<EasCapability> capabilities;
+
+    /** Runtime device state */
+    EasDeviceState state;
+};
+
+
+/**
+ * @brief Core internal context.
+ */
+struct EasCore {
+
+    /** Initialization flag */
+    bool initialized = false;
+
+    /** Device registry */
+    std::unordered_map<std::string, InternalDevice> devices;
+
+    /** Global mutex */
+    std::mutex mutex;
+
+    /** Last error string */
+    std::string lastError;
+
+    /** Event callback */
+    EasEventCallback callback = nullptr;
+
+    /** Userdata for callback */
+    void* callbackUserdata = nullptr;
+};
+
+
+/* ============================================================
+   Internal Helpers
+============================================================ */
+
+/**
+ * @brief Store last error message.
+ *
+ * @param core Core context.
+ * @param msg  Error message.
+ */
+static void setError(
+    EasCore* core,
+    const std::string& msg
+) {
+    if (core)
+        core->lastError = msg;
+}
+
+
+/**
+ * @brief Check if device supports a capability.
+ *
+ * @param dev Device descriptor.
+ * @param cap Capability to test.
+ *
+ * @return true if supported.
+ */
+static bool hasCapability(
+    const InternalDevice& dev,
+    EasCapability cap
+) {
+    for (auto c : dev.capabilities) {
+        if (c == cap)
+            return true;
+    }
+
+    return false;
+}
+
+
+/**
+ * @brief Emit event to registered callback.
+ *
+ * Centralized dispatcher for all core events.
+ *
+ * @param core Core context.
+ * @param ev   Event descriptor.
+ */
+static void emitEvent(
+    EasCore* core,
+    const EasEvent& ev
+) {
+
+    if (!core)
+        return;
+
+    EasEventCallback cb = nullptr;
+    void* userdata = nullptr;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        cb = core->callback;
+        userdata = core->callbackUserdata;
+    }
+
+    if (cb) {
+        cb(&ev, userdata);
     }
 }
 
-void shutdown() {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    devices.clear();
-    globalCallback = nullptr;
+
+
+/**
+ * @brief Initialize default state.
+ *
+ * @param dev Device descriptor.
+ */
+static void initDefaultState(
+    InternalDevice& dev
+) {
+
+    dev.state.power = false;
+
+    dev.state.brightness = -1;
+    dev.state.color = 0;
+    dev.state.temperature = -1.0f;
+    dev.state.timestamp = 0;
+
+    if (hasCapability(dev, EAS_CAP_BRIGHTNESS))
+        dev.state.brightness = 0;
+
+    if (hasCapability(dev, EAS_CAP_COLOR))
+        dev.state.color = 0xFFFFFF;
+
+    if (hasCapability(dev, EAS_CAP_TEMPERATURE))
+        dev.state.temperature = 20.0f;
 }
 
-void registerCallback(CoreEventCallback callback) {
-    globalCallback = callback;
-}
 
-int registerDevice(int deviceId, char* name, int protocol, const char* address) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    Device device;
-    device.id = deviceId;
-    device.name = name ? std::string(name) : "";
-    device.protocol = protocol;
-    device.address = address ? std::string(address) : "";
-    device.capabilities = {1, 2}; 
-    device.capabilityValues = {0, 0};
-    devices.push_back(device);
-    return device.id;
-}
+/* ============================================================
+   Core Lifecycle
+============================================================ */
 
-void removeDevice(int deviceId, char* name) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto it = devices.begin(); it != devices.end(); ++it) {
-        bool match = false;
-        if (deviceId >= 0) match = (it->id == deviceId);
-        else if (name) match = (it->name == std::string(name));
-        if (match) {
-            devices.erase(it);
-            return;
-        }
+/**
+ * @brief Create core instance.
+ *
+ * @return Pointer to core context or NULL.
+ */
+EasCore* eas_core_create(void) {
+
+    try {
+        return new EasCore();
+    }
+    catch (...) {
+        return nullptr;
     }
 }
 
-void setPower(int deviceId, int state) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (device.id == deviceId) {
-            device.power = state;
-            if (globalCallback) globalCallback(device.id, 0, device.power);
-            return;
-        }
-    }
+
+/**
+ * @brief Destroy core instance.
+ *
+ * @param core Core context.
+ */
+void eas_core_destroy(EasCore* core) {
+
+    if (!core)
+        return;
+
+    delete core;
 }
 
-int getPower(int deviceId) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (device.id == deviceId) return device.power;
-    }
-    return -1; 
+
+/**
+ * @brief Initialize core.
+ *
+ * @param core Core context.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_init(EasCore* core) {
+
+    if (!core)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    core->initialized = true;
+
+    core->lastError.clear();
+
+    return EAS_OK;
 }
 
-void setCapability(int deviceId, int capability, int value) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (device.id == deviceId) {
-            for (size_t i = 0; i < device.capabilities.size(); ++i) {
-                if (device.capabilities[i] == capability) {
-                    device.capabilityValues[i] = value;
-                    if (globalCallback) globalCallback(device.id, capability, value);
-                    return;
-                }
-            }
-        }
+
+/* ============================================================
+   Device Management
+============================================================ */
+
+/**
+ * @brief Register new device.
+ *
+ * @param core     Core context.
+ * @param uuid     Device UUID.
+ * @param name     Device name.
+ * @param protocol Communication protocol.
+ * @param caps     Capability array.
+ * @param capCount Capability count.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_register_device(
+    EasCore* core,
+    const char* uuid,
+    const char* name,
+    EasProtocol protocol,
+    const EasCapability* caps,
+    uint8_t capCount
+) {
+
+    if (!core || !uuid || !name || !caps)
+        return EAS_INVALID_ARGUMENT;
+
+    if (!core->initialized)
+        return EAS_NOT_INITIALIZED;
+
+    if (capCount > EAS_MAX_CAPS)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    std::string id(uuid);
+
+    if (core->devices.count(id)) {
+        setError(core, "Device already exists");
+        return EAS_ALREADY_EXISTS;
     }
+
+    InternalDevice dev;
+
+    dev.uuid = id;
+    dev.name = name;
+    dev.protocol = protocol;
+
+    dev.capabilities.assign(caps, caps + capCount);
+
+    initDefaultState(dev);
+
+    core->devices[id] = std::move(dev);
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_DEVICE_ADDED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
 }
 
-int hasCapability(int deviceId, int capability) {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (device.id == deviceId) {
-            for (int cap : device.capabilities) {
-                if (cap == capability) return 1;
-            }
-        }
+
+/**
+ * @brief Remove device.
+ *
+ * @param core Core context.
+ * @param uuid Device UUID.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_remove_device(
+    EasCore* core,
+    const char* uuid
+) {
+
+    if (!core || !uuid)
+        return EAS_INVALID_ARGUMENT;
+
+    if (!core->initialized)
+        return EAS_NOT_INITIALIZED;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end()) {
+        setError(core, "Device not found");
+        return EAS_NOT_FOUND;
     }
-    return 0;
+
+    core->devices.erase(it);
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_DEVICE_REMOVED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
 }
 
-int sendEvent(int deviceId, int capability, int value) {
-    if (globalCallback) {
-        globalCallback(deviceId, capability, value);
-        return 0;
-    }
 
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    
-    for (auto& device : devices) {
-        if (device.id == deviceId) {
-            if(hasCapability(device.id, capability)){
-                switch(device.protocol){
-                    case 0:
-                        wifi.sendEvent(
-                            Event({
-                                device.id,
-                                capability,
-                                value,
-                                device.address
-                            })
-                        );
-                    break;
-                    case 1:
-                        mqtt.sendEvent(
-                            Event({
-                                device.id,
-                                capability,
-                                value,
-                                device.address
-                            })
-                        );
-                    break;
-                    case 2:
-                        zigbee.sendEvent(
-                            Event({
-                                device.id,
-                                capability,
-                                value,
-                                device.address
-                            })
-                        );
-                    break;
-                    case 3:
-                        ble.sendEvent(
-                            Event({
-                                device.id,
-                                capability,
-                                value,
-                                device.address
-                            })
-                        );
-                    break;
-                }
-            }
-        }
-    }
+/**
+ * @brief Get device info.
+ *
+ * @param core    Core context.
+ * @param uuid    Device UUID.
+ * @param outInfo Output buffer.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_get_device(
+    EasCore* core,
+    const char* uuid,
+    EasDeviceInfo* outInfo
+) {
 
-    return 1;
+    if (!core || !uuid || !outInfo)
+        return EAS_INVALID_ARGUMENT;
+
+    if (!core->initialized)
+        return EAS_NOT_INITIALIZED;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    const InternalDevice& dev = it->second;
+
+    std::memset(outInfo, 0, sizeof(EasDeviceInfo));
+
+    std::strncpy(outInfo->uuid, dev.uuid.c_str(), EAS_MAX_UUID - 1);
+    std::strncpy(outInfo->name, dev.name.c_str(), EAS_MAX_NAME - 1);
+
+    outInfo->protocol = dev.protocol;
+
+    outInfo->capabilityCount =
+        (uint8_t)dev.capabilities.size();
+
+    for (uint8_t i = 0; i < outInfo->capabilityCount; i++)
+        outInfo->capabilities[i] = dev.capabilities[i];
+
+    return EAS_OK;
 }
 
-void poll() {
-    std::lock_guard<std::mutex> lock(devicesMutex);
-    for (auto& device : devices) {
-        if (globalCallback) globalCallback(device.id, 0, device.power);
-        for (size_t i = 0; i < device.capabilities.size(); ++i) {
-            if (globalCallback) globalCallback(device.id, device.capabilities[i], device.capabilityValues[i]);
-        }
-    }
+
+/* ============================================================
+   State Handling
+============================================================ */
+
+/**
+ * @brief Get device state.
+ *
+ * @param core     Core context.
+ * @param uuid     Device UUID.
+ * @param outState Output state.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_get_state(
+    EasCore* core,
+    const char* uuid,
+    EasDeviceState* outState
+) {
+
+    if (!core || !uuid || !outState)
+        return EAS_INVALID_ARGUMENT;
+
+    if (!core->initialized)
+        return EAS_NOT_INITIALIZED;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    *outState = it->second.state;
+
+    return EAS_OK;
+}
+
+
+/* ============================================================
+   State Setters
+============================================================ */
+
+/**
+ * @brief Set power state.
+ *
+ * @param core  Core context.
+ * @param uuid  Device UUID.
+ * @param value Power value.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_set_power(
+    EasCore* core,
+    const char* uuid,
+    bool value
+) {
+
+    if (!core || !uuid)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    if (!hasCapability(it->second, EAS_CAP_POWER))
+        return EAS_NOT_SUPPORTED;
+
+    it->second.state.power = value;
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
+}
+
+
+/**
+ * @brief Set brightness.
+ *
+ * @param core  Core context.
+ * @param uuid  Device UUID.
+ * @param value Brightness value (0-100).
+ *
+ * @return Result code.
+ */
+EasResult eas_core_set_brightness(
+    EasCore* core,
+    const char* uuid,
+    int value
+) {
+
+    if (!core || !uuid)
+        return EAS_INVALID_ARGUMENT;
+
+    if (value < 0 || value > 100)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    if (!hasCapability(it->second, EAS_CAP_BRIGHTNESS))
+        return EAS_NOT_SUPPORTED;
+
+    it->second.state.brightness = value;
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
+}
+
+
+/**
+ * @brief Set color.
+ *
+ * @param core  Core context.
+ * @param uuid  Device UUID.
+ * @param value RGB color.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_set_color(
+    EasCore* core,
+    const char* uuid,
+    uint32_t value
+) {
+
+    if (!core || !uuid)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    if (!hasCapability(it->second, EAS_CAP_COLOR))
+        return EAS_NOT_SUPPORTED;
+
+    it->second.state.color = value;
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
+}
+
+
+/**
+ * @brief Set temperature.
+ *
+ * @param core  Core context.
+ * @param uuid  Device UUID.
+ * @param value Temperature in Celsius.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_set_temperature(
+    EasCore* core,
+    const char* uuid,
+    float value
+) {
+
+    if (!core || !uuid)
+        return EAS_INVALID_ARGUMENT;
+
+    if (value < -50.0f || value > 100.0f)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end())
+        return EAS_NOT_FOUND;
+
+    if (!hasCapability(it->second, EAS_CAP_TEMPERATURE))
+        return EAS_NOT_SUPPORTED;
+
+    it->second.state.temperature = value;
+
+    EasEvent ev{};
+    ev.type = EAS_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, EAS_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return EAS_OK;
+}
+
+
+/* ============================================================
+   Diagnostics / Events
+============================================================ */
+
+/**
+ * @brief Get last error.
+ *
+ * @param core Core context.
+ *
+ * @return Error string.
+ */
+const char* eas_core_last_error(EasCore* core) {
+
+    if (!core)
+        return "Invalid core handle";
+
+    return core->lastError.c_str();
+}
+
+
+/**
+ * @brief Set event callback.
+ *
+ * @param core     Core context.
+ * @param callback Event callback.
+ * @param userdata User pointer.
+ *
+ * @return Result code.
+ */
+EasResult eas_core_set_event_callback(
+    EasCore* core,
+    EasEventCallback callback,
+    void* userdata
+) {
+
+    if (!core)
+        return EAS_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    core->callback = callback;
+    core->callbackUserdata = userdata;
+
+    return EAS_OK;
 }
