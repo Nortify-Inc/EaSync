@@ -13,9 +13,9 @@ extern "C" {
 ============================================================ */
 
 /**
- * @brief EaSync Core API version.
+ * @brief Core public API version.
  */
-#define EAS_API_VERSION 1
+#define CORE_API_VERSION "0.0.1"
 
 
 /* ============================================================
@@ -28,27 +28,27 @@ extern "C" {
 typedef enum {
 
     /** Operation completed successfully */
-    EAS_OK = 0,
+    CORE_OK = 0,
 
     /** Generic error */
-    EAS_ERROR = -1,
+    CORE_ERROR = -1,
 
     /** Resource not found */
-    EAS_NOT_FOUND = -2,
+    CORE_NOT_FOUND = -2,
 
     /** Resource already exists */
-    EAS_ALREADY_EXISTS = -3,
+    CORE_ALREADY_EXISTS = -3,
 
     /** Invalid argument */
-    EAS_INVALID_ARGUMENT = -4,
+    CORE_INVALID_ARGUMENT = -4,
 
     /** Feature not supported */
-    EAS_NOT_SUPPORTED = -5,
+    CORE_NOT_SUPPORTED = -5,
 
     /** Core not initialized */
-    EAS_NOT_INITIALIZED = -6
+    CORE_NOT_INITIALIZED = -6
 
-} EasResult;
+} CoreResult;
 
 
 /* ============================================================
@@ -60,12 +60,12 @@ typedef enum {
  */
 typedef enum {
 
-    EAS_PROTOCOL_WIFI = 0,
-    EAS_PROTOCOL_MQTT,
-    EAS_PROTOCOL_ZIGBEE,
-    EAS_PROTOCOL_BLE
+    CORE_PROTOCOL_WIFI = 0,
+    CORE_PROTOCOL_MQTT,
+    CORE_PROTOCOL_ZIGBEE,
+    CORE_PROTOCOL_BLE
 
-} EasProtocol;
+} CoreProtocol;
 
 
 /* ============================================================
@@ -77,13 +77,13 @@ typedef enum {
  */
 typedef enum {
 
-    EAS_CAP_POWER = 0,
-    EAS_CAP_BRIGHTNESS,
-    EAS_CAP_COLOR,
-    EAS_CAP_TEMPERATURE,
-    EAS_CAP_TIMESTAMP
+    CORE_CAP_POWER = 0,
+    CORE_CAP_BRIGHTNESS,
+    CORE_CAP_COLOR,
+    CORE_CAP_TEMPERATURE,
+    CORE_CAP_TIMESTAMP
 
-} EasCapability;
+} CoreCapability;
 
 
 /* ============================================================
@@ -91,18 +91,18 @@ typedef enum {
 ============================================================ */
 
 /**
- * @brief Opaque core context handle.
+ * @brief Opaque core context.
  */
-typedef struct EasCore EasCore;
+typedef struct CoreContext CoreContext;
 
 
 /* ============================================================
    Limits
 ============================================================ */
 
-#define EAS_MAX_CAPS   16
-#define EAS_MAX_NAME  64
-#define EAS_MAX_UUID  64
+#define CORE_MAX_CAPS   16
+#define CORE_MAX_NAME  64
+#define CORE_MAX_UUID  64
 
 
 /* ============================================================
@@ -114,18 +114,22 @@ typedef struct EasCore EasCore;
  */
 typedef struct {
 
-    char uuid[EAS_MAX_UUID];
+    /** Unique device identifier */
+    char uuid[CORE_MAX_UUID];
 
-    char name[EAS_MAX_NAME];
+    /** Human-readable name */
+    char name[CORE_MAX_NAME];
 
-    EasProtocol protocol;
+    /** Communication protocol */
+    CoreProtocol protocol;
 
+    /** Number of supported capabilities */
     uint8_t capabilityCount;
 
-    EasCapability capabilities[EAS_MAX_CAPS];
+    /** Capability list */
+    CoreCapability capabilities[CORE_MAX_CAPS];
 
-} EasDeviceInfo;
-
+} CoreDeviceInfo;
 
 /* ============================================================
    Device State
@@ -138,17 +142,22 @@ typedef struct {
  */
 typedef struct {
 
+    /** Power state */
     bool power;
 
+    /** Brightness (0-100, -1 = unsupported) */
     int brightness;
 
+    /** RGB color (0xRRGGBB, 0 = unsupported) */
     uint32_t color;
 
+    /** Temperature in Celsius (-1 = unsupported) */
     float temperature;
 
+    /** Last update timestamp (unix ms, 0 = unsupported) */
     uint64_t timestamp;
 
-} EasDeviceState;
+} CoreDeviceState;
 
 
 /* ============================================================
@@ -158,9 +167,9 @@ typedef struct {
 /**
  * @brief Create a new core instance.
  *
- * @return Core context or NULL.
+ * @return Core context or NULL on failure.
  */
-EasCore* eas_core_create(void);
+CoreContext* core_create(void);
 
 
 /**
@@ -168,17 +177,19 @@ EasCore* eas_core_create(void);
  *
  * @param core Core context.
  */
-void eas_core_destroy(EasCore* core);
+void core_destroy(CoreContext* core);
 
 
 /**
  * @brief Initialize core.
  *
+ * Must be called before any other function.
+ *
  * @param core Core context.
  *
  * @return Result code.
  */
-EasResult eas_core_init(EasCore* core);
+CoreResult core_init(CoreContext* core);
 
 
 /* ============================================================
@@ -186,70 +197,70 @@ EasResult eas_core_init(EasCore* core);
 ============================================================ */
 
 /**
- * @brief Register device.
+ * @brief Register a new device.
  *
- * @param core Core context.
- * @param uuid Unique identifier.
- * @param name Display name.
+ * @param core     Core context.
+ * @param uuid     Unique device identifier.
+ * @param name     Display name.
  * @param protocol Communication protocol.
- * @param caps Capability list.
- * @param capCount Capability count.
+ * @param caps     Capability list.
+ * @param capCount Number of capabilities.
  *
  * @return Result code.
  */
-EasResult eas_core_register_device(
-    EasCore* core,
+CoreResult core_register_device(
+    CoreContext* core,
     const char* uuid,
     const char* name,
-    EasProtocol protocol,
-    const EasCapability* caps,
+    CoreProtocol protocol,
+    const CoreCapability* caps,
     uint8_t capCount
 );
 
 
 /**
- * @brief Remove device.
+ * @brief Remove a device.
  *
  * @param core Core context.
  * @param uuid Device UUID.
  *
  * @return Result code.
  */
-EasResult eas_core_remove_device(
-    EasCore* core,
+CoreResult core_remove_device(
+    CoreContext* core,
     const char* uuid
 );
 
 
 /**
- * @brief Get device metadata.
+ * @brief Retrieve device metadata.
  *
- * @param core Core context.
- * @param uuid Device UUID.
+ * @param core    Core context.
+ * @param uuid    Device UUID.
  * @param outInfo Output buffer.
  *
  * @return Result code.
  */
-EasResult eas_core_get_device(
-    EasCore* core,
+CoreResult core_get_device(
+    CoreContext* core,
     const char* uuid,
-    EasDeviceInfo* outInfo
+    CoreDeviceInfo* outInfo
 );
 
 
 /**
- * @brief List devices.
+ * @brief List registered devices.
  *
- * @param core Core context.
- * @param buffer Output buffer.
- * @param maxItems Max items.
+ * @param core     Core context.
+ * @param buffer   Output array.
+ * @param maxItems Maximum number of items.
  * @param outCount Returned count.
  *
  * @return Result code.
  */
-EasResult eas_core_list_devices(
-    EasCore* core,
-    EasDeviceInfo* buffer,
+CoreResult core_list_devices(
+    CoreContext* core,
+    CoreDeviceInfo* buffer,
     uint32_t maxItems,
     uint32_t* outCount
 );
@@ -260,36 +271,36 @@ EasResult eas_core_list_devices(
 ============================================================ */
 
 /**
- * @brief Test capability.
+ * @brief Check if device supports capability.
  *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param cap Capability.
+ * @param core      Core context.
+ * @param uuid      Device UUID.
+ * @param cap       Capability.
  * @param outResult Output result.
  *
  * @return Result code.
  */
-EasResult eas_core_has_capability(
-    EasCore* core,
+CoreResult core_has_capability(
+    CoreContext* core,
     const char* uuid,
-    EasCapability cap,
+    CoreCapability cap,
     bool* outResult
 );
 
 
 /**
- * @brief Get device state.
+ * @brief Get current device state.
  *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param outState Output state.
+ * @param core     Core context.
+ * @param uuid     Device UUID.
+ * @param outState Output buffer.
  *
  * @return Result code.
  */
-EasResult eas_core_get_state(
-    EasCore* core,
+CoreResult core_get_state(
+    CoreContext* core,
     const char* uuid,
-    EasDeviceState* outState
+    CoreDeviceState* outState
 );
 
 
@@ -298,64 +309,40 @@ EasResult eas_core_get_state(
 ============================================================ */
 
 /**
- * @brief Set power.
- *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param value Power value.
- *
- * @return Result code.
+ * @brief Set power state.
  */
-EasResult eas_core_set_power(
-    EasCore* core,
+CoreResult core_set_power(
+    CoreContext* core,
     const char* uuid,
     bool value
 );
 
 
 /**
- * @brief Set brightness.
- *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param value 0-100.
- *
- * @return Result code.
+ * @brief Set brightness level.
  */
-EasResult eas_core_set_brightness(
-    EasCore* core,
+CoreResult core_set_brightness(
+    CoreContext* core,
     const char* uuid,
     int value
 );
 
 
 /**
- * @brief Set color.
- *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param value RGB.
- *
- * @return Result code.
+ * @brief Set color value.
  */
-EasResult eas_core_set_color(
-    EasCore* core,
+CoreResult core_set_color(
+    CoreContext* core,
     const char* uuid,
     uint32_t value
 );
 
 
 /**
- * @brief Set temperature.
- *
- * @param core Core context.
- * @param uuid Device UUID.
- * @param value Celsius.
- *
- * @return Result code.
+ * @brief Set temperature value.
  */
-EasResult eas_core_set_temperature(
-    EasCore* core,
+CoreResult core_set_temperature(
+    CoreContext* core,
     const char* uuid,
     float value
 );
@@ -366,13 +353,13 @@ EasResult eas_core_set_temperature(
 ============================================================ */
 
 /**
- * @brief Get last error.
+ * @brief Get last error message.
  *
  * @param core Core context.
  *
- * @return Error string.
+ * @return Null-terminated string.
  */
-const char* eas_core_last_error(EasCore* core);
+const char* core_last_error(CoreContext* core);
 
 
 /* ============================================================
@@ -384,12 +371,12 @@ const char* eas_core_last_error(EasCore* core);
  */
 typedef enum {
 
-    EAS_EVENT_DEVICE_ADDED = 0,
-    EAS_EVENT_DEVICE_REMOVED,
-    EAS_EVENT_STATE_CHANGED,
-    EAS_EVENT_ERROR
+    CORE_EVENT_DEVICE_ADDED = 0,
+    CORE_EVENT_DEVICE_REMOVED,
+    CORE_EVENT_STATE_CHANGED,
+    CORE_EVENT_ERROR
 
-} EasEventType;
+} CoreEventType;
 
 
 /**
@@ -397,25 +384,29 @@ typedef enum {
  */
 typedef struct {
 
-    EasEventType type;
+    /** Event type */
+    CoreEventType type;
 
-    char uuid[EAS_MAX_UUID];
+    /** Device UUID (if applicable) */
+    char uuid[CORE_MAX_UUID];
 
-    EasDeviceState state;
+    /** Current device state (STATE_CHANGED) */
+    CoreDeviceState state;
 
+    /** Error code (ERROR event) */
     int errorCode;
 
-} EasEvent;
+} CoreEvent;
 
 
 /**
- * @brief Event callback.
+ * @brief Event callback function.
  *
- * @param event Event descriptor.
+ * @param event    Event descriptor.
  * @param userdata User pointer.
  */
-typedef void (*EasEventCallback)(
-    const EasEvent* event,
+typedef void (*CoreEventCallback)(
+    const CoreEvent* event,
     void* userdata
 );
 
@@ -423,15 +414,15 @@ typedef void (*EasEventCallback)(
 /**
  * @brief Register event callback.
  *
- * @param core Core context.
- * @param callback Callback.
+ * @param core     Core context.
+ * @param callback Callback function.
  * @param userdata User data.
  *
  * @return Result code.
  */
-EasResult eas_core_set_event_callback(
-    EasCore* core,
-    EasEventCallback callback,
+CoreResult core_set_event_callback(
+    CoreContext* core,
+    CoreEventCallback callback,
     void* userdata
 );
 
