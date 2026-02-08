@@ -46,7 +46,10 @@ typedef enum {
     CORE_NOT_SUPPORTED = -5,
 
     /** Core not initialized */
-    CORE_NOT_INITIALIZED = -6
+    CORE_NOT_INITIALIZED = -6,
+
+    /** Core protocol not supported */
+    CORE_PROTOCOL_UNAVAILABLE = -7
 
 } CoreResult;
 
@@ -59,9 +62,9 @@ typedef enum {
  * @brief Supported communication protocols.
  */
 typedef enum {
-
-    CORE_PROTOCOL_WIFI = 0,
+    CORE_PROTOCOL_MOCK = 0,
     CORE_PROTOCOL_MQTT,
+    CORE_PROTOCOL_WIFI,
     CORE_PROTOCOL_ZIGBEE,
     CORE_PROTOCOL_BLE
 

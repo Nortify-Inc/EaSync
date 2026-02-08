@@ -26,11 +26,12 @@ bool MockDriver::connect(const std::string& uuid) {
 }
 
 
-void MockDriver::disconnect(const std::string& uuid) {
+bool MockDriver::disconnect(const std::string& uuid) {
 
     std::lock_guard<std::mutex> lock(mutex);
-
     states.erase(uuid);
+
+    return true;
 }
 
 
@@ -111,6 +112,10 @@ bool MockDriver::getState(
     outState = states[uuid];
 
     return true;
+}
+
+bool MockDriver::isAvailable(const std::string& uuid){
+    return states.count(uuid);
 }
 
 }

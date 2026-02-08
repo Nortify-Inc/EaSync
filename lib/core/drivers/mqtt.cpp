@@ -6,27 +6,13 @@
 namespace drivers {
 
 MqttDriver::MqttDriver(
-    const std::string& broker,
-    const std::string& id
-)
-    : brokerUrl(broker),
-      clientId(id) {
+){
 
     client = std::make_unique<
         mqtt::async_client
     >(brokerUrl, clientId);
 
     client->set_callback(*this);
-}
-
-MqttDriver::~MqttDriver() {
-
-    if (connected) {
-        try {
-            client->disconnect()->wait();
-
-        } catch (...) {}
-    }
 }
 
 bool MqttDriver::init() {
@@ -71,13 +57,15 @@ bool MqttDriver::connect(
     return true;
 }
 
-void MqttDriver::disconnect(
+bool MqttDriver::disconnect(
     const std::string& uuid
 ) {
 
     std::lock_guard<std::mutex> lock(mutex);
 
     states.erase(uuid);
+
+    return true;
 }
 
 void MqttDriver::publishCommand(
@@ -206,6 +194,10 @@ bool MqttDriver::getState(
     outState = states[uuid];
 
     return true;
+}
+
+bool MqttDriver::isAvailable(const std::string& uuid){
+    return states.count(uuid);
 }
 
 void MqttDriver::connection_lost(
