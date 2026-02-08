@@ -141,6 +141,15 @@ int main() {
     }
 
     inspectState(core, "lamp-001");
+    
+    std::cout << "\nTrying not supported capability...\n";
+    res = core_set_temperature(core, "lamp-001", 22);
+    if (res != CORE_NOT_SUPPORTED) {
+        std::cout << "[ERROR] set_temperature in a non-compatible device not resulted in CORE_NOT_SUPPORTED -> lastError: "
+                  << (core ? core_last_error(core) : "null core") << "\n";
+    }
+
+    inspectState(core, "lamp-001");
 
     /* Remove */
     std::cout << "\nRemoving device...\n";
