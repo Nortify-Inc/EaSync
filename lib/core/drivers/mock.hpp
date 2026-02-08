@@ -3,19 +3,18 @@
 #include "driver.hpp"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <mutex>
 
 namespace drivers {
 
 class MockDriver : public Driver {
 public:
-    MockDriver();
-
     bool init() override;
 
     bool connect(const std::string& uuid) override;
 
-    void disconnect(const std::string& uuid) override;
+    bool disconnect(const std::string& uuid) override;
 
     bool setPower(
         const std::string& uuid,
@@ -42,9 +41,13 @@ public:
         CoreDeviceState& outState
     ) override;
 
+    virtual bool isAvailable(
+        const std::string& uuid
+    ) override;
+
 private:
     std::mutex mutex;
-
+    
     std::unordered_map<
         std::string,
         CoreDeviceState

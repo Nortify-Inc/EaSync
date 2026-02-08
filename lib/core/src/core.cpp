@@ -1,6 +1,6 @@
 /**
  * @file core.cpp
- * @brief EaSync Core Runtime Implementation.
+ * @brief EaSync Core Runtime Implementation (Expanded +1000 lines version)
  *
  * Responsibilities:
  * - Device registry
@@ -8,6 +8,8 @@
  * - State caching
  * - Event dispatch
  * - Thread safety
+ * - Detailed error handling
+ * - Debug helpers
  *
  * This layer is NOT exposed directly through Foreign Function Integration.
  */
@@ -16,191 +18,232 @@
 #include "driver.hpp"
 #include "mock.hpp"
 #include "mqtt.hpp"
+#include "wifi.hpp"
+#include "ble.hpp"
 
 #include <unordered_map>
+#include <unordered_set>
 #include <string>
 #include <vector>
 #include <mutex>
 #include <memory>
 #include <cstring>
-
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 extern "C" {
 
-/* ============================================================
-   Internal Structures
-   ============================================================ */
+
 
 /**
  * @brief Internal representation of a device.
+ *
+ * Stores device metadata, protocol, capabilities,
+ * associated driver and current device state.
  */
 struct InternalDevice {
-
-    std::string uuid;
-
-    std::string name;
-
-    CoreProtocol protocol;
-
-    std::vector<CoreCapability> capabilities;
-
-    std::shared_ptr<drivers::Driver> driver;
-
-    CoreDeviceState state;
+    std::string uuid;                           /**< Device UUID */
+    std::string name;                           /**< Device display name */
+    CoreProtocol protocol;                      /**< Communication protocol */
+    std::vector<CoreCapability> capabilities;   /**< Declared capabilities */
+    std::shared_ptr<drivers::Driver> driver;    /**< Associated driver */
+    CoreDeviceState state;                      /**< Current device state */
 };
+
 
 
 /**
  * @brief Core runtime context.
+ *
+ * Stores all devices, drivers, event callbacks, and thread safety primitives.
  */
 struct CoreContext {
-
-    bool initialized = false;
-
-    std::unordered_map<std::string, InternalDevice> devices;
-
-    std::unordered_map<
-        CoreProtocol,
-        std::shared_ptr<drivers::MockDriver>,
-        std::shared_ptr<drivers::MqttDriver>
-    > drivers;
-
-    std::mutex mutex;
-
-    std::string lastError;
-
-    CoreEventCallback callback = nullptr;
-
-    void* callbackUserdata = nullptr;
+    bool initialized = false;                                                      /**< Core initialization flag */
+    std::unordered_map<std::string, InternalDevice> devices;                       /**< Registered devices */
+    std::unordered_map<CoreProtocol, std::shared_ptr<drivers::Driver>> drivers;    /**< Protocol drivers */
+    std::mutex mutex;                                                              /**< Global mutex */
+    std::string lastError;                                                         /**< Last error string */
+    CoreEventCallback callback = nullptr;                                          /**< Event callback */
+    void* callbackUserdata = nullptr;                                              /**< User data for callback */
 };
 
-/* ============================================================
-   Internal Helpers
-   ============================================================ */
+
 
 /**
- * @brief Store last error message.
+ * @brief Store last error message into core context.
  *
- * @param core Core context.
- * @param msg  Null-terminated error message.
+ * This function should be called whenever an operation fails.
+ *
+ * @param core Pointer to CoreContext.
+ * @param msg Null-terminated error message.
  */
-static void setError(
-    CoreContext* core,
-    const char* msg
-) {
+static void setError(CoreContext* core, const char* msg) {
+    if (!core) return;
 
-    if (!core)
-        return;
-
-    core->lastError = msg ? msg : "";
+    core->lastError = msg ? msg : "Unknown error";
+    std::cerr << "[CoreError] " << core->lastError << std::endl;
 }
+
+
+
+/**
+ * @brief Convert a CoreCapability to a readable string.
+ *
+ * @param cap Capability to convert.
+ * @return std::string Human-readable capability name.
+ */
+static std::string capabilityToString(CoreCapability cap) {
+    switch (cap) {
+        case CORE_CAP_POWER: return "Power";
+        case CORE_CAP_BRIGHTNESS: return "Brightness";
+        case CORE_CAP_COLOR: return "Color";
+        case CORE_CAP_TEMPERATURE: return "Temperature";
+        default: return "UnknownCapability";
+    }
+}
+
 
 
 /**
  * @brief Check if device supports a capability.
  *
- * @param dev Device descriptor.
+ * @param dev Reference to InternalDevice.
  * @param cap Capability to test.
- *
  * @return true if supported, false otherwise.
  */
-static bool hasCapability(
-    const InternalDevice& dev,
-    CoreCapability cap
-) {
-
+static bool hasCapability(const InternalDevice& dev, CoreCapability cap) {
     for (auto c : dev.capabilities) {
-
-        if (c == cap)
-            return true;
+        if (c == cap) return true;
     }
 
     return false;
 }
 
 
+
 /**
- * @brief Emit event to registered callback.
+ * @brief Emit event to registered callback if exists.
  *
- * @param core Core context.
- * @param ev   Event payload.
+ * @param core Pointer to CoreContext.
+ * @param ev Event structure.
  */
-static void emitEvent(
-    CoreContext* core,
-    const CoreEvent& ev
-) {
-    if (!core)
-        return;
+static void emitEvent(CoreContext* core, const CoreEvent& ev) {
+    if (!core) return;
 
     CoreEventCallback cb = core->callback;
     void* userdata = core->callbackUserdata;
 
-    if (cb)
-        cb(&ev, userdata);
+    if (cb) cb(&ev, userdata);
 }
 
 
-/* ============================================================
-   Core Lifecycle
-   ============================================================ */
 
 /**
- * @brief Create a new core runtime.
+ * @brief Utility: print device state (for debug).
  *
- * @return Pointer to CoreContext or NULL on failure.
+ * @param state Device state structure.
+ */
+static void printDeviceStateDebug(const CoreDeviceState& state) {
+    std::cerr << "[State Debug] Power=" << (state.power ? "ON" : "OFF")
+              << " Brightness=" << state.brightness
+              << " Color=0x" << std::hex << state.color << std::dec
+              << " Temperature=" << state.temperature
+              << " Timestamp=" << state.timestamp
+              << std::endl;
+}
+
+
+
+/**
+ * @brief Create a new Core runtime context.
+ *
+ * Initializes all drivers for supported protocols but does NOT initialize devices.
+ *
+ * @return Pointer to CoreContext or nullptr on failure.
  */
 CoreContext* core_create(void) {
-
     try {
-
         CoreContext* context = new CoreContext();
 
-        context->drivers[CORE_PROTOCOL_WIFI] =
+        context->drivers[CORE_PROTOCOL_MOCK] = 
             std::make_shared<drivers::MockDriver>();
 
-        context->drivers[CORE_PROTOCOL_BLE] =
-            std::make_shared<drivers::MockDriver>();
+        context->drivers[CORE_PROTOCOL_MQTT] = 
+            std::make_shared<drivers::MqttDriver>();
+
+        context->drivers[CORE_PROTOCOL_WIFI] = 
+            std::make_shared<drivers::WifiDriver>();
+
+        context->drivers[CORE_PROTOCOL_BLE] = 
+            std::make_shared<drivers::BleDriver>();
 
         return context;
-    }
-    catch (...) {
+
+    } catch (...) {
+        std::cerr << "[CoreError] Failed to allocate CoreContext" << std::endl;
         return nullptr;
     }
 }
 
 
 /**
- * @brief Destroy core runtime.
+ * @brief Destroy Core runtime context.
  *
- * @param core Core context.
+ * Cleans up all resources and deletes the context.
+ *
+ * @param core Pointer to CoreContext.
  */
 void core_destroy(CoreContext* core) {
-
-    if (!core)
+    if (!core) {
+        std::cerr << "[CoreError] core_destroy called with null pointer" << std::endl;
         return;
+    }
+
+    core->devices.clear();
+    core->drivers.clear();
 
     delete core;
 }
 
 
+
 /**
- * @brief Initialize runtime and drivers.
+ * @brief Initialize core runtime.
  *
- * @param core Core context.
+ * Initializes only the drivers required by currently registered devices.
  *
- * @return CORE_OK on success.
+ * @param core Pointer to CoreContext.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if core is null.
+ * @return CORE_ERROR if driver initialization fails.
  */
 CoreResult core_init(CoreContext* core) {
-
-    if (!core)
+    if (!core) {
+        std::cerr << "[CoreError] core_init called with null pointer" << std::endl;
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
-    for (auto& pair : core->drivers) {
+    std::unordered_set<CoreProtocol> usedProtocols;
+    for (const auto& pair : core->devices) {
+        usedProtocols.insert(pair.second.protocol);
+    }
 
-        if (!pair.second->init()) {
+    for (auto protocol : usedProtocols) {
+        auto it = core->drivers.find(protocol);
 
+        if (it == core->drivers.end()) {
+            std::ostringstream oss;
+
+            oss << "No driver registered for protocol " << protocol;
+            setError(core, oss.str().c_str());
+
+            return CORE_NOT_SUPPORTED;
+        }
+
+        if (!it->second->init()) {
             setError(core, "Driver initialization failed");
 
             return CORE_ERROR;
@@ -208,85 +251,106 @@ CoreResult core_init(CoreContext* core) {
     }
 
     core->initialized = true;
-
     return CORE_OK;
 }
 
 
-/* ============================================================
-   Device Management
-   ============================================================ */
 
 /**
- * @brief Register a new device.
+ * @brief Register a new device in the core.
  *
- * @param core      Core context.
- * @param uuid      Device unique identifier.
- * @param name      Device name.
- * @param protocol  Communication protocol.
- * @param caps      Capability array.
- * @param capCount  Number of capabilities.
+ * Adds a device with its UUID, name, protocol, and capabilities.
+ * Initializes connection with the appropriate driver.
  *
- * @return CoreResult status.
+ * @param core Pointer to CoreContext.
+ * @param uuid Device unique identifier (string, non-null).
+ * @param name Device display name (string, non-null).
+ * @param protocol Communication protocol used by the device.
+ * @param caps Array of capabilities supported by the device.
+ * @param capCount Number of capabilities in caps array.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if any parameter is invalid.
+ * @return CORE_ALREADY_EXISTS if device with same UUID already exists.
+ * @return CORE_NOT_INITIALIZED if core is not initialized.
+ * @return CORE_NOT_SUPPORTED if protocol is not supported.
+ * @return CORE_ERROR if driver connection fails.
  */
-CoreResult core_register_device(
-    CoreContext* core,
-    const char* uuid,
-    const char* name,
-    CoreProtocol protocol,
-    const CoreCapability* caps,
-    uint8_t capCount
-) {
-
-    if (!core || !uuid || !name || !caps)
+CoreResult core_register_device(CoreContext* core,
+                                const char* uuid,
+                                const char* name,
+                                CoreProtocol protocol,
+                                const CoreCapability* caps,
+                                uint8_t capCount)
+{
+    if (!core || !uuid || !name || !caps) {
+        setError(core, "Invalid device registration parameters (null pointer detected)");
         return CORE_INVALID_ARGUMENT;
-
-    if (!core->initialized)
-        return CORE_NOT_INITIALIZED;
-
-    if (capCount > CORE_MAX_CAPS)
-        return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
-    if (core->devices.count(uuid))
-        return CORE_ALREADY_EXISTS;
+    if (!core->initialized) {
+        setError(core, "Core context is not initialized. Cannot register device");
+        return CORE_NOT_INITIALIZED;
+    }
 
-    if (!core->drivers.count(protocol))
+    if (capCount == 0) {
+        setError(core, "Device must have at least one capability");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    if (capCount > CORE_MAX_CAPS) {
+        setError(core, "Device has too many capabilities; exceeds CORE_MAX_CAPS");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    if (core->devices.count(uuid)) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' already exists";
+        setError(core, oss.str().c_str());
+
+        return CORE_ALREADY_EXISTS;
+    }
+
+    auto driverIt = core->drivers.find(protocol);
+
+    if (driverIt == core->drivers.end()) {
+        std::ostringstream oss;
+
+        oss << "No driver found for protocol " << protocol;
+        setError(core, oss.str().c_str());
+
         return CORE_NOT_SUPPORTED;
+    }
 
     InternalDevice dev;
 
     dev.uuid = uuid;
     dev.name = name;
+
     dev.protocol = protocol;
 
-    dev.capabilities.assign(
-        caps,
-        caps + capCount
-    );
-
-    dev.driver = core->drivers[protocol];
+    dev.capabilities.assign(caps, caps + capCount);
+    dev.driver = driverIt->second;
 
     std::memset(&dev.state, 0, sizeof(CoreDeviceState));
 
     if (!dev.driver->connect(dev.uuid)) {
+        std::ostringstream oss;
 
-        setError(core, "Driver connection failed");
+        oss << "Driver failed to connect device '" << uuid << "'";
+        setError(core, oss.str().c_str());
 
         return CORE_ERROR;
     }
 
-    core->devices[dev.uuid] = dev;
+    core->devices[uuid] = dev;
 
     CoreEvent ev{};
-    ev.type = CORE_EVENT_DEVICE_ADDED;
 
-    std::strncpy(
-        ev.uuid,
-        uuid,
-        CORE_MAX_UUID - 1
-    );
+    ev.type = CORE_EVENT_DEVICE_ADDED;
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
 
     emitEvent(core, ev);
 
@@ -294,47 +358,102 @@ CoreResult core_register_device(
 }
 
 
-/**
- * @brief Retrieve static device metadata.
- *
- * Fills a CoreDeviceInfo structure with the registered
- * device information, including capabilities and protocol.
- *
- * @param core    Core context.
- * @param uuid    Device UUID.
- * @param outInfo Output buffer for device info.
- *
- * @return CORE_OK on success.
- * @return CORE_INVALID_ARGUMENT if parameters are invalid.
- * @return CORE_NOT_FOUND if device does not exist.
- */
-CoreResult core_get_device(
-    CoreContext* core,
-    const char* uuid,
-    CoreDeviceInfo* outInfo
-) {
 
-    if (!core || !uuid || !outInfo)
+/**
+ * @brief Remove a registered device from the core.
+ *
+ * Disconnects the driver and removes the device from registry.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device to remove.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device with UUID does not exist.
+ */
+CoreResult core_remove_device(CoreContext* core, const char* uuid)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_remove_device");
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
     auto it = core->devices.find(uuid);
 
-    if (it == core->devices.end())
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for removal";
+        setError(core, oss.str().c_str());
+
         return CORE_NOT_FOUND;
+    }
+
+    if (!it->second.driver->disconnect(uuid)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to disconnect device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
+        return CORE_ERROR;
+    }
+
+    core->devices.erase(it);
+
+    CoreEvent ev{};
+
+    ev.type = CORE_EVENT_DEVICE_REMOVED;
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
+
+    emitEvent(core, ev);
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Retrieve metadata for a specific device.
+ *
+ * Fills a CoreDeviceInfo structure with name, protocol, and capabilities.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device to query.
+ * @param outInfo Output buffer to populate with device info.
+ * @return CORE_OK on success.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ */
+CoreResult core_get_device(CoreContext* core, const char* uuid, CoreDeviceInfo* outInfo)
+{
+    if (!core || !uuid || !outInfo) {
+        setError(core, "Invalid parameters to core_get_device");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
 
     const InternalDevice& dev = it->second;
-
     std::memset(outInfo, 0, sizeof(CoreDeviceInfo));
-
     std::strncpy(outInfo->uuid, dev.uuid.c_str(), CORE_MAX_UUID - 1);
     std::strncpy(outInfo->name, dev.name.c_str(), CORE_MAX_NAME - 1);
 
     outInfo->protocol = dev.protocol;
     outInfo->capabilityCount = dev.capabilities.size();
 
-    for (size_t i = 0; i < dev.capabilities.size(); i++) {
+    for (size_t i = 0; i < dev.capabilities.size(); ++i) {
         outInfo->capabilities[i] = dev.capabilities[i];
     }
 
@@ -342,39 +461,37 @@ CoreResult core_get_device(
 }
 
 
+
 /**
  * @brief List all registered devices.
  *
- * Copies registered device metadata into the provided buffer.
- * If buffer is NULL, only the device count is returned.
+ * Copies device metadata into a buffer or returns count if buffer is null.
  *
- * @param core     Core context.
- * @param buffer   Output array (may be NULL).
- * @param maxItems Maximum number of items in buffer.
- * @param outCount Number of devices found.
- *
+ * @param core Pointer to CoreContext.
+ * @param buffer Optional output array of CoreDeviceInfo.
+ * @param maxItems Max elements buffer can hold.
+ * @param outCount Output for number of devices found.
  * @return CORE_OK on success.
  * @return CORE_INVALID_ARGUMENT if parameters are invalid.
  */
-CoreResult core_list_devices(
-    CoreContext* core,
-    CoreDeviceInfo* buffer,
-    uint32_t maxItems,
-    uint32_t* outCount
-) {
-
-    if (!core || !outCount)
+CoreResult core_list_devices(CoreContext* core,
+                             CoreDeviceInfo* buffer,
+                             uint32_t maxItems,
+                             uint32_t* outCount)
+{
+    if (!core || !outCount) {
+        setError(core, "Invalid parameters to core_list_devices");
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
     uint32_t count = 0;
 
     for (auto& pair : core->devices) {
-
         if (buffer && count < maxItems) {
-
             const InternalDevice& dev = pair.second;
+
             CoreDeviceInfo& info = buffer[count];
 
             std::memset(&info, 0, sizeof(CoreDeviceInfo));
@@ -385,169 +502,161 @@ CoreResult core_list_devices(
             info.protocol = dev.protocol;
             info.capabilityCount = dev.capabilities.size();
 
-            for (size_t i = 0; i < dev.capabilities.size(); i++) {
+            for (size_t i = 0; i < dev.capabilities.size(); ++i)
                 info.capabilities[i] = dev.capabilities[i];
-            }
         }
 
         count++;
     }
 
     *outCount = count;
-
     return CORE_OK;
 }
 
 
+
 /**
- * @brief Check if a device supports a capability.
+ * @brief Check whether a device supports a specific capability.
  *
- * Verifies whether the specified device declares
- * support for a given capability.
- *
- * @param core      Core context.
- * @param uuid      Device UUID.
- * @param cap       Capability to test.
- * @param outResult Output result (true if supported).
- *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param cap Capability to check.
+ * @param outResult Output boolean, true if supported.
  * @return CORE_OK on success.
  * @return CORE_INVALID_ARGUMENT if parameters are invalid.
  * @return CORE_NOT_FOUND if device does not exist.
  */
-CoreResult core_has_capability(
-    CoreContext* core,
-    const char* uuid,
-    CoreCapability cap,
-    bool* outResult
-) {
-
-    if (!core || !uuid || !outResult)
+CoreResult core_has_capability(CoreContext* core,
+                               const char* uuid,
+                               CoreCapability cap,
+                               bool* outResult)
+{
+    if (!core || !uuid || !outResult) {
+        setError(core, "Invalid parameters to core_has_capability");
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
     auto it = core->devices.find(uuid);
 
-    if (it == core->devices.end())
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for capability check";
+        setError(core, oss.str().c_str());
+
         return CORE_NOT_FOUND;
+    }
 
     *outResult = hasCapability(it->second, cap);
-
     return CORE_OK;
 }
 
 
-/**
- * @brief Remove a registered device.
- *
- * @param core Core context.
- * @param uuid Device identifier.
- *
- * @return CoreResult status.
- */
-CoreResult core_remove_device(
-    CoreContext* core,
-    const char* uuid
-) {
 
-    if (!core || !uuid)
+/**
+ * @brief Retrieve current device state.
+ *
+ * Queries the driver for the latest device state.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param out Pointer to CoreDeviceState to populate.
+ * @return CORE_OK if state retrieved successfully.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_ERROR if driver fails to provide state.
+ */
+CoreResult core_get_state(CoreContext* core, const char* uuid, CoreDeviceState* out)
+{
+    if (!core || !uuid || !out) {
+        setError(core, "Invalid parameters to core_get_state");
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
     auto it = core->devices.find(uuid);
 
-    if (it == core->devices.end())
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for state retrieval";
+        setError(core, oss.str().c_str());
+
         return CORE_NOT_FOUND;
+    }
 
-    it->second.driver->disconnect(uuid);
-
-    core->devices.erase(it);
-
-    CoreEvent ev{};
-    ev.type = CORE_EVENT_DEVICE_REMOVED;
-
-    std::strncpy(
-        ev.uuid,
-        uuid,
-        CORE_MAX_UUID - 1
-    );
-
-    emitEvent(core, ev);
-
-    return CORE_OK;
-}
-
-
-/* ============================================================
-   State
-   ============================================================ */
-
-/**
- * @brief Get current device state.
- *
- * @param core     Core context.
- * @param uuid     Device identifier.
- * @param outState Output state structure.
- *
- * @return CoreResult status.
- */
-CoreResult core_get_state(
-    CoreContext* core,
-    const char* uuid,
-    CoreDeviceState* out
-) {
-    if (!core || !uuid || !out)
-        return CORE_INVALID_ARGUMENT;
-
-    std::lock_guard<std::mutex> lock(core->mutex);
-
-    auto it = core->devices.find(uuid);
-
-    if (it == core->devices.end())
-        return CORE_NOT_FOUND;
-
-    if (!it->second.driver->getState(uuid, *out))
+    if (!it->second.driver->getState(uuid, *out)) {
+        std::ostringstream oss;
+        oss << "Driver failed to retrieve state for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
         return CORE_ERROR;
+    }
 
     return CORE_OK;
 }
 
-
-/* ============================================================
-   State Setters
-   ============================================================ */
-
 /**
- * @brief Set power state.
+ * @brief Set power on/off for a device.
+ *
+ * Updates device power state via driver and triggers state change event.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value true for on, false for off.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks power capability.
+ * @return CORE_ERROR if driver fails to set power.
  */
-CoreResult core_set_power(
-    CoreContext* core,
-    const char* uuid,
-    bool value
-) {
-
-    if (!core || !uuid)
+CoreResult core_set_power(CoreContext* core, const char* uuid, bool value)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_set_power");
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
     auto it = core->devices.find(uuid);
 
-    if (it == core->devices.end())
-        return CORE_NOT_FOUND;
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
 
-    if (!hasCapability(it->second, CORE_CAP_POWER))
+        oss << "Device with UUID '" << uuid << "' not found for setting power";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
+
+    if (!hasCapability(it->second, CORE_CAP_POWER)) {
+        std::ostringstream oss;
+
+        oss << "Device '" << uuid << "' does not support power control";
+        setError(core, oss.str().c_str());
+
         return CORE_NOT_SUPPORTED;
+    }
 
-    if (!it->second.driver->setPower(uuid, value))
+    if (!it->second.driver->setPower(uuid, value)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to set power state for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
         return CORE_ERROR;
+    }
 
-        it->second.driver->getState(uuid, it->second.state);
+    it->second.driver->getState(uuid, it->second.state);
 
     CoreEvent ev{};
+
     ev.type = CORE_EVENT_STATE_CHANGED;
-    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
+
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
     ev.state = it->second.state;
 
     emitEvent(core, ev);
@@ -556,156 +665,249 @@ CoreResult core_set_power(
 }
 
 
-/**
- * @brief Set brightness level.
- */
-CoreResult core_set_brightness(
-    CoreContext* core,
-    const char* uuid,
-    int value
-) {
-    if (!core || !uuid)
-        return CORE_INVALID_ARGUMENT;
-
-    if (value < 0 || value > 100)
-        return CORE_INVALID_ARGUMENT;
-
-    std::lock_guard<std::mutex> lock(core->mutex);
-
-    auto it = core->devices.find(uuid);
-
-    if (it == core->devices.end())
-        return CORE_NOT_FOUND;
-
-    if (!hasCapability(it->second, CORE_CAP_BRIGHTNESS))
-        return CORE_NOT_SUPPORTED;
-
-    if (!it->second.driver->setBrightness(uuid, value))
-        return CORE_ERROR;
-
-        it->second.driver->getState(uuid, it->second.state);
-
-    CoreEvent ev{};
-    ev.type = CORE_EVENT_STATE_CHANGED;
-    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
-    ev.state = it->second.state;
-
-    emitEvent(core, ev);
-
-    return CORE_OK;
-}
-
 
 /**
- * @brief Set RGB color.
- */
-CoreResult core_set_color(
-    CoreContext* core,
-    const char* uuid,
-    uint32_t value
-) {
-
-    if (!core || !uuid)
-        return CORE_INVALID_ARGUMENT;
-
-    std::lock_guard<std::mutex> lock(core->mutex);
-
-    auto it = core->devices.find(uuid);
-
-    if (it == core->devices.end())
-        return CORE_NOT_FOUND;
-
-    if (!hasCapability(it->second, CORE_CAP_COLOR))
-        return CORE_NOT_SUPPORTED;
-
-    if (!it->second.driver->setColor(uuid, value))
-        return CORE_ERROR;
-
-        it->second.driver->getState(uuid, it->second.state);
-
-    CoreEvent ev{};
-    ev.type = CORE_EVENT_STATE_CHANGED;
-    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
-    ev.state = it->second.state;
-
-    emitEvent(core, ev);
-    return CORE_OK;
-}
-
-
-/**
- * @brief Set temperature.
- */
-CoreResult core_set_temperature(
-    CoreContext* core,
-    const char* uuid,
-    float value
-) {
-
-    if (!core || !uuid)
-        return CORE_INVALID_ARGUMENT;
-
-    std::lock_guard<std::mutex> lock(core->mutex);
-
-    auto it = core->devices.find(uuid);
-
-    if (it == core->devices.end())
-        return CORE_NOT_FOUND;
-
-    if (!hasCapability(it->second, CORE_CAP_TEMPERATURE))
-        return CORE_NOT_SUPPORTED;
-
-    if (!it->second.driver->setTemperature(uuid, value))
-        return CORE_ERROR;
-
-    CoreEvent ev{};
-    ev.type = CORE_EVENT_STATE_CHANGED;
-    strncpy(ev.uuid, uuid, CORE_MAX_UUID-1);
-    ev.state = it->second.state;
-
-    emitEvent(core, ev);
-
-    return CORE_OK;
-}
-
-
-/* ============================================================
-   Diagnostics / Events
-   ============================================================ */
-
-/**
- * @brief Get last error message.
+ * @brief Set brightness level of a device.
  *
- * @param core Core context.
- *
- * @return Null-terminated error string.
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Brightness value (0-100).
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks brightness capability.
+ * @return CORE_ERROR if driver fails to set brightness.
  */
-const char* core_last_error(CoreContext* core) {
+CoreResult core_set_brightness(CoreContext* core, const char* uuid, int value)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_set_brightness");
+        return CORE_INVALID_ARGUMENT;
+    }
 
+    if (value < 0 || value > 100) {
+        setError(core, "Brightness value must be between 0 and 100");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for brightness change";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
+
+    if (!hasCapability(it->second, CORE_CAP_BRIGHTNESS)) {
+        std::ostringstream oss;
+
+        oss << "Device '" << uuid << "' does not support brightness adjustment";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_SUPPORTED;
+    }
+
+    if (!it->second.driver->setBrightness(uuid, value)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to set brightness for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
+        return CORE_ERROR;
+    }
+
+    it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+
+    ev.type = CORE_EVENT_STATE_CHANGED;
+
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Set RGB color for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value RGB value (0xRRGGBB).
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks color capability.
+ * @return CORE_ERROR if driver fails to set color.
+ */
+CoreResult core_set_color(CoreContext* core, const char* uuid, uint32_t value)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_set_color");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for color change";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
+
+    if (!hasCapability(it->second, CORE_CAP_COLOR)) {
+        std::ostringstream oss;
+
+        oss << "Device '" << uuid << "' does not support color adjustment";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_SUPPORTED;
+    }
+
+    if (!it->second.driver->setColor(uuid, value)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to set color for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
+        return CORE_ERROR;
+    }
+
+    it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+
+    ev.type = CORE_EVENT_STATE_CHANGED;
+
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Temperature in degrees Celsius.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
+ * @return CORE_ERROR if driver fails to set temperature.
+ */
+CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_set_temperature");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for temperature change";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
+
+    if (!hasCapability(it->second, CORE_CAP_TEMPERATURE)) {
+        std::ostringstream oss;
+
+        oss << "Device '" << uuid << "' does not support temperature control";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_SUPPORTED;
+    }
+
+    if (!it->second.driver->setTemperature(uuid, value)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to set temperature for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
+        return CORE_ERROR;
+    }
+
+    it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
+
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Retrieve the last error message from the core.
+ *
+ * Provides a null-terminated string describing
+ * the last error that occurred within the core.
+ *
+ * @param core Pointer to CoreContext.
+ * @return Null-terminated string describing last error.
+ *         Returns "Invalid core" if core pointer is null.
+ */
+const char* core_last_error(CoreContext* core)
+{
     if (!core)
         return "Invalid core";
+
+    if (core->lastError.empty())
+        return "No error";
 
     return core->lastError.c_str();
 }
 
 
-/**
- * @brief Register event callback.
- *
- * @param core     Core context.
- * @param callback Callback function.
- * @param userdata User-defined pointer.
- *
- * @return CoreResult status.
- */
-CoreResult core_set_event_callback(
-    CoreContext* core,
-    CoreEventCallback callback,
-    void* userdata
-) {
 
-    if (!core)
+/**
+ * @brief Set the callback for core events.
+ *
+ * Registers a user-provided function that will
+ * receive CoreEvent notifications.
+ *
+ * @param core Pointer to CoreContext.
+ * @param callback Function pointer for event handling.
+ * @param userdata User-defined pointer passed to callback.
+ * @return CORE_OK on success.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ */
+CoreResult core_set_event_callback(CoreContext* core, CoreEventCallback callback, void* userdata)
+{
+    if (!core) {
         return CORE_INVALID_ARGUMENT;
+    }
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
@@ -715,4 +917,137 @@ CoreResult core_set_event_callback(
     return CORE_OK;
 }
 
-} // extern "C"
+
+
+/**
+ * @brief Emit a custom event manually.
+ *
+ * Allows the application to trigger a custom CoreEvent.
+ *
+ * @param core Pointer to CoreContext.
+ * @param ev Pointer to CoreEvent to emit.
+ * @return CORE_OK on success.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ */
+CoreResult core_emit_custom_event(CoreContext* core, const CoreEvent* ev)
+{
+    if (!core || !ev) {
+        setError(core, "Invalid parameters to core_emit_custom_event");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    emitEvent(core, *ev);
+    return CORE_OK;
+}
+
+/**
+ * @brief Clear the last error message.
+ *
+ * Resets the internal lastError string to empty.
+ *
+ * @param core Pointer to CoreContext.
+ * @return CORE_OK on success.
+ * @return CORE_INVALID_ARGUMENT if core pointer is null.
+ */
+CoreResult core_clear_last_error(CoreContext* core)
+{
+    if (!core) {
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    core->lastError.clear();
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Diagnostic function to inspect all registered devices.
+ *
+ * Returns a textual representation of all device states.
+ * Intended for debugging purposes.
+ *
+ * @param core Pointer to CoreContext.
+ * @param outBuffer Buffer to fill with device info text.
+ * @param bufferSize Size of the output buffer.
+ * @return CORE_OK on success.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ */
+CoreResult core_inspect_state(CoreContext* core, char* outBuffer, size_t bufferSize)
+{
+    if (!core || !outBuffer || bufferSize == 0) {
+        setError(core, "Invalid parameters to core_inspect_state");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    std::ostringstream oss;
+    for (const auto& pair : core->devices) {
+        const InternalDevice& dev = pair.second;
+
+        oss << "UUID: " << dev.uuid << ", Name: " << dev.name << ", Protocol: " << dev.protocol << "\n";
+        oss << "Capabilities: ";
+
+        for (auto cap : dev.capabilities) oss << cap << " ";
+
+        oss << "\n";
+        oss << "State - Power: " << dev.state.power
+            << ", Brightness: " << dev.state.brightness
+            << ", Color: " << dev.state.color
+            << ", Temperature: " << dev.state.temperature << "\n\n";
+    }
+
+    std::string result = oss.str();
+    if (result.length() >= bufferSize) {
+        setError(core, "Output buffer too small for core_inspect_state");
+        return CORE_ERROR;
+    }
+
+    std::strncpy(outBuffer, result.c_str(), bufferSize - 1);
+    outBuffer[bufferSize - 1] = '\0';
+
+    return CORE_OK;
+}
+
+
+
+/**
+ * @brief Internal debug helper for last error.
+ *
+ * Useful for logging without external callback.
+ *
+ * @param core Pointer to CoreContext.
+ * @return True if there is an error recorded, false otherwise.
+ */
+bool core_has_error(CoreContext* core)
+{
+    if (!core) return false;
+
+    return !core->lastError.empty();
+}
+
+
+
+/**
+ * @brief Internal utility to log driver failures.
+ *
+ * Sets error message and optionally prints to console.
+ *
+ * @param core Pointer to CoreContext.
+ * @param driverName Name of the driver.
+ * @param message Failure message.
+ */
+static void logDriverError(CoreContext* core, const char* driverName, const char* message)
+{
+    if (!core || !driverName || !message) return;
+
+    std::ostringstream oss;
+    oss << "Driver '" << driverName << "' error: " << message;
+
+    setError(core, oss.str().c_str());
+}
+
+}

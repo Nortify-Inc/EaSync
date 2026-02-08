@@ -3,15 +3,15 @@
 #include "driver.hpp"
 
 #include <unordered_map>
-#include <mutex>
 #include <string>
+#include <mutex>
+
+#include <gattlib.h>
 
 namespace drivers {
 
-class WifiDriver : public Driver {
+class BleDriver : public Driver {
 public:
-    WifiDriver();
-
     bool init() override;
 
     bool connect(const std::string& uuid) override;
@@ -43,24 +43,13 @@ public:
         CoreDeviceState& outState
     ) override;
 
-    virtual bool isAvailable(
+    bool isAvailable(
         const std::string& uuid
     ) override;
 
 private:
-    bool httpPost(
-        const std::string& url,
-        const std::string& body
-    );
-
-    bool httpGet(
-        const std::string& url,
-        std::string& out
-    );
-
-    void parseState(
-        const std::string& uuid,
-        const std::string& json
+    bool discoverCharacteristics(
+        const std::string& mac
     );
 
 private:
@@ -68,13 +57,21 @@ private:
 
     std::unordered_map<
         std::string,
-        CoreDeviceState
-    > states;
+        gattlib_connection_t*
+    > connections;
 
     std::unordered_map<
         std::string,
-        std::string
-    > deviceIps;
+        std::unordered_map<
+            std::string,
+            uuid_t
+        >
+    > characteristics;
+
+    std::unordered_map<
+        std::string,
+        CoreDeviceState
+    > states;
 };
 
 }

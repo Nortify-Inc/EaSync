@@ -32,7 +32,6 @@ WifiDriver::WifiDriver() {
 bool WifiDriver::init() {
 
     if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-        std::cerr << "curl init failed\n";
         return false;
     }
 
@@ -65,7 +64,7 @@ bool WifiDriver::connect(
     return true;
 }
 
-void WifiDriver::disconnect(
+bool WifiDriver::disconnect(
     const std::string& uuid
 ) {
 
@@ -73,6 +72,8 @@ void WifiDriver::disconnect(
 
     states.erase(uuid);
     deviceIps.erase(uuid);
+
+    return true;
 }
 
 bool WifiDriver::httpPost(
@@ -253,6 +254,10 @@ bool WifiDriver::getState(
     outState = states[uuid];
 
     return true;
+}
+
+bool WifiDriver::isAvailable(const std::string& uuid){
+    return states.count(uuid);
 }
 
 void WifiDriver::parseState(

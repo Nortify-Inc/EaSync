@@ -4,14 +4,12 @@
 #include <cstdint>
 #include <core.h>
 
-
 /**
  * @file driver.hpp
  * @brief Base interface for device drivers.
  *
  * All protocol drivers must implement this interface.
  */
-
 
 namespace drivers {
 
@@ -49,7 +47,7 @@ public:
     /**
      * @brief Disconnect device.
      */
-    virtual void disconnect(
+    virtual bool disconnect(
         const std::string& uuid
     ) = 0;
 
@@ -97,6 +95,17 @@ public:
         const std::string& uuid,
         CoreDeviceState& outState
     ) = 0;
+
+
+    /**
+     * @brief 
+     * 
+     * @param core core context runtime
+     * @return boolean for driver is available to use.
+     */
+    virtual bool isAvailable(
+        const std::string& uuid
+    ) = 0;
 };
 
-} // namespace easync
+} // namespace drivers

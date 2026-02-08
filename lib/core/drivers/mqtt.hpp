@@ -14,18 +14,13 @@ namespace drivers {
 class MqttDriver : public Driver, public virtual mqtt::callback {
 
 public:
-    MqttDriver(
-        const std::string& brokerUrl,
-        const std::string& clientId
-    );
-
-    ~MqttDriver();
+    MqttDriver();
 
     bool init() override;
 
     bool connect(const std::string& uuid) override;
 
-    void disconnect(const std::string& uuid) override;
+    bool disconnect(const std::string& uuid) override;
 
     bool setPower(
         const std::string& uuid,
@@ -50,6 +45,10 @@ public:
     bool getState(
         const std::string& uuid,
         CoreDeviceState& outState
+    ) override;
+
+    virtual bool isAvailable(
+        const std::string& uuid
     ) override;
 
 private:
