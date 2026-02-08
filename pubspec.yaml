@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   ffi: ^2.1.5
+  typed_data: ^1.4.0
   uuid: ^4.5.2
   shared_preferences: ^2.5.4
   provider: ^6.1.5+1

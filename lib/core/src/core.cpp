@@ -19,7 +19,6 @@
 #include "mock.hpp"
 #include "mqtt.hpp"
 #include "wifi.hpp"
-#include "ble.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -176,7 +175,7 @@ CoreContext* core_create(void) {
             std::make_shared<drivers::WifiDriver>();
 
         context->drivers[CORE_PROTOCOL_BLE] = 
-            std::make_shared<drivers::BleDriver>();
+            std::make_shared<drivers::MockDriver>();
 
         return context;
 
