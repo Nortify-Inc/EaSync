@@ -1,6 +1,6 @@
 import 'dart:ui';
-import 'handler.dart';
 import 'package:flutter/material.dart';
+import 'handler.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -46,45 +46,90 @@ class _DashboardState extends State<Dashboard> {
     });
   }
 
+  void _showFilterSnack() {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: EaColor.back,
+        elevation: 6,
+        duration: const Duration(seconds: 3),
+        margin: const EdgeInsets.only(
+          right: 16,
+          left: 80,
+          bottom: 20,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        content: _SnackContent(
+          onClose: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool showClear = selectedCapabilities.isNotEmpty;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Spacer(),
-                GestureDetector(
-                  onTap: _clearFilters,
-                  child: Container(
-                    height: 30,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Text(
-                      "Clear",
-                      style: EaText.secondary.copyWith(
-                        fontWeight: FontWeight.w600,
+                AnimatedOpacity(
+                  opacity: showClear ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !showClear,
+                    child: GestureDetector(
+                      onTap: _clearFilters,
+                      child: Container(
+                        height: 26,
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: EaColor.back,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  Colors.black.withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                          border: Border.all(
+                            color:
+                                Colors.black.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            "Clear",
+                            style: EaText.secondary,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
+
             const SizedBox(height: 10),
+
             _buildFilters(),
+
             const SizedBox(height: 24),
+
             Expanded(child: _buildDeviceList()),
           ],
         ),
@@ -103,14 +148,14 @@ class _DashboardState extends State<Dashboard> {
                 CoreCapability.CORE_CAP_POWER,
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildFilter(
                 "Color",
                 CoreCapability.CORE_CAP_COLOR,
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildFilter(
                 "Time",
@@ -128,7 +173,7 @@ class _DashboardState extends State<Dashboard> {
                 CoreCapability.CORE_CAP_TEMPERATURE,
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildFilter(
                 "Brightness",
@@ -155,6 +200,10 @@ class _DashboardState extends State<Dashboard> {
             selectedCapabilities.add(cap);
           }
         });
+
+        if (filteredDevices.isEmpty && devices.isNotEmpty) {
+          _showFilterSnack();
+        }
       },
     );
   }
@@ -165,7 +214,7 @@ class _DashboardState extends State<Dashboard> {
     }
 
     if (filteredDevices.isEmpty) {
-      return _buildEmpty("No devices match this filter");
+      return const SizedBox();
     }
 
     return ListView.builder(
@@ -179,28 +228,14 @@ class _DashboardState extends State<Dashboard> {
 
   Widget _buildEmpty(String text) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.devices,
-            size: 90,
-            color: EaColor.fore.withValues(alpha: 0.45),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            text,
-            style: EaText.primaryTranslucent,
-          ),
-        ],
+      child: Text(
+        text,
+        style: EaText.primaryTranslucent,
+        textAlign: TextAlign.center,
       ),
     );
   }
 }
-
-/* ===========================
-   FILTER BUTTON
-=========================== */
 
 class FilterChipButton extends StatefulWidget {
   final String label;
@@ -223,10 +258,10 @@ class _FilterChipButtonState extends State<FilterChipButton> {
 
   @override
   Widget build(BuildContext context) {
-    const double radius = 50;
+    const double radius = 40;
 
     final double scale =
-        (pressed || widget.selected) ? 0.96 : 1.0;
+        (pressed || widget.selected) ? 0.95 : 1.0;
 
     final Color background =
         widget.selected ? EaColor.fore : EaColor.back;
@@ -247,29 +282,25 @@ class _FilterChipButtonState extends State<FilterChipButton> {
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOut,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 8,
-          ),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: background,
             borderRadius: BorderRadius.circular(radius),
-            boxShadow: widget.selected
-                ? [
-                    BoxShadow(
-                      color: EaColor.fore.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.14),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Center(
             child: Text(
               widget.label,
               style: EaText.secondary.copyWith(
                 color: textColor,
-                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
           ),
@@ -294,10 +325,10 @@ class _DeviceCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22),
-          color: EaColor.back.withValues(alpha: 0.9),
+          color: EaColor.back.withValues(alpha: 0.95),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.14),
               blurRadius: 14,
               offset: const Offset(0, 4),
             ),
@@ -312,9 +343,9 @@ class _DeviceCard extends StatelessWidget {
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
-              children: device.capabilities
-                  .map(_capToChip)
-                  .toList(),
+              runSpacing: 6,
+              children:
+                  device.capabilities.map(_capToChip).toList(),
             ),
           ],
         ),
@@ -324,13 +355,18 @@ class _DeviceCard extends StatelessWidget {
 
   Widget _capToChip(int cap) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 4,
-      ),
+      padding:
+          const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: EaColor.fore.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Text(
         _capName(cap),
@@ -354,5 +390,75 @@ class _DeviceCard extends StatelessWidget {
       default:
         return "Unknown";
     }
+  }
+}
+
+class _SnackContent extends StatefulWidget {
+  final VoidCallback onClose;
+
+  const _SnackContent({required this.onClose});
+
+  @override
+  State<_SnackContent> createState() => _SnackContentState();
+}
+
+class _SnackContentState extends State<_SnackContent>
+    with SingleTickerProviderStateMixin {
+  late AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+
+    controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: controller,
+          builder: (_, __) {
+            return LinearProgressIndicator(
+              value: 1 - controller.value,
+              minHeight: 3,
+              backgroundColor: Colors.transparent,
+              valueColor: AlwaysStoppedAnimation(
+                EaColor.fore.withValues(alpha: 0.7),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                "No devices match this filter",
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+            GestureDetector(
+              onTap: widget.onClose,
+              child: const Icon(
+                Icons.close,
+                size: 16,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

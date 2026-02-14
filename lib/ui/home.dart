@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'handler.dart';
 
 class Home extends StatefulWidget {
@@ -10,26 +11,34 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   static const int fakePages = 10000;
 
-  static const int startPage = (fakePages ~/ 2) - ((fakePages ~/ 2) % 3);
+  static const int startPage =
+      (fakePages ~/ 2) - ((fakePages ~/ 2) % 3);
 
   int selectedIndex = 0;
   int currentFakePage = startPage;
 
-  final PageController pageController = PageController(initialPage: startPage);
+  final PageController pageController =
+      PageController(initialPage: startPage);
 
-  final PageController bottomController = PageController(
-    viewportFraction: 0.35,
-    initialPage: startPage,
-  );
+  final PageController bottomTextController =
+      PageController(initialPage: startPage);
 
   late double screenWidth;
 
   double dragStartX = 0;
   double dragDelta = 0;
 
-  final List<Widget> pages = const [Dashboard(), Profiles(), Manage()];
+  final List<Widget> pages = const [
+    Dashboard(),
+    Profiles(),
+    Manage(),
+  ];
 
-  final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
+  final List<String> tabs = [
+    "Dashboard",
+    "Profiles",
+    "Manage",
+  ];
 
   int getRealIndex(int fakeIndex) {
     return fakeIndex % pages.length;
@@ -44,13 +53,11 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
-
-    bottomController.addListener(syncPages);
+    bottomTextController.addListener(syncPages);
   }
 
   void syncPages() {
-    final page = bottomController.page;
-
+    final page = bottomTextController.page;
     if (page == null) return;
 
     final fake = page.round();
@@ -69,7 +76,7 @@ class _HomeState extends State<Home> {
   }
 
   void goNext() {
-    bottomController.animateToPage(
+    bottomTextController.animateToPage(
       currentFakePage + 1,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -77,7 +84,7 @@ class _HomeState extends State<Home> {
   }
 
   void goPrev() {
-    bottomController.animateToPage(
+    bottomTextController.animateToPage(
       currentFakePage - 1,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -87,14 +94,47 @@ class _HomeState extends State<Home> {
   @override
   void dispose() {
     pageController.dispose();
-    bottomController.dispose();
+    bottomTextController.dispose();
     super.dispose();
+  }
+
+  Widget _buildIndicator() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        pages.length,
+        (index) => _buildDot(index),
+      ),
+    );
+  }
+
+  Widget _buildDot(int index) {
+    final bool active = index == selectedIndex;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      width: active ? 18 : 8,
+      height: 8,
+      decoration: BoxDecoration(
+        color: active ? EaColor.fore : EaColor.back,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: EaColor.fore.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                ),
+              ]
+            : null,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       // BODY COM SWIPE GLOBAL
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -130,55 +170,50 @@ class _HomeState extends State<Home> {
         ),
       ),
 
-      // BOTTOM NAV
-      bottomNavigationBar: SizedBox(
-        height: 100,
-        child: PageView.builder(
-          controller: bottomController,
-          itemCount: fakePages,
-          itemBuilder: (context, index) {
-            final real = getRealIndex(index);
-            final bool isSelected = real == selectedIndex;
+      // BOTTOM BAR
+      bottomNavigationBar: SafeArea(
+        child: SizedBox(
+          height: 110,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildIndicator(),
 
-            return GestureDetector(
-              onTap: () {
-                bottomController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOutCubic,
-                );
-              },
-              child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 18,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? EaColor.fore
-                        : EaColor.back.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.18),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : [],
-                  ),
-                  child: Text(
-                    tabs[real],
-                    style: isSelected ? EaText.primaryBack : EaText.secondary,
-                  ),
+              const SizedBox(height: 10),
+
+              // PILL FIXA
+              Container(
+                height: 48,
+                width: 180,
+                decoration: BoxDecoration(
+                  color: EaColor.fore,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: PageView.builder(
+                  controller: bottomTextController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: fakePages,
+                  itemBuilder: (context, index) {
+                    final real = getRealIndex(index);
+
+                    return Center(
+                      child: Text(
+                        tabs[real],
+                        style: EaText.primaryBack,
+                      ),
+                    );
+                  },
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );

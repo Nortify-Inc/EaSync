@@ -8,37 +8,37 @@ class EaColor {
 }
 
 class EaText {
-  static const TextStyle primary = TextStyle(
+  static final TextStyle primary = GoogleFonts.poppins(
     color: EaColor.fore,
     fontSize: 16,
     fontWeight: FontWeight.w500,
   );
 
-  static final TextStyle primaryTranslucent = TextStyle(
+  static final TextStyle primaryTranslucent = GoogleFonts.poppins(
     color: EaColor.fore.withValues(alpha: 0.4),
     fontSize: 16,
     fontWeight: FontWeight.w500,
   );
 
-  static const TextStyle primaryBack = TextStyle(
+  static final TextStyle primaryBack = GoogleFonts.poppins(
     color: EaColor.back,
     fontSize: 16,
     fontWeight: FontWeight.w500,
   );
 
-  static const TextStyle secondary = TextStyle(
+  static final TextStyle secondary = GoogleFonts.poppins(
     color: EaColor.fore,
     fontSize: 14,
     fontWeight: FontWeight.w400,
   );
 
-  static final TextStyle secondaryTranslucent = TextStyle(
+  static final TextStyle secondaryTranslucent = GoogleFonts.poppins(
     color: EaColor.fore.withValues(alpha: 0.5),
     fontSize: 14,
     fontWeight: FontWeight.w400,
   );
 
-  static const TextStyle secondaryBack = TextStyle(
+  static final TextStyle secondaryBack = GoogleFonts.poppins(
     color: EaColor.back,
     fontSize: 14,
     fontWeight: FontWeight.w400,
