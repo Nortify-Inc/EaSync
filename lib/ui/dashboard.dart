@@ -1,35 +1,6 @@
-import 'dart:ffi';
+import 'dart:ui';
+import 'handler.dart';
 import 'package:flutter/material.dart';
-import 'bridge.dart';
-
-/* ===========================================================
-   MODEL
-=========================================================== */
-
-class DeviceModel {
-  final String uuid;
-  final String name;
-  final int protocol;
-  final List<int> capabilities;
-
-  bool power;
-  int brightness;
-  double temperature;
-
-  DeviceModel({
-    required this.uuid,
-    required this.name,
-    required this.protocol,
-    required this.capabilities,
-    required this.power,
-    required this.brightness,
-    required this.temperature,
-  });
-}
-
-/* ===========================================================
-   DASHBOARD
-=========================================================== */
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -39,241 +10,349 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  final List<DeviceModel> devices = [];
-
-  bool loading = true;
-  String? error;
+  List<DeviceInfo> devices = [];
+  final Set<int> selectedCapabilities = {};
 
   @override
   void initState() {
     super.initState();
-    initCore();
+    _loadDevices();
   }
 
-  Future<void> initCore() async {
-    try {
-      Bridge.init();
-      await loadDevices();
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        loading = false;
-      });
-    }
-  }
-
-  Future<void> loadDevices() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
+  void _loadDevices() {
     try {
       final list = Bridge.listDevices();
-
-      devices.clear();
-
-      for (final dev in list) {
-        final uuid = _readCString(dev.uuid);
-        final name = _readCString(dev.name);
-
-        final state = Bridge.getState(uuid);
-
-        devices.add(
-          DeviceModel(
-            uuid: uuid,
-            name: name,
-            protocol: dev.protocol,
-            capabilities: _readCaps(dev),
-            power: state.power,
-            brightness: state.brightness,
-            temperature: state.temperature,
-          ),
-        );
-      }
-
       setState(() {
-        loading = false;
+        devices = list;
       });
     } catch (e) {
-      setState(() {
-        error = e.toString();
-        loading = false;
-      });
+      debugPrint(e.toString());
     }
   }
 
-  Future<void> togglePower(DeviceModel dev) async {
-    try {
-      await Future(() {
-        Bridge.setPower(dev.uuid, !dev.power);
-      });
+  List<DeviceInfo> get filteredDevices {
+    if (selectedCapabilities.isEmpty) return devices;
 
-      await loadDevices();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+    return devices.where((d) {
+      return selectedCapabilities.any(
+        (cap) => d.capabilities.contains(cap),
       );
-    }
+    }).toList();
   }
 
-  @override
-  void dispose() {
-    Bridge.destroy();
-    super.dispose();
+  void _clearFilters() {
+    setState(() {
+      selectedCapabilities.clear();
+    });
   }
-
-  /* ===========================================================
-     UI
-  =========================================================== */
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (error != null) {
-      return Scaffold(
-        body: Center(
-          child: Text(
-            error!,
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Devices'),
-        actions: [
-          IconButton(
-            onPressed: loadDevices,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-
-      body: GridView.builder(
+    return SafeArea(
+      child: Padding(
         padding: const EdgeInsets.all(16),
-
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          childAspectRatio: 1,
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Spacer(),
+                GestureDetector(
+                  onTap: _clearFilters,
+                  child: Container(
+                    height: 30,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: Text(
+                      "Clear",
+                      style: EaText.secondary.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _buildFilters(),
+            const SizedBox(height: 24),
+            Expanded(child: _buildDeviceList()),
+          ],
         ),
-
-        itemCount: devices.length,
-
-        itemBuilder: (context, i) {
-          return _DeviceCard(
-            device: devices[i],
-            onToggle: () => togglePower(devices[i]),
-          );
-        },
       ),
     );
   }
 
-  /* ===========================================================
-     UTILS
-  =========================================================== */
-
-  String _readCString(Array<Int8> arr) {
-    final bytes = <int>[];
-
-    for (int i = 0; i < 256; i++) {
-      final v = arr[i];
-
-      if (v == 0) break;
-
-      bytes.add(v);
-    }
-
-    return String.fromCharCodes(bytes);
+  Widget _buildFilters() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildFilter(
+                "Power",
+                CoreCapability.CORE_CAP_POWER,
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: _buildFilter(
+                "Color",
+                CoreCapability.CORE_CAP_COLOR,
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: _buildFilter(
+                "Time",
+                CoreCapability.CORE_CAP_TIMESTAMP,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildFilter(
+                "Temperature",
+                CoreCapability.CORE_CAP_TEMPERATURE,
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: _buildFilter(
+                "Brightness",
+                CoreCapability.CORE_CAP_BRIGHTNESS,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
-  List<int> _readCaps(CoreDeviceInfo info) {
-    final list = <int>[];
+  Widget _buildFilter(String label, int cap) {
+    final selected = selectedCapabilities.contains(cap);
 
-    for (int i = 0; i < info.capabilityCount; i++) {
-      list.add(info.capabilities[i]);
+    return FilterChipButton(
+      label: label,
+      selected: selected,
+      onTap: () {
+        setState(() {
+          if (selected) {
+            selectedCapabilities.remove(cap);
+          } else {
+            selectedCapabilities.add(cap);
+          }
+        });
+      },
+    );
+  }
+
+  Widget _buildDeviceList() {
+    if (devices.isEmpty) {
+      return _buildEmpty("Your devices will appear here");
     }
 
-    return list;
+    if (filteredDevices.isEmpty) {
+      return _buildEmpty("No devices match this filter");
+    }
+
+    return ListView.builder(
+      physics: const BouncingScrollPhysics(),
+      itemCount: filteredDevices.length,
+      itemBuilder: (context, index) {
+        return _DeviceCard(device: filteredDevices[index]);
+      },
+    );
   }
-  
+
+  Widget _buildEmpty(String text) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.devices,
+            size: 90,
+            color: EaColor.fore.withValues(alpha: 0.45),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            text,
+            style: EaText.primaryTranslucent,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-/* ===========================================================
-   DEVICE CARD
-=========================================================== */
+/* ===========================
+   FILTER BUTTON
+=========================== */
+
+class FilterChipButton extends StatefulWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const FilterChipButton({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  State<FilterChipButton> createState() => _FilterChipButtonState();
+}
+
+class _FilterChipButtonState extends State<FilterChipButton> {
+  bool pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    const double radius = 50;
+
+    final double scale =
+        (pressed || widget.selected) ? 0.96 : 1.0;
+
+    final Color background =
+        widget.selected ? EaColor.fore : EaColor.back;
+
+    final Color textColor =
+        widget.selected ? EaColor.back : EaColor.fore;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (_) => setState(() => pressed = true),
+      onTapUp: (_) {
+        setState(() => pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => pressed = false),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 8,
+          ),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(radius),
+            boxShadow: widget.selected
+                ? [
+                    BoxShadow(
+                      color: EaColor.fore.withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              widget.label,
+              style: EaText.secondary.copyWith(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _DeviceCard extends StatelessWidget {
-  final DeviceModel device;
-  final VoidCallback onToggle;
+  final DeviceInfo device;
 
   const _DeviceCard({
     required this.device,
-    required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-
-      child: InkWell(
-        onTap: onToggle,
-
-        borderRadius: BorderRadius.circular(16),
-
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-            children: [
-              Text(
-                device.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              Icon(
-                device.power
-                    ? Icons.power
-                    : Icons.power_off,
-
-                size: 48,
-
-                color: device.power
-                    ? Colors.green
-                    : Colors.grey,
-              ),
-
-              Column(
-                children: [
-                  Text('Temp: ${device.temperature.toStringAsFixed(1)}°C'),
-                  Text('Brightness: ${device.brightness}%'),
-                ],
-              ),
-            ],
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(22),
+          color: EaColor.back.withValues(alpha: 0.9),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(device.name, style: EaText.primary),
+            const SizedBox(height: 6),
+            Text(device.uuid, style: EaText.secondary),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: device.capabilities
+                  .map(_capToChip)
+                  .toList(),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _capToChip(int cap) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 4,
+      ),
+      decoration: BoxDecoration(
+        color: EaColor.fore.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        _capName(cap),
+        style: EaText.secondary.copyWith(fontSize: 12),
+      ),
+    );
+  }
+
+  String _capName(int cap) {
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return "Power";
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return "Brightness";
+      case CoreCapability.CORE_CAP_COLOR:
+        return "Color";
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return "Temp";
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        return "Time";
+      default:
+        return "Unknown";
+    }
   }
 }

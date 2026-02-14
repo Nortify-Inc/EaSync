@@ -7,20 +7,11 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-
-/* ============================================================
-   API Version
-============================================================ */
-
 /**
  * @brief Core public API version.
  */
 #define CORE_API_VERSION "0.0.1"
 
-
-/* ============================================================
-   Result Codes
-============================================================ */
 
 /**
  * @brief Return codes for all API functions.
@@ -54,10 +45,6 @@ typedef enum {
 } CoreResult;
 
 
-/* ============================================================
-   Protocol Types
-============================================================ */
-
 /**
  * @brief Supported communication protocols.
  */
@@ -70,10 +57,6 @@ typedef enum {
 
 } CoreProtocol;
 
-
-/* ============================================================
-   Device Capabilities
-============================================================ */
 
 /**
  * @brief Supported device capabilities.
@@ -89,28 +72,16 @@ typedef enum {
 } CoreCapability;
 
 
-/* ============================================================
-   Forward Declarations
-============================================================ */
-
 /**
  * @brief Opaque core context.
  */
 typedef struct CoreContext CoreContext;
 
 
-/* ============================================================
-   Limits
-============================================================ */
-
 #define CORE_MAX_CAPS   16
 #define CORE_MAX_NAME  64
 #define CORE_MAX_UUID  64
 
-
-/* ============================================================
-   Device Information
-============================================================ */
 
 /**
  * @brief Static device metadata.
@@ -134,9 +105,6 @@ typedef struct {
 
 } CoreDeviceInfo;
 
-/* ============================================================
-   Device State
-============================================================ */
 
 /**
  * @brief Runtime device state.
@@ -162,10 +130,6 @@ typedef struct {
 
 } CoreDeviceState;
 
-
-/* ============================================================
-   Core Lifecycle
-============================================================ */
 
 /**
  * @brief Create a new core instance.
@@ -194,10 +158,6 @@ void core_destroy(CoreContext* core);
  */
 CoreResult core_init(CoreContext* core);
 
-
-/* ============================================================
-   Device Management
-============================================================ */
 
 /**
  * @brief Register a new device.
@@ -268,11 +228,6 @@ CoreResult core_list_devices(
     uint32_t* outCount
 );
 
-
-/* ============================================================
-   Capability / State
-============================================================ */
-
 /**
  * @brief Check if device supports capability.
  *
@@ -306,10 +261,6 @@ CoreResult core_get_state(
     CoreDeviceState* outState
 );
 
-
-/* ============================================================
-   State Setters
-============================================================ */
 
 /**
  * @brief Set power state.
@@ -351,10 +302,6 @@ CoreResult core_set_temperature(
 );
 
 
-/* ============================================================
-   Diagnostics
-============================================================ */
-
 /**
  * @brief Get last error message.
  *
@@ -364,10 +311,6 @@ CoreResult core_set_temperature(
  */
 const char* core_last_error(CoreContext* core);
 
-
-/* ============================================================
-   Events
-============================================================ */
 
 /**
  * @brief Core event types.

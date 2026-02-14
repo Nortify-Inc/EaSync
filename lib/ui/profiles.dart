@@ -5,8 +5,6 @@ class Profiles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text("Profiles Page", style: EaText.primary),
-    );
+    return Center(child: Text("Profiles Page", style: EaText.primary));
   }
 }

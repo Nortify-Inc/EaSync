@@ -1,6 +1,9 @@
 import 'handler.dart';
 
-void main(){
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  Bridge.init();
+
   runApp(const EaSync());
 }
 
@@ -9,8 +12,6 @@ class EaSync extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Home()
-    );
+    return const MaterialApp(home: Home());
   }
 }
