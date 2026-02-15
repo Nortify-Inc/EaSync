@@ -243,17 +243,24 @@ Never _throwLastError(int code) {
   throw Exception('Core error $code: $msg');
 }
 
-/* ===========================================================
-   BRIDGE
-=========================================================== */
-
 class Bridge {
+  static bool _ready = false;
+  static bool get isReady => _ready;
+
   static Pointer<Void>? _ctx;
 
-  static void init() {
+  static void _ensureReady() {
+    if (!_ready || _ctx == null) {
+      throw Exception("Bridge not initialized. Call Bridge.init() first.");
+    }
+  }
+
+  static Future<void> init() async {
+    if (_ready) return;
+
     _ctx = _coreCreate();
 
-    if (_ctx == nullptr) {
+    if (_ctx == nullptr || _ctx == null) {
       throw Exception('core_create failed');
     }
 
@@ -262,12 +269,15 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+
+    _ready = true;
   }
 
   static void destroy() {
     if (_ctx != null) {
       _coreDestroy(_ctx!);
       _ctx = null;
+      _ready = false;
     }
   }
 
@@ -277,6 +287,8 @@ class Bridge {
     required int protocol,
     required List<int> capabilities,
   }) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
     final namePtr = name.toNativeUtf8();
 
@@ -305,6 +317,8 @@ class Bridge {
   }
 
   static List<DeviceInfo> listDevices() {
+    _ensureReady();
+
     final countPtr = calloc<Uint32>();
 
     final first = _coreListDevices(_ctx!, nullptr, 0, countPtr);
@@ -354,6 +368,8 @@ class Bridge {
   }
 
   static DeviceState getState(String uuid) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
     final statePtr = calloc<CoreDeviceState>();
 
@@ -381,7 +397,13 @@ class Bridge {
     return result;
   }
 
+  /* =========================
+     STATE CONTROL
+  ========================== */
+
   static void setPower(String uuid, bool value) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
 
     final res = _coreSetPower(_ctx!, uuidPtr, value);
@@ -394,6 +416,8 @@ class Bridge {
   }
 
   static void setBrightness(String uuid, int value) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
 
     final res = _coreSetBrightness(_ctx!, uuidPtr, value);
@@ -406,6 +430,8 @@ class Bridge {
   }
 
   static void setTemperature(String uuid, double value) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
 
     final res = _coreSetTemperature(_ctx!, uuidPtr, value);
@@ -418,6 +444,8 @@ class Bridge {
   }
 
   static void setColor(String uuid, int value) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
 
     final res = _coreSetColor(_ctx!, uuidPtr, value);
@@ -429,3 +457,4 @@ class Bridge {
     }
   }
 }
+
