@@ -58,37 +58,8 @@ class _ManageState extends State<Manage> {
     return SafeArea(
       child: Column(
         children: [
-          _header(),
           Expanded(child: _body()),
           _fab(),
-        ],
-      ),
-    );
-  }
-
-  /* ===================================================== */
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Row(
-        children: [
-          Text(
-            "Manage Devices",
-            style: EaText.primary.copyWith(
-              fontWeight: FontWeight.w600,
-              fontSize: 20,
-              color: EaColor.textPrimary,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: _loadDevices,
-            icon: const Icon(
-              Icons.refresh,
-              color: EaColor.textSecondary,
-            ),
-          ),
         ],
       ),
     );
@@ -116,9 +87,7 @@ class _ManageState extends State<Manage> {
   Widget _body() {
     if (loading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: EaColor.fore,
-        ),
+        child: CircularProgressIndicator(color: EaColor.fore),
       );
     }
 
@@ -130,8 +99,6 @@ class _ManageState extends State<Manage> {
       itemBuilder: (_, i) => _row(devices[i]),
     );
   }
-
-  /* ===================================================== */
 
   Widget _emptyState() {
     return Center(
@@ -171,9 +138,7 @@ class _ManageState extends State<Manage> {
             Text(
               "Add your first device to get started",
               textAlign: TextAlign.center,
-              style: EaText.secondary.copyWith(
-                color: EaColor.textSecondary,
-              ),
+              style: EaText.secondary.copyWith(color: EaColor.textSecondary),
             ),
           ],
         ),
@@ -201,10 +166,7 @@ class _ManageState extends State<Manage> {
                 color: EaColor.fore.withValues(alpha: .15),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(
-                Icons.devices,
-                color: EaColor.fore,
-              ),
+              child: const Icon(Icons.devices, color: EaColor.fore),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -213,9 +175,7 @@ class _ManageState extends State<Manage> {
                 children: [
                   Text(
                     d.name,
-                    style: EaText.primary.copyWith(
-                      color: EaColor.textPrimary,
-                    ),
+                    style: EaText.primary.copyWith(color: EaColor.textPrimary),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -230,10 +190,7 @@ class _ManageState extends State<Manage> {
                 ],
               ),
             ),
-            const Icon(
-              Icons.chevron_right,
-              color: EaColor.textSecondary,
-            ),
+            const Icon(Icons.chevron_right, color: EaColor.textSecondary),
           ],
         ),
       ),
@@ -249,10 +206,7 @@ class _DeviceEditor extends StatefulWidget {
   final DeviceInfo? device;
   final VoidCallback onSaved;
 
-  const _DeviceEditor({
-    this.device,
-    required this.onSaved,
-  });
+  const _DeviceEditor({this.device, required this.onSaved});
 
   @override
   State<_DeviceEditor> createState() => _DeviceEditorState();
@@ -267,8 +221,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   void initState() {
     super.initState();
 
-    nameController =
-        TextEditingController(text: widget.device?.name ?? "");
+    nameController = TextEditingController(text: widget.device?.name ?? "");
 
     if (widget.device != null) {
       caps.addAll(widget.device!.capabilities);
@@ -306,10 +259,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.redAccent,
-      ),
+      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
     );
   }
 
@@ -318,13 +268,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
     return List.generate(
       4,
-      (_) => r.nextInt(0xFFFF)
-          .toRadixString(16)
-          .padLeft(4, '0'),
+      (_) => r.nextInt(0xFFFF).toRadixString(16).padLeft(4, '0'),
     ).join("-");
   }
-
-  /* ===================================================== */
 
   Widget _capChip(String label, int cap) {
     final active = caps.contains(cap);
@@ -337,25 +283,16 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: active
-              ? EaColor.fore.withValues(alpha: .25)
-              : EaColor.back,
+          color: active ? EaColor.fore.withValues(alpha: .25) : EaColor.back,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: active ? EaColor.fore : EaColor.border,
-          ),
+          border: Border.all(color: active ? EaColor.fore : EaColor.border),
         ),
         child: Text(
           label,
           style: EaText.secondary.copyWith(
-            color: active
-                ? EaColor.fore
-                : EaColor.textSecondary,
+            color: active ? EaColor.fore : EaColor.textSecondary,
           ),
         ),
       ),
@@ -376,8 +313,6 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     );
   }
 
-  /* ===================================================== */
-
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
@@ -388,9 +323,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: EaColor.back,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(28),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -406,9 +339,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
             ),
 
             Text(
-              widget.device == null
-                  ? "New Device"
-                  : "Edit Device",
+              widget.device == null ? "New Device" : "Edit Device",
               style: EaText.primary.copyWith(
                 fontWeight: FontWeight.w600,
                 color: EaColor.textPrimary,

@@ -20,9 +20,7 @@ class _SplashState extends State<Splash> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const Home(),
-        ),
+        MaterialPageRoute(builder: (_) => const Home()),
       );
     });
   }
@@ -51,7 +49,6 @@ class _SplashState extends State<Splash> {
                   _headline(),
 
                   const Spacer(),
-
                 ],
               ),
             ),
@@ -76,10 +73,7 @@ class _SplashState extends State<Splash> {
           shape: BoxShape.circle,
 
           gradient: RadialGradient(
-            colors: [
-              EaColor.fore.withValues(alpha: 0.35),
-              Colors.transparent,
-            ],
+            colors: [EaColor.fore.withValues(alpha: 0.35), Colors.transparent],
           ),
         ),
       ),
@@ -89,28 +83,18 @@ class _SplashState extends State<Splash> {
   Widget _brand() {
     return Row(
       children: [
-        Icon(
-          Icons.blur_on,
-          color: EaColor.fore,
-          size: 28,
-        ),
+        Icon(Icons.blur_on, color: EaColor.fore, size: 28),
 
         const SizedBox(width: 8),
 
-        Text(
-          "EaSync",
-          style: EaText.primary,
-        ),
+        Text("EaSync", style: EaText.primary),
 
         const SizedBox(width: 8),
 
         Padding(
           padding: const EdgeInsets.only(top: 18),
 
-          child: Text(
-            "Powered by Nortify",
-            style: EaText.secondaryBack,
-          ),
+          child: Text("Powered by Nortify", style: EaText.secondaryBack),
         ),
       ],
     );
@@ -145,4 +129,3 @@ class _SplashState extends State<Splash> {
     );
   }
 }
-

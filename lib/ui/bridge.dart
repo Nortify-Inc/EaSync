@@ -457,4 +457,3 @@ class Bridge {
     }
   }
 }
-

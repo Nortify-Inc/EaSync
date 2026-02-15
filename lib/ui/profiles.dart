@@ -23,11 +23,7 @@ class Profile {
   final List<DeviceAction> actions;
   final IconData icon;
 
-  Profile({
-    required this.name,
-    required this.actions,
-    required this.icon,
-  });
+  Profile({required this.name, required this.actions, required this.icon});
 }
 
 /* ============================================================
@@ -58,8 +54,6 @@ class _ProfilesState extends State<Profiles> {
       setState(() {});
     } catch (_) {}
   }
-
-  /* ===================================================== */
 
   void _openEditor({Profile? profile}) {
     showModalBottomSheet(
@@ -97,53 +91,23 @@ class _ProfilesState extends State<Profiles> {
         }
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile applied")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Profile applied")));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
-
-  /* ===================================================== */
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
         children: [
-          _header(),
           Expanded(child: _body()),
           _fab(),
-        ],
-      ),
-    );
-  }
-
-  /* ===================================================== */
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Row(
-        children: [
-          Text(
-            "Profiles",
-            style: EaText.primary.copyWith(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: _loadDevices,
-            icon: const Icon(
-              Icons.refresh,
-              color: EaColor.textSecondary,
-            ),
-          ),
         ],
       ),
     );
@@ -178,8 +142,6 @@ class _ProfilesState extends State<Profiles> {
     );
   }
 
-  /* ===================================================== */
-
   Widget _empty() {
     return Center(
       child: Padding(
@@ -199,11 +161,7 @@ class _ProfilesState extends State<Profiles> {
                   ],
                 ),
               ),
-              child: const Icon(
-                Icons.tune,
-                size: 42,
-                color: EaColor.fore,
-              ),
+              child: const Icon(Icons.tune, size: 42, color: EaColor.fore),
             ),
             const SizedBox(height: 24),
             Text(
@@ -215,7 +173,7 @@ class _ProfilesState extends State<Profiles> {
             ),
             const SizedBox(height: 8),
             Text(
-              "Create profiles to control your devices",
+              "Create profiles aligned with your mood",
               textAlign: TextAlign.center,
               style: EaText.secondary,
             ),
@@ -224,8 +182,6 @@ class _ProfilesState extends State<Profiles> {
       ),
     );
   }
-
-  /* ===================================================== */
 
   Widget _row(Profile p) {
     return Container(
@@ -247,28 +203,19 @@ class _ProfilesState extends State<Profiles> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(p.name, style: EaText.primary),
-                Text(
-                  "${p.actions.length} actions",
-                  style: EaText.secondary,
-                ),
+                Text("${p.actions.length} actions", style: EaText.secondary),
               ],
             ),
           ),
 
           IconButton(
             onPressed: () => _applyProfile(p),
-            icon: const Icon(
-              Icons.play_arrow,
-              color: EaColor.fore,
-            ),
+            icon: const Icon(Icons.play_arrow, color: EaColor.fore),
           ),
 
           IconButton(
             onPressed: () => _openEditor(profile: p),
-            icon: const Icon(
-              Icons.edit,
-              color: EaColor.textSecondary,
-            ),
+            icon: const Icon(Icons.edit, color: EaColor.textSecondary),
           ),
         ],
       ),
@@ -317,25 +264,19 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   void initState() {
     super.initState();
 
-    nameController =
-        TextEditingController(text: widget.profile?.name ?? "");
+    nameController = TextEditingController(text: widget.profile?.name ?? "");
 
-    selectedIcon =
-        widget.profile?.icon ?? Icons.home;
+    selectedIcon = widget.profile?.icon ?? Icons.home;
 
     if (widget.profile != null) {
       actions.addAll(widget.profile!.actions);
     }
   }
 
-  /* ===================================================== */
-
   void _addAction(DeviceInfo d) {
     if (actions.any((a) => a.deviceId == d.uuid)) return;
 
-    actions.add(
-      DeviceAction(deviceId: d.uuid),
-    );
+    actions.add(DeviceAction(deviceId: d.uuid));
 
     setState(() {});
   }
@@ -350,16 +291,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
     if (name.isEmpty || actions.isEmpty) return;
 
-    widget.onSaved(
-      Profile(
-        name: name,
-        actions: actions,
-        icon: selectedIcon,
-      ),
-    );
+    widget.onSaved(Profile(name: name, actions: actions, icon: selectedIcon));
   }
-
-  /* ===================================================== */
 
   @override
   Widget build(BuildContext context) {
@@ -371,9 +304,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: EaColor.back,
-          borderRadius: const BorderRadius.vertical(
-            top: Radius.circular(28),
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -407,14 +338,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  /* ===================================================== */
-
   Widget _title() {
     return Text(
       widget.profile == null ? "New Profile" : "Edit Profile",
-      style: EaText.primary.copyWith(
-        fontWeight: FontWeight.w600,
-      ),
+      style: EaText.primary.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
@@ -423,6 +350,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       controller: nameController,
       style: EaText.primary,
       decoration: InputDecoration(
+        helperText: "e.g Concentration, Movie Time, Relax Time",
         labelText: "Profile name",
         labelStyle: EaText.secondary,
         enabledBorder: OutlineInputBorder(
@@ -458,16 +386,12 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                     : EaColor.back,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: selected
-                      ? EaColor.fore
-                      : EaColor.border,
+                  color: selected ? EaColor.fore : EaColor.border,
                 ),
               ),
               child: Icon(
                 icon,
-                color: selected
-                    ? EaColor.fore
-                    : EaColor.textSecondary,
+                color: selected ? EaColor.fore : EaColor.textSecondary,
               ),
             ),
           );
@@ -476,33 +400,25 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  /* ===================================================== */
-
   Widget _actions() {
     if (actions.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text(
-          "No devices added yet",
-          style: EaText.secondary,
-        ),
+        child: Text("No devices added yet", style: EaText.secondary),
       );
     }
 
-    return Column(
-      children: actions.map(_actionCard).toList(),
-    );
+    return Column(children: actions.map(_actionCard).toList());
   }
 
   Widget _actionCard(DeviceAction a) {
-    final d =
-        widget.devices.firstWhere((e) => e.uuid == a.deviceId);
+    final d = widget.devices.firstWhere((e) => e.uuid == a.deviceId);
 
-    final hasPower =
-        d.capabilities.contains(CoreCapability.CORE_CAP_POWER);
+    final hasPower = d.capabilities.contains(CoreCapability.CORE_CAP_POWER);
 
-    final hasBrightness =
-        d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS);
+    final hasBrightness = d.capabilities.contains(
+      CoreCapability.CORE_CAP_BRIGHTNESS,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -543,8 +459,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   Widget _powerRow(DeviceAction a) {
     return Row(
       children: [
-        const Icon(Icons.power_settings_new,
-            size: 18, color: EaColor.fore),
+        const Icon(Icons.power_settings_new, size: 18, color: EaColor.fore),
 
         const SizedBox(width: 8),
 
@@ -571,8 +486,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
         Row(
           children: [
-            const Icon(Icons.brightness_6,
-                size: 18, color: EaColor.fore),
+            const Icon(Icons.brightness_6, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
             Text("Brightness", style: EaText.secondary),
           ],
@@ -584,8 +498,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           divisions: 100,
           value: a.brightness.toDouble(),
           activeColor: EaColor.fore,
-          inactiveColor:
-              EaColor.fore.withValues(alpha: .25),
+          inactiveColor: EaColor.fore.withValues(alpha: .25),
           onChanged: (v) {
             setState(() => a.brightness = v.round());
           },
@@ -594,15 +507,12 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  /* ===================================================== */
-
   Widget _devicePicker() {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: widget.devices.map((d) {
-        final used =
-            actions.any((a) => a.deviceId == d.uuid);
+        final used = actions.any((a) => a.deviceId == d.uuid);
 
         return OutlinedButton.icon(
           onPressed: used ? null : () => _addAction(d),
@@ -612,14 +522,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           label: Text(d.name),
 
           style: OutlinedButton.styleFrom(
-            foregroundColor:
-                used ? EaColor.textSecondary : EaColor.fore,
+            foregroundColor: used ? EaColor.textSecondary : EaColor.fore,
 
-            side: BorderSide(
-              color: used
-                  ? EaColor.border
-                  : EaColor.fore,
-            ),
+            side: BorderSide(color: used ? EaColor.border : EaColor.fore),
 
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -641,10 +546,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             borderRadius: BorderRadius.circular(18),
           ),
         ),
-        child: Text(
-          "Save Profile",
-          style: EaText.primaryBack,
-        ),
+        child: Text("Save Profile", style: EaText.primaryBack),
       ),
     );
   }
