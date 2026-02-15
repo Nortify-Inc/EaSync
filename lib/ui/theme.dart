@@ -6,7 +6,7 @@ class EaColor {
   static const Color secondaryFore = Color(0xFF9AAEFF);
 
   // Surfaces
-  static const Color back = Color(0xFF1C1C1E);
+  static const Color back = Color.fromARGB(255, 32, 32, 32);
   static const Color secondaryBack = Color(0xFF2A2A2D);
 
   // Main background
@@ -49,11 +49,11 @@ class EaText {
     fontSize: 14,
   );
 
-   static final TextStyle secondaryBack = GoogleFonts.poppins(
+  static final TextStyle secondaryBack = GoogleFonts.poppins(
     color: EaColor.textSecondary,
     fontStyle: FontStyle.italic,
     fontSize: 12,
-    fontWeight: FontWeight.w300
+    fontWeight: FontWeight.w300,
   );
 
   static final TextStyle accent = GoogleFonts.poppins(
@@ -67,4 +67,3 @@ class EaText {
     fontSize: 12,
   );
 }
-

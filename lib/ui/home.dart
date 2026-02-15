@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'handler.dart';
 
 class Home extends StatefulWidget {
@@ -9,39 +11,26 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   static const int fakePages = 10000;
-
-  static const int startPage =
-      (fakePages ~/ 2) - ((fakePages ~/ 2) % 3);
+  static const int startPage = (fakePages ~/ 2) - ((fakePages ~/ 2) % 3);
 
   int selectedIndex = 0;
   int currentFakePage = startPage;
 
-  final PageController pageController =
-      PageController(initialPage: startPage);
-
-  final PageController bottomTextController =
-      PageController(initialPage: startPage);
+  final PageController pageController = PageController(initialPage: startPage);
 
   late double screenWidth;
-
   double dragStartX = 0;
   double dragDelta = 0;
 
-  final List<Widget> pages = const [
-    Dashboard(),
-    Profiles(),
-    Manage(),
+  final List<Widget> pages = [
+    const Dashboard(),
+    const Profiles(),
+    const Manage(),
   ];
 
-  final List<String> tabs = [
-    "Dashboard",
-    "Profiles",
-    "Manage",
-  ];
+  final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
 
-  int getRealIndex(int fakeIndex) {
-    return fakeIndex % pages.length;
-  }
+  int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
 
   @override
   void didChangeDependencies() {
@@ -49,42 +38,15 @@ class _HomeState extends State<Home> {
     screenWidth = MediaQuery.of(context).size.width;
   }
 
-  @override
-  void initState() {
-    super.initState();
-    bottomTextController.addListener(syncPages);
-  }
-
-  void syncPages() {
-    final page = bottomTextController.page;
-    if (page == null) return;
-
-    final fake = page.round();
-
-    if (fake != currentFakePage) {
-      currentFakePage = fake;
-
-      final real = getRealIndex(fake);
-
-      if (real != selectedIndex) {
-        setState(() => selectedIndex = real);
-      }
-    }
-
-    pageController.jumpTo(page * screenWidth);
-  }
-
   void goNext() {
-    bottomTextController.animateToPage(
-      currentFakePage + 1,
+    pageController.nextPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
   }
 
   void goPrev() {
-    bottomTextController.animateToPage(
-      currentFakePage - 1,
+    pageController.previousPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
     );
@@ -93,28 +55,69 @@ class _HomeState extends State<Home> {
   @override
   void dispose() {
     pageController.dispose();
-    bottomTextController.dispose();
     super.dispose();
   }
 
+  // blur animado do título
+  Widget _buildBlurTitle() {
+    final title = tabs[selectedIndex];
+
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(title),
+      tween: Tween<double>(begin: 3, end: 0),
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOut,
+      builder: (context, blur, _) {
+        return ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+          child: Text(title, style: EaText.primary),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Positioned(
+      top: 0,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            height: 56,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [Spacer(flex: 1), _buildBlurTitle(), Spacer(flex: 100)],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(
-        pages.length,
-        (index) => _buildDot(index),
+    return Positioned(
+      bottom: 0,
+      left: 0,
+      right: 0,
+      child: SizedBox(
+        height: 36,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(pages.length, (index) => _buildDot(index)),
+        ),
       ),
     );
   }
 
   Widget _buildDot(int index) {
     final bool active = index == selectedIndex;
-
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      width: active ? 18 : 8,
+      width: active ? 20 : 8,
       height: 8,
       decoration: BoxDecoration(
         color: active ? EaColor.fore : EaColor.back,
@@ -122,101 +125,58 @@ class _HomeState extends State<Home> {
         boxShadow: active
             ? [
                 BoxShadow(
-                  color: EaColor.fore.withValues(alpha: 0.4),
-                  blurRadius: 6,
+                  color: Colors.deepPurpleAccent,
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
                 ),
               ]
-            : null,
+            : [BoxShadow(color: EaColor.border, blurRadius: 2)],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // calculando padding vertical automático
+    final double topPadding =
+        MediaQuery.of(context).padding.top + 56; // SafeArea + AppBar
+    final double bottomPadding = 36 + 16; // indicador + margem
+
     return Scaffold(
       backgroundColor: EaColor.background,
-
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-
-        onHorizontalDragStart: (d) {
-          dragStartX = d.globalPosition.dx;
-        },
-
-        onHorizontalDragUpdate: (d) {
-          dragDelta = d.globalPosition.dx - dragStartX;
-        },
-
-        onHorizontalDragEnd: (d) {
-          if (dragDelta.abs() < 50) return;
-
-          if (dragDelta < 0) {
-            goNext();
-          } else {
-            goPrev();
-          }
-
-          dragDelta = 0;
-        },
-
-        child: PageView.builder(
-          controller: pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: fakePages,
-          itemBuilder: (context, index) {
-            final real = getRealIndex(index);
-            return pages[real];
-          },
-        ),
-      ),
-
-      bottomNavigationBar: SafeArea(        
-        child: SizedBox(
-          height: 80,
-          child: Container(
-            color: EaColor.background,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildIndicator(),
-
-                const SizedBox(height: 10),
-
-                Container(
-                  height: 48,
-                  width: 180,
-                  decoration: BoxDecoration(
-                    color: EaColor.fore,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: PageView.builder(
-                    controller: bottomTextController,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: fakePages,
-                    itemBuilder: (context, index) {
-                      final real = getRealIndex(index);
-
-                      return Center(
-                        child: Text(
-                          tabs[real],
-                          style: EaText.primaryBack,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+      body: Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onHorizontalDragStart: (d) => dragStartX = d.globalPosition.dx,
+            onHorizontalDragUpdate: (d) =>
+                dragDelta = d.globalPosition.dx - dragStartX,
+            onHorizontalDragEnd: (d) {
+              if (dragDelta.abs() > 50) {
+                dragDelta < 0 ? goNext() : goPrev();
+              }
+              dragDelta = 0;
+            },
+            child: Padding(
+              padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
+              child: PageView.builder(
+                controller: pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: fakePages,
+                itemBuilder: (context, index) => pages[getRealIndex(index)],
+                onPageChanged: (fake) {
+                  currentFakePage = fake;
+                  final real = getRealIndex(fake);
+                  if (real != selectedIndex)
+                    setState(() => selectedIndex = real);
+                },
+              ),
             ),
           ),
-        ),
-      )
+          _buildAppBar(),
+          _buildIndicator(),
+        ],
+      ),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'handler.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Bridge.init();
   runApp(const EaSync());

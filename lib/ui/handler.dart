@@ -13,5 +13,3 @@ export 'home.dart';
 export 'dashboard.dart';
 export 'profiles.dart';
 export 'manage.dart';
-
-

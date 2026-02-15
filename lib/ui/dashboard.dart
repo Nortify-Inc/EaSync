@@ -42,54 +42,7 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          _header(),
-
-          Expanded(
-            child: _body(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /* ===================================================== */
-
-  Widget _header() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-
-      child: Row(
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-
-            children: [
-              Text(
-                "Dashboard",
-
-                style: EaText.primary.copyWith(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 4),
-
-              Text(
-                "${devices.length} devices",
-
-                style: EaText.secondary,
-              ),
-            ],
-          ),
-
-          const Spacer(),
-        ],
-      ),
-    );
+    return SafeArea(child: _body());
   }
 
   Widget _body() {
@@ -108,14 +61,8 @@ class _DashboardState extends State<Dashboard> {
     return _grid();
   }
 
-  /* ===================================================== */
-
   Widget _loading() {
-    return const Center(
-      child: CircularProgressIndicator(
-        color: EaColor.fore,
-      ),
-    );
+    return const Center(child: CircularProgressIndicator(color: EaColor.fore));
   }
 
   Widget _errorState() {
@@ -127,18 +74,11 @@ class _DashboardState extends State<Dashboard> {
           mainAxisAlignment: MainAxisAlignment.center,
 
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Colors.redAccent,
-            ),
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
 
             const SizedBox(height: 16),
 
-            Text(
-              "Core error",
-              style: EaText.primary,
-            ),
+            Text("Core error", style: EaText.primary),
 
             const SizedBox(height: 8),
 
@@ -146,19 +86,6 @@ class _DashboardState extends State<Dashboard> {
               error ?? "",
               textAlign: TextAlign.center,
               style: EaText.secondary,
-            ),
-
-            const SizedBox(height: 24),
-
-            ElevatedButton(
-              onPressed: _loadDevices,
-
-              style: ElevatedButton.styleFrom(
-                backgroundColor: EaColor.fore,
-                foregroundColor: EaColor.background,
-              ),
-
-              child: const Text("Retry"),
             ),
           ],
         ),
@@ -227,8 +154,6 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  /* ===================================================== */
-
   Widget _grid() {
     return RefreshIndicator(
       color: EaColor.fore,
@@ -238,8 +163,7 @@ class _DashboardState extends State<Dashboard> {
       child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
 
-        gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 18,
           crossAxisSpacing: 18,
@@ -277,27 +201,16 @@ class _DashboardState extends State<Dashboard> {
             const Align(
               alignment: Alignment.topRight,
 
-              child: Icon(
-                Icons.circle,
-                size: 10,
-                color: Colors.greenAccent,
-              ),
+              child: Icon(Icons.circle, size: 10, color: Colors.greenAccent),
             ),
 
             const Spacer(),
 
-            const Icon(
-              Icons.devices,
-              size: 36,
-              color: EaColor.fore,
-            ),
+            const Icon(Icons.devices, size: 36, color: EaColor.fore),
 
             const SizedBox(height: 12),
 
-            Text(
-              device.name,
-              style: EaText.primary,
-            ),
+            Text(device.name, style: EaText.primary),
 
             Text(
               device.uuid,
@@ -305,17 +218,13 @@ class _DashboardState extends State<Dashboard> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
 
-              style: EaText.secondary.copyWith(
-                fontSize: 11,
-              ),
+              style: EaText.secondary.copyWith(fontSize: 11),
             ),
           ],
         ),
       ),
     );
   }
-
-  /* ===================================================== */
 
   void _togglePower(DeviceInfo device) async {
     try {
@@ -325,11 +234,9 @@ class _DashboardState extends State<Dashboard> {
 
       await _loadDevices();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 }
