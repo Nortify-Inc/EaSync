@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'handler.dart';
 
 class Home extends StatefulWidget {
@@ -135,7 +134,8 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // BODY COM SWIPE GLOBAL
+      backgroundColor: EaColor.background,
+
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
 
@@ -170,52 +170,53 @@ class _HomeState extends State<Home> {
         ),
       ),
 
-      // BOTTOM BAR
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: SafeArea(        
         child: SizedBox(
-          height: 110,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildIndicator(),
+          height: 80,
+          child: Container(
+            color: EaColor.background,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildIndicator(),
 
-              const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-              // PILL FIXA
-              Container(
-                height: 48,
-                width: 180,
-                decoration: BoxDecoration(
-                  color: EaColor.fore,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: PageView.builder(
-                  controller: bottomTextController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: fakePages,
-                  itemBuilder: (context, index) {
-                    final real = getRealIndex(index);
-
-                    return Center(
-                      child: Text(
-                        tabs[real],
-                        style: EaText.primaryBack,
+                Container(
+                  height: 48,
+                  width: 180,
+                  decoration: BoxDecoration(
+                    color: EaColor.fore,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
-                    );
-                  },
+                    ],
+                  ),
+                  child: PageView.builder(
+                    controller: bottomTextController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: fakePages,
+                    itemBuilder: (context, index) {
+                      final real = getRealIndex(index);
+
+                      return Center(
+                        child: Text(
+                          tabs[real],
+                          style: EaText.primaryBack,
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      )
     );
   }
 }
