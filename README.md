@@ -91,6 +91,7 @@ lib/
 
 ```bash
 cd easync/lib/core
+chmod +x build.sh
 ./build.sh
 
 ```
