@@ -51,7 +51,6 @@ class EaText {
 
   static final TextStyle secondaryBack = GoogleFonts.poppins(
     color: EaColor.textSecondary,
-    fontStyle: FontStyle.italic,
     fontSize: 12,
     fontWeight: FontWeight.w300,
   );

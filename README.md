@@ -1,6 +1,6 @@
-# easync
+# EaSync
 
-A new Flutter project.
+Everything Connected. One Interface.
 
 ## Getting Started
 

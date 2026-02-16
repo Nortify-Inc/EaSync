@@ -5,7 +5,7 @@ import 'package:ffi/ffi.dart';
 
 final DynamicLibrary coreLib = Platform.isWindows
     ? DynamicLibrary.open('core.dll')
-    : DynamicLibrary.open('libcore.so');
+    : DynamicLibrary.open('libeasync_core.so');
 
 const String CORE_API_VERSION = "0.0.1";
 
@@ -110,10 +110,6 @@ typedef _coreGetStateC =
 typedef _coreGetStateDart =
     int Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>);
 
-typedef _coreSetPowerC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
-
-typedef _coreSetPowerDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
-
 typedef _coreRegisterDeviceC =
     Int32 Function(
       Pointer<Void>,
@@ -134,21 +130,31 @@ typedef _coreRegisterDeviceDart =
       int,
     );
 
+typedef _coreSetPowerC = 
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
+typedef _coreSetPowerDart = 
+    int Function(Pointer<Void>, Pointer<Utf8>, bool);
+
 typedef _coreSetBrightnessC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32);
-
 typedef _coreSetBrightnessDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, int);
+
+typedef _coreSetColorC = 
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetColorDart = 
     int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 typedef _coreSetTemperatureC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
-
 typedef _coreSetTemperatureDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
 
-typedef _coreSetColorC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetTimeC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
+typedef _coreSetTimeDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, int);
 
-typedef _coreSetColorDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -183,13 +189,17 @@ final _coreSetBrightnessDart _coreSetBrightness = coreLib
       'core_set_brightness',
     );
 
+final _coreSetColorDart _coreSetColor = coreLib
+    .lookupFunction<_coreSetColorC, _coreSetColorDart>('core_set_color');
+
 final _coreSetTemperatureDart _coreSetTemperature = coreLib
     .lookupFunction<_coreSetTemperatureC, _coreSetTemperatureDart>(
       'core_set_temperature',
     );
 
-final _coreSetColorDart _coreSetColor = coreLib
-    .lookupFunction<_coreSetColorC, _coreSetColorDart>('core_set_color');
+final _coreSetTimeDart _coreSetTime = coreLib
+    .lookupFunction<_coreSetTimeC, _coreSetTimeDart>('core_set_time');
+
 
 class DeviceInfo {
   final String uuid;
@@ -397,10 +407,6 @@ class Bridge {
     return result;
   }
 
-  /* =========================
-     STATE CONTROL
-  ========================== */
-
   static void setPower(String uuid, bool value) {
     _ensureReady();
 
@@ -429,6 +435,20 @@ class Bridge {
     }
   }
 
+  static void setColor(String uuid, int value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetColor(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
   static void setTemperature(String uuid, double value) {
     _ensureReady();
 
@@ -443,12 +463,12 @@ class Bridge {
     }
   }
 
-  static void setColor(String uuid, int value) {
+  static void setTime(String uuid, int value) {
     _ensureReady();
 
     final uuidPtr = uuid.toNativeUtf8();
 
-    final res = _coreSetColor(_ctx!, uuidPtr, value);
+    final res = _coreSetTime(_ctx!, uuidPtr, value);
 
     calloc.free(uuidPtr);
 

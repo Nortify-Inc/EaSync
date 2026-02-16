@@ -1,20 +1,23 @@
-import 'package:flutter/material.dart';
 import 'handler.dart';
-
-/* ============================================================
-   MODELS
-============================================================ */
 
 class DeviceAction {
   final String deviceId;
 
   bool power;
   int brightness;
+  double temperature;
+  int color;
+  int time;
+
 
   DeviceAction({
     required this.deviceId,
     this.power = false,
-    this.brightness = 100,
+    this.brightness = 0,
+    this.temperature = 0,
+    this.color = 0xFFFFFF,
+    this.time = 0
+
   });
 }
 
@@ -26,9 +29,6 @@ class Profile {
   Profile({required this.name, required this.actions, required this.icon});
 }
 
-/* ============================================================
-   PAGE
-============================================================ */
 
 class Profiles extends StatefulWidget {
   const Profiles({super.key});
@@ -37,10 +37,15 @@ class Profiles extends StatefulWidget {
   State<Profiles> createState() => _ProfilesState();
 }
 
-class _ProfilesState extends State<Profiles> {
+class _ProfilesState extends State<Profiles>
+    with AutomaticKeepAliveClientMixin {
+
   final List<Profile> profiles = [];
 
   List<DeviceInfo> devices = [];
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -86,23 +91,43 @@ class _ProfilesState extends State<Profiles> {
       for (final a in profile.actions) {
         Bridge.setPower(a.deviceId, a.power);
 
-        if (a.brightness >= 0) {
+        if (a.brightness > 0) {
           Bridge.setBrightness(a.deviceId, a.brightness);
+        }
+
+        if (a.temperature > 0) {
+          Bridge.setTemperature(a.deviceId, a.temperature);
+        }
+
+        if (a.color > 0) {
+          Bridge.setColor(a.deviceId, a.color);
+        }
+
+        if (a.time > 0) {
+          Bridge.setTime(a.deviceId, a.time);
         }
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Profile applied")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Profile applied",
+            style: EaText.primaryBack,
+          ),
+          backgroundColor: EaColor.back,
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // ← IMPORTANTE
+
     return SafeArea(
       child: Column(
         children: [
@@ -123,9 +148,11 @@ class _ProfilesState extends State<Profiles> {
           backgroundColor: EaColor.fore,
           onPressed: () => _openEditor(),
           icon: const Icon(Icons.add, color: Colors.black),
-          label: const Text(
+          label: Text(
             "New profile",
-            style: TextStyle(color: Colors.black),
+            style: EaText.primaryBack.copyWith(
+              color: Colors.black,
+            ),
           ),
         ),
       ),
@@ -203,19 +230,29 @@ class _ProfilesState extends State<Profiles> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(p.name, style: EaText.primary),
-                Text("${p.actions.length} actions", style: EaText.secondary),
+                Text(
+                  "${p.actions.length} ${p.actions.length > 1 ? "Actions" : "Action"}",
+                  style: EaText.secondary,
+                ),
               ],
             ),
           ),
 
           IconButton(
             onPressed: () => _applyProfile(p),
-            icon: const Icon(Icons.play_arrow, color: EaColor.fore),
+            icon: const Icon(
+              Icons.play_arrow,
+              color: EaColor.fore,
+            ),
           ),
 
           IconButton(
             onPressed: () => _openEditor(profile: p),
-            icon: const Icon(Icons.edit, color: EaColor.textSecondary),
+            icon: const Icon(
+              Icons.edit,
+              size: 15,
+              color: EaColor.fore,
+            ),
           ),
         ],
       ),
@@ -223,9 +260,6 @@ class _ProfilesState extends State<Profiles> {
   }
 }
 
-/* ============================================================
-   EDITOR
-============================================================ */
 
 class _ProfileEditor extends StatefulWidget {
   final List<DeviceInfo> devices;
@@ -350,7 +384,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       controller: nameController,
       style: EaText.primary,
       decoration: InputDecoration(
-        helperText: "e.g Concentration, Movie Time, Relax Time",
+        helperText: "e.g Focus Mode, Movie Time, Relax Moment",
+        helperStyle: EaText.secondaryBack,
         labelText: "Profile name",
         labelStyle: EaText.secondary,
         enabledBorder: OutlineInputBorder(
@@ -415,10 +450,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     final d = widget.devices.firstWhere((e) => e.uuid == a.deviceId);
 
     final hasPower = d.capabilities.contains(CoreCapability.CORE_CAP_POWER);
-
-    final hasBrightness = d.capabilities.contains(
-      CoreCapability.CORE_CAP_BRIGHTNESS,
-    );
+    final hasBrightness = d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS);
+    final hasColor = d.capabilities.contains(CoreCapability.CORE_CAP_COLOR);
+    final hasTemperature = d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE);
+    final hasTime = d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -451,6 +486,12 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           if (hasPower) _powerRow(a),
 
           if (hasBrightness) _brightnessRow(a),
+
+          if (hasColor) _colorRow(a),
+
+          if (hasTemperature) _temperatureRow(a),
+
+          if (hasTime) _timeRow(a),
         ],
       ),
     );
@@ -507,6 +548,214 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
+  Widget _colorRow(DeviceAction a) {
+    Color current = Color(0xFF000000 | a.color);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+
+        Row(
+          children: [
+            const Icon(Icons.palette, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Color", style: EaText.secondary),
+
+            const Spacer(),
+
+            GestureDetector(
+              onTap: () {
+                Color selected = current;
+
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: EaColor.background,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  builder: (_) {
+                    return Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          RgbColorWheel(
+                            color: selected,
+                            onChanged: (c) {
+                              selected = c;
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: EaColor.fore,
+                              foregroundColor: EaColor.background,
+                            ),
+                            onPressed: () {
+                              final rgb = selected.toARGB32() & 0x00FFFFFF;
+
+                              setState(() => a.color = rgb);
+
+                              Navigator.pop(context);
+                            },
+                            child: const Text("Apply"),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: current,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: EaColor.fore,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+
+
+  Widget _temperatureRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+
+        Row(
+          children: [
+            const Icon(Icons.thermostat, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Temperature", style: EaText.secondary),
+
+            const Spacer(),
+
+            
+          ],
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            Slider(
+              min: 0.0,
+              max: 36.0,
+              divisions: 36,
+              value: a.temperature,
+              activeColor: EaColor.fore,
+              inactiveColor: EaColor.fore.withValues(alpha: .25),
+              onChanged: (v) {
+                setState(() => a.temperature = v);
+              },
+            ),
+            Text(
+              "${a.temperature.toStringAsFixed(1)}°C",
+              style: EaText.secondary.copyWith(
+                color: EaColor.fore,
+              ),
+            )
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _timeRow(DeviceAction a) {
+
+    TimeOfDay? toTime(int? m) {
+      if (m == null || m < 0) return null;
+
+      final h = m ~/ 60;
+      final min = m % 60;
+
+      return TimeOfDay(hour: h, minute: min);
+    }
+
+    int toMinutes(TimeOfDay t) {
+      return t.hour * 60 + t.minute;
+    }
+
+    final time = toTime(a.time);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+
+        Row(
+          children: [
+            const Icon(Icons.schedule, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Schedule", style: EaText.secondary),
+          ],
+        ),
+
+        const SizedBox(height: 6),
+
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+          decoration: BoxDecoration(
+            color: EaColor.background,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: EaColor.border),
+          ),
+          child: Row(
+            children: [
+              Text(
+                time != null
+                    ? "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"
+                    : "Not set",
+                style: EaText.secondary,
+              ),
+
+              const Spacer(),
+
+              IconButton(
+                icon: const Icon(
+                  Icons.edit,
+                  size: 18,
+                  color: EaColor.fore,
+                ),
+                onPressed: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: time ?? TimeOfDay.now(),
+                  );
+
+                  if (picked != null) {
+                    final minutes = toMinutes(picked);
+
+                    setState(() => a.time = minutes);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
   Widget _devicePicker() {
     return Wrap(
       spacing: 8,
@@ -550,4 +799,92 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       ),
     );
   }
+}
+
+class RgbColorWheel extends StatelessWidget {
+  final Color color;
+  final ValueChanged<Color> onChanged;
+  final double size;
+
+  const RgbColorWheel({
+    super.key,
+    required this.color,
+    required this.onChanged,
+    this.size = 220,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanDown: (d) => _update(d.localPosition),
+      onPanUpdate: (d) => _update(d.localPosition),
+
+      child: CustomPaint(
+        size: Size.square(size),
+        painter: _RgbWheelPainter(),
+      ),
+    );
+  }
+
+  void _update(Offset pos) {
+    final center = Offset(size / 2, size / 2);
+    final dx = pos.dx - center.dx;
+    final dy = pos.dy - center.dy;
+
+    final dist = sqrt(dx * dx + dy * dy);
+
+    if (dist > size / 2) return;
+
+    final r = ((dx / size + 0.5) * 255).clamp(0, 255).toInt();
+    final g = ((dy / size + 0.5) * 255).clamp(0, 255).toInt();
+    final b = (255 - ((dx + dy) / size * 255))
+        .clamp(0, 255)
+        .toInt();
+
+    onChanged(Color.fromARGB(255, r, g, b));
+  }
+}
+
+class _RgbWheelPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    final shader = SweepGradient(
+      colors: const [
+        Color(0xFFFF0000),
+        Color(0xFFFFFF00),
+        Color(0xFF00FF00),
+        Color(0xFF00FFFF),
+        Color(0xFF0000FF),
+        Color(0xFFFF00FF),
+        Color(0xFFFF0000),
+      ],
+    ).createShader(rect);
+
+    final paint = Paint()
+      ..shader = shader
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, radius, paint);
+
+    final overlay = RadialGradient(
+      colors: [
+        Colors.white,
+        Colors.transparent,
+      ],
+    ).createShader(rect);
+
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()..shader = overlay,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
