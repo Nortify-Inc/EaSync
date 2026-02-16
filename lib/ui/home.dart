@@ -167,8 +167,7 @@ class _HomeState extends State<Home> {
                 onPageChanged: (fake) {
                   currentFakePage = fake;
                   final real = getRealIndex(fake);
-                  if (real != selectedIndex)
-                    setState(() => selectedIndex = real);
+                  if (real != selectedIndex) setState(() => selectedIndex = real);
                 },
               ),
             ),

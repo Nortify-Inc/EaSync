@@ -32,7 +32,6 @@ class _SplashState extends State<Splash> {
 
       body: Stack(
         children: [
-          _backgroundGlow(),
 
           SafeArea(
             child: Padding(
@@ -101,31 +100,56 @@ class _SplashState extends State<Splash> {
   }
 
   Widget _headline() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              left: -120,
+              top: -100,
+              child: Container(
+                width: 360,
+                height: 360,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      EaColor.fore.withValues(alpha: 0.35),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-      children: [
-        Text(
-          "Smart\nControl",
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Smart\nControl",
+                  style: EaText.primary.copyWith(
+                    fontSize: 48,
+                    height: 1.05,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
 
-          style: EaText.primary.copyWith(
-            fontSize: 48,
-            height: 1.05,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+                const SizedBox(height: 16),
 
-        const SizedBox(height: 16),
-
-        Text(
-          "Everything connected.\nOne interface.",
-
-          style: EaText.secondary.copyWith(
-            color: EaColor.textSecondary,
-            fontSize: 16,
-          ),
-        ),
-      ],
+                Text(
+                  "Everything connected.\nOne interface.",
+                  style: EaText.secondary.copyWith(
+                    color: EaColor.textSecondary,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
+
 }
