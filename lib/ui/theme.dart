@@ -29,29 +29,30 @@ class EaText {
   );
 
   static final TextStyle primaryTranslucent = GoogleFonts.poppins(
-    color: EaColor.textSecondary,
-    fontSize: 16,
+    color: EaColor.textPrimary.withValues(alpha: 0.5),
+    fontSize: 20,
   );
 
   static final TextStyle primaryBack = GoogleFonts.poppins(
-    color: Colors.white,
-    fontSize: 15,
+    color: EaColor.back,
+    fontSize: 14,
     fontWeight: FontWeight.w500,
   );
 
   static final TextStyle secondary = GoogleFonts.poppins(
-    color: EaColor.textSecondary,
+    color: EaColor.textPrimary,
     fontSize: 14,
+    fontWeight: FontWeight.w500,
   );
 
   static final TextStyle secondaryTranslucent = GoogleFonts.poppins(
-    color: EaColor.textSecondary.withValues(alpha: 0.5),
+    color: EaColor.textPrimary.withValues(alpha: 0.5),
     fontSize: 14,
   );
 
   static final TextStyle secondaryBack = GoogleFonts.poppins(
-    color: EaColor.textSecondary,
-    fontSize: 12,
+    color: EaColor.back,
+    fontSize: 14,
     fontWeight: FontWeight.w300,
   );
 
@@ -62,7 +63,7 @@ class EaText {
   );
 
   static final TextStyle small = GoogleFonts.poppins(
-    color: EaColor.textSecondary,
+    color: EaColor.textPrimary,
     fontSize: 12,
   );
 }

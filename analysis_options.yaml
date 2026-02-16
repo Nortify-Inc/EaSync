@@ -14,6 +14,7 @@ analyzer:
     constant_identifier_names: ignore
     file_names: ignore
     library_private_types_in_public_api: ignore
+    must_be_immutable: ignore
     strict_top_level_inference: ignore
     unnecessary_import: ignore
     unrelated_type_equality_checks: ignore

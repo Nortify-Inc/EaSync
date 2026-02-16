@@ -9,15 +9,13 @@ class DeviceAction {
   int color;
   int time;
 
-
   DeviceAction({
     required this.deviceId,
     this.power = false,
     this.brightness = 0,
     this.temperature = 0,
-    this.color = 0xFFFFFF,
-    this.time = 0
-
+    this.color = 0xFFFFFFFF,
+    this.time = 0,
   });
 }
 
@@ -29,7 +27,6 @@ class Profile {
   Profile({required this.name, required this.actions, required this.icon});
 }
 
-
 class Profiles extends StatefulWidget {
   const Profiles({super.key});
 
@@ -39,9 +36,7 @@ class Profiles extends StatefulWidget {
 
 class _ProfilesState extends State<Profiles>
     with AutomaticKeepAliveClientMixin {
-
   final List<Profile> profiles = [];
-
   List<DeviceInfo> devices = [];
 
   @override
@@ -61,6 +56,7 @@ class _ProfilesState extends State<Profiles>
   }
 
   void _openEditor({Profile? profile}) {
+    _loadDevices();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -99,7 +95,7 @@ class _ProfilesState extends State<Profiles>
           Bridge.setTemperature(a.deviceId, a.temperature);
         }
 
-        if (a.color > 0) {
+        if (a.color != 0xFFFFFFFF) {
           Bridge.setColor(a.deviceId, a.color);
         }
 
@@ -110,23 +106,20 @@ class _ProfilesState extends State<Profiles>
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            "Profile applied",
-            style: EaText.primaryBack,
-          ),
+          content: Text("Profile applied", style: EaText.secondary),
           backgroundColor: EaColor.back,
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // ← IMPORTANTE
+    super.build(context);
 
     return SafeArea(
       child: Column(
@@ -148,12 +141,7 @@ class _ProfilesState extends State<Profiles>
           backgroundColor: EaColor.fore,
           onPressed: () => _openEditor(),
           icon: const Icon(Icons.add, color: Colors.black),
-          label: Text(
-            "New profile",
-            style: EaText.primaryBack.copyWith(
-              color: Colors.black,
-            ),
-          ),
+          label: Text("New profile", style: EaText.primaryBack),
         ),
       ),
     );
@@ -202,7 +190,7 @@ class _ProfilesState extends State<Profiles>
             Text(
               "Create profiles aligned with your mood",
               textAlign: TextAlign.center,
-              style: EaText.secondary,
+              style: EaText.secondaryTranslucent,
             ),
           ],
         ),
@@ -231,7 +219,7 @@ class _ProfilesState extends State<Profiles>
               children: [
                 Text(p.name, style: EaText.primary),
                 Text(
-                  "${p.actions.length} ${p.actions.length > 1 ? "Actions" : "Action"}",
+                  "${p.actions.length} ${p.actions.length > 1 ? "actions" : "action"}",
                   style: EaText.secondary,
                 ),
               ],
@@ -240,26 +228,18 @@ class _ProfilesState extends State<Profiles>
 
           IconButton(
             onPressed: () => _applyProfile(p),
-            icon: const Icon(
-              Icons.play_arrow,
-              color: EaColor.fore,
-            ),
+            icon: const Icon(Icons.play_arrow, color: EaColor.fore),
           ),
 
           IconButton(
             onPressed: () => _openEditor(profile: p),
-            icon: const Icon(
-              Icons.edit,
-              size: 15,
-              color: EaColor.fore,
-            ),
+            icon: const Icon(Icons.edit, size: 15, color: EaColor.fore),
           ),
         ],
       ),
     );
   }
 }
-
 
 class _ProfileEditor extends StatefulWidget {
   final List<DeviceInfo> devices;
@@ -286,6 +266,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     Icons.home,
     Icons.work,
     Icons.bed,
+    Icons.ac_unit,
+    Icons.gamepad,
+    Icons.wine_bar,
     Icons.movie,
     Icons.music_note,
     Icons.local_cafe,
@@ -362,7 +345,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
               _devicePicker(),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 19),
 
               _saveButton(),
             ],
@@ -382,13 +365,14 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   Widget _nameField() {
     return TextField(
       controller: nameController,
-      style: EaText.primary,
+      style: EaText.secondary,
       decoration: InputDecoration(
-        helperText: "e.g Focus Mode, Movie Time, Relax Moment",
-        helperStyle: EaText.secondaryBack,
+        hintText: "e.g Focus Mode, Movie Time, Relax Moment",
+        hintStyle: EaText.secondaryBack,
+
         labelText: "Profile name",
         labelStyle: EaText.secondary,
-        enabledBorder: OutlineInputBorder(
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: EaColor.border),
         ),
@@ -436,23 +420,22 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   }
 
   Widget _actions() {
-    if (actions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Text("No devices added yet", style: EaText.secondary),
-      );
-    }
-
-    return Column(children: actions.map(_actionCard).toList());
+    return widget.devices.isEmpty
+        ? Text("No devices yet", style: EaText.secondaryTranslucent)
+        : Column(children: actions.map(_actionCard).toList());
   }
 
   Widget _actionCard(DeviceAction a) {
     final d = widget.devices.firstWhere((e) => e.uuid == a.deviceId);
 
     final hasPower = d.capabilities.contains(CoreCapability.CORE_CAP_POWER);
-    final hasBrightness = d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS);
+    final hasBrightness = d.capabilities.contains(
+      CoreCapability.CORE_CAP_BRIGHTNESS,
+    );
     final hasColor = d.capabilities.contains(CoreCapability.CORE_CAP_COLOR);
-    final hasTemperature = d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE);
+    final hasTemperature = d.capabilities.contains(
+      CoreCapability.CORE_CAP_TEMPERATURE,
+    );
     final hasTime = d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP);
 
     return Container(
@@ -544,6 +527,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             setState(() => a.brightness = v.round());
           },
         ),
+
+        Text("${a.brightness}")
       ],
     );
   }
@@ -577,36 +562,54 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                     ),
                   ),
                   builder: (_) {
-                    return Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          RgbColorWheel(
-                            color: selected,
-                            onChanged: (c) {
-                              selected = c;
-                            },
+                    return StatefulBuilder(
+                      builder: (context, setModalState) {
+                        return Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: selected,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+
+                              RgbColorWheel(
+                                color: selected,
+                                onChanged: (c) {
+                                  setModalState(() => selected = c);
+                                },
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: EaColor.fore,
+                                  foregroundColor: EaColor.background,
+                                ),
+
+                                onPressed: () {
+                                  final rgb = selected.toARGB32() & 0x00FFFFFF;
+                                  setState(() => a.color = rgb);
+                                  Navigator.pop(context);
+                                },
+
+                                child: const Text("Apply"),
+                              ),
+                            ],
                           ),
-
-                          const SizedBox(height: 16),
-
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: EaColor.fore,
-                              foregroundColor: EaColor.background,
-                            ),
-                            onPressed: () {
-                              final rgb = selected.toARGB32() & 0x00FFFFFF;
-
-                              setState(() => a.color = rgb);
-
-                              Navigator.pop(context);
-                            },
-                            child: const Text("Apply"),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     );
                   },
                 );
@@ -618,10 +621,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 decoration: BoxDecoration(
                   color: current,
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: EaColor.fore,
-                    width: 2,
-                  ),
+                  border: Border.all(color: EaColor.fore, width: 2),
                 ),
               ),
             ),
@@ -630,8 +630,6 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       ],
     );
   }
-
-
 
   Widget _temperatureRow(DeviceAction a) {
     return Column(
@@ -646,10 +644,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             Text("Temperature", style: EaText.secondary),
 
             const Spacer(),
-
-            
           ],
         ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -659,17 +656,15 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               divisions: 36,
               value: a.temperature,
               activeColor: EaColor.fore,
-              inactiveColor: EaColor.fore.withValues(alpha: .25),
+              inactiveColor: EaColor.secondaryBack,
               onChanged: (v) {
                 setState(() => a.temperature = v);
               },
             ),
             Text(
               "${a.temperature.toStringAsFixed(1)}°C",
-              style: EaText.secondary.copyWith(
-                color: EaColor.fore,
-              ),
-            )
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
           ],
         ),
       ],
@@ -677,7 +672,6 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   }
 
   Widget _timeRow(DeviceAction a) {
-
     TimeOfDay? toTime(int? m) {
       if (m == null || m < 0) return null;
 
@@ -709,10 +703,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         const SizedBox(height: 6),
 
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
             color: EaColor.background,
             borderRadius: BorderRadius.circular(12),
@@ -730,11 +721,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               const Spacer(),
 
               IconButton(
-                icon: const Icon(
-                  Icons.edit,
-                  size: 18,
-                  color: EaColor.fore,
-                ),
+                icon: const Icon(Icons.edit, size: 18, color: EaColor.fore),
                 onPressed: () async {
                   final picked = await showTimePicker(
                     context: context,
@@ -754,7 +741,6 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       ],
     );
   }
-
 
   Widget _devicePicker() {
     return Wrap(
@@ -801,7 +787,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   }
 }
 
-class RgbColorWheel extends StatelessWidget {
+class RgbColorWheel extends StatefulWidget {
   final Color color;
   final ValueChanged<Color> onChanged;
   final double size;
@@ -814,75 +800,84 @@ class RgbColorWheel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanDown: (d) => _update(d.localPosition),
-      onPanUpdate: (d) => _update(d.localPosition),
+  State<RgbColorWheel> createState() => _RgbColorWheelState();
+}
 
-      child: CustomPaint(
-        size: Size.square(size),
-        painter: _RgbWheelPainter(),
-      ),
-    );
+class _RgbColorWheelState extends State<RgbColorWheel> {
+  late double hue;
+  late double saturation;
+  late double value;
+
+  @override
+  void initState() {
+    super.initState();
+    final hsv = HSVColor.fromColor(widget.color);
+    hue = hsv.hue;
+    saturation = hsv.saturation;
+    value = hsv.value;
   }
 
   void _update(Offset pos) {
-    final center = Offset(size / 2, size / 2);
+    final center = Offset(widget.size / 2, widget.size / 2);
     final dx = pos.dx - center.dx;
     final dy = pos.dy - center.dy;
 
     final dist = sqrt(dx * dx + dy * dy);
+    final radius = widget.size / 2;
 
-    if (dist > size / 2) return;
+    if (dist > radius) return;
 
-    final r = ((dx / size + 0.5) * 255).clamp(0, 255).toInt();
-    final g = ((dy / size + 0.5) * 255).clamp(0, 255).toInt();
-    final b = (255 - ((dx + dy) / size * 255))
-        .clamp(0, 255)
-        .toInt();
+    // Hue = ângulo do ponto
+    hue = (atan2(dy, dx) * 180 / pi + 360) % 360;
 
-    onChanged(Color.fromARGB(255, r, g, b));
+    // Saturation = distância do centro normalizada
+    saturation = (dist / radius).clamp(0.0, 1.0);
+
+    // Valor fixo máximo (v = 1)
+    value = 1;
+
+    widget.onChanged(HSVColor.fromAHSV(1, hue, saturation, value).toColor());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanDown: (d) => _update(d.localPosition),
+      onPanUpdate: (d) => _update(d.localPosition),
+      child: CustomPaint(
+        size: Size.square(widget.size),
+        painter: _HsvWheelPainter(),
+      ),
+    );
   }
 }
 
-class _RgbWheelPainter extends CustomPainter {
+class _HsvWheelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-
+    final center = Offset(radius, radius);
     final rect = Rect.fromCircle(center: center, radius: radius);
 
+    final paint = Paint()..style = PaintingStyle.fill;
+
+    // Sweep gradient usando cores do HSV
     final shader = SweepGradient(
-      colors: const [
-        Color(0xFFFF0000),
-        Color(0xFFFFFF00),
-        Color(0xFF00FF00),
-        Color(0xFF00FFFF),
-        Color(0xFF0000FF),
-        Color(0xFFFF00FF),
-        Color(0xFFFF0000),
+      colors: [
+        for (var h = 0; h <= 360; h += 60)
+          HSVColor.fromAHSV(1, h.toDouble(), 1, 1).toColor(),
       ],
     ).createShader(rect);
 
-    final paint = Paint()
-      ..shader = shader
-      ..style = PaintingStyle.fill;
-
+    paint.shader = shader;
     canvas.drawCircle(center, radius, paint);
 
+    // Overlay para saturação (centro branco, borda transparente)
     final overlay = RadialGradient(
-      colors: [
-        Colors.white,
-        Colors.transparent,
-      ],
+      colors: [Colors.white, Colors.transparent],
     ).createShader(rect);
 
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()..shader = overlay,
-    );
+    canvas.drawCircle(center, radius, Paint()..shader = overlay);
   }
 
   @override

@@ -32,7 +32,6 @@ class _SplashState extends State<Splash> {
 
       body: Stack(
         children: [
-
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -53,28 +52,6 @@ class _SplashState extends State<Splash> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  // ---------------- UI ----------------
-
-  Widget _backgroundGlow() {
-    return Positioned(
-      top: -60,
-      right: 60,
-
-      child: Container(
-        width: 500,
-        height: 500,
-
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-
-          gradient: RadialGradient(
-            colors: [EaColor.fore.withValues(alpha: 0.35), Colors.transparent],
-          ),
-        ),
       ),
     );
   }
@@ -151,5 +128,4 @@ class _SplashState extends State<Splash> {
       },
     );
   }
-
 }

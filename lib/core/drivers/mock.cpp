@@ -16,7 +16,7 @@ bool MockDriver::connect(const std::string& uuid) {
     CoreDeviceState st{};
     st.power = false;
     st.brightness = 0;
-    st.color = 16777215;
+    st.color = 0xFFFFFFFF;
     st.temperature = 0.0f;
     st.timestamp = 0;
 
