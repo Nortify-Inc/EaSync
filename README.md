@@ -47,39 +47,40 @@ EaSync is a unified platform for smart device control and automation, integratin
 
 ## 🗂 Project Structure
 
-lib/
-├─ core/
-│ ├─ build/
-│ ├─ drivers/
-│ │ ├─ driver.hpp
-│ │ ├─ mock.cpp
-│ │ ├─ mock.hpp
-│ │ ├─ mqtt.cpp
-│ │ ├─ mqtt.hpp
-│ │ ├─ wifi.cpp
-│ │ ├─ wifi.hpp
-│ │ ├─ zigbee.cpp
-│ │ └─ zigbee.hpp
-│ ├─ include/
-│ │ └─ core.h
-│ └─ src/
-│ ├─ core.cpp
-│ └─ driver.cpp
-│
-├─ ui/
-│ ├─ bridge.dart
-│ ├─ bridge_test.dart
-│ ├─ dashboard.dart
-│ ├─ handler.dart
-│ ├─ home.dart
-│ ├─ main.dart
-│ ├─ manage.dart
-│ ├─ profiles.dart
-│ ├─ splash.dart
-│ └─ theme.dart
-│
-├─ build.sh
-└─ CMakeLists.txt
+lib/  
+├─ core/  
+│ ├─ build/  
+│ ├─ drivers/  
+│ │ ├─ driver.hpp  
+│ │ ├─ mock.cpp  
+│ │ ├─ mock.hpp  
+│ │ ├─ mqtt.cpp  
+│ │ ├─ mqtt.hpp  
+│ │ ├─ wifi.cpp  
+│ │ ├─ wifi.hpp  
+│ │ ├─ zigbee.cpp  
+│ │ └─ zigbee.hpp  
+│ ├─ include/  
+│ │ └─ core.h  
+│ └─ src/  
+│ ├─ core.cpp  
+│ └─ driver.cpp  
+│  
+├─ ui/  
+│ ├─ bridge.dart  
+│ ├─ bridge_test.dart  
+│ ├─ dashboard.dart  
+│ ├─ handler.dart  
+│ ├─ home.dart  
+│ ├─ main.dart  
+│ ├─ manage.dart  
+│ ├─ profiles.dart  
+│ ├─ splash.dart  
+│ └─ theme.dart  
+│  
+├─ build.sh  
+└─ CMakeLists.txt  
+
 
 
 ---
