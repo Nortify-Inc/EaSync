@@ -2,7 +2,7 @@
 
 > Everything Connected. One Interface.
 
-EaSync é uma plataforma unificada para controle e automação de dispositivos inteligentes, integrando múltiplos protocolos em um único backend em C++ com uma interface moderna em Flutter.
+EaSync is a unified platform for smart device control and automation, integrating multiple protocols into a single C++ backend with a modern Flutter interface.
 
 ---
 
@@ -25,4 +25,71 @@ EaSync é uma plataforma unificada para controle e automação de dispositivos i
 ## 💻 Languages
 
 - ![Dart](https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white) Dart
-- ![C++](https://img.shields.io/badge/C%2B%2B-00599C?s)
+- ![C++](https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white) C++
+- ![CMake](https://img.shields.io/badge/CMake-064F8C?style=flat&logo=cmake&logoColor=white) CMake
+- ![Bash](https://img.shields.io/badge/Bash-4EAA25?style=flat&logo=gnu-bash&logoColor=white) Bash
+- ![JSON](https://img.shields.io/badge/JSON-000000?style=flat&logo=json&logoColor=white) JSON
+
+---
+
+## ⚡ Features
+
+- Unified control of multiple smart devices  
+- Support for MQTT, Wi-Fi/HTTP REST, and ZigBee protocols  
+- Robust C++ backend with POSIX threads  
+- Modern and responsive Flutter interface  
+- Efficient Dart ↔ C++ communication via FFI  
+- Modular: separate drivers for each device type  
+- Real-time logging and state management  
+- Easy extension for new devices and protocols
+
+---
+
+## 🗂 Project Structure
+
+lib/
+├─ core/
+│ ├─ build/
+│ ├─ drivers/
+│ │ ├─ driver.hpp
+│ │ ├─ mock.cpp
+│ │ ├─ mock.hpp
+│ │ ├─ mqtt.cpp
+│ │ ├─ mqtt.hpp
+│ │ ├─ wifi.cpp
+│ │ ├─ wifi.hpp
+│ │ ├─ zigbee.cpp
+│ │ └─ zigbee.hpp
+│ ├─ include/
+│ │ └─ core.h
+│ └─ src/
+│ ├─ core.cpp
+│ └─ driver.cpp
+│
+├─ ui/
+│ ├─ bridge.dart
+│ ├─ bridge_test.dart
+│ ├─ dashboard.dart
+│ ├─ handler.dart
+│ ├─ home.dart
+│ ├─ main.dart
+│ ├─ manage.dart
+│ ├─ profiles.dart
+│ ├─ splash.dart
+│ └─ theme.dart
+│
+├─ build.sh
+└─ CMakeLists.txt
+
+
+---
+
+## ⚙️ Installation
+
+### Backend (C++)
+
+```bash
+cd easync/lib/core
+./build.sh
+
+```
