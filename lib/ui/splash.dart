@@ -70,7 +70,7 @@ class _SplashState extends State<Splash> {
         Padding(
           padding: const EdgeInsets.only(top: 18),
 
-          child: Text("Powered by Nortify", style: EaText.secondaryBack),
+          child: Text("Powered by Nortify", style: EaText.secondaryTranslucent),
         ),
       ],
     );
