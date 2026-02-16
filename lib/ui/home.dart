@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'handler.dart';
 
+List<DeviceInfo> devices = [];
+
 class Home extends StatefulWidget {
   const Home({super.key});
 
@@ -29,6 +31,8 @@ class _HomeState extends State<Home> {
   ];
 
   final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
+
+  
 
   int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
 
@@ -167,8 +171,7 @@ class _HomeState extends State<Home> {
                 onPageChanged: (fake) {
                   currentFakePage = fake;
                   final real = getRealIndex(fake);
-                  if (real != selectedIndex)
-                    setState(() => selectedIndex = real);
+                  if (real != selectedIndex) setState(() => selectedIndex = real);
                 },
               ),
             ),

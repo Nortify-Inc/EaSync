@@ -506,29 +506,34 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
 
         Row(
           children: [
-            const Icon(Icons.brightness_6, size: 18, color: EaColor.fore),
+            const Icon(Icons.tungsten, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
             Text("Brightness", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${a.brightness} %",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            
           ],
         ),
 
         Slider(
-          min: 0,
-          max: 100,
-          divisions: 100,
+          min: 0.0,
+          max: 100.0,
           value: a.brightness.toDouble(),
           activeColor: EaColor.fore,
-          inactiveColor: EaColor.fore.withValues(alpha: .25),
+          inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.brightness = v.round());
+            setState(() => a.brightness = v.toInt());
           },
         ),
-
-        Text("${a.brightness}")
       ],
     );
   }
@@ -635,7 +640,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
 
         Row(
           children: [
@@ -644,28 +649,24 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             Text("Temperature", style: EaText.secondary),
 
             const Spacer(),
+
+            Text(
+              "${a.temperature.toInt()} °C",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            
           ],
         ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            Slider(
-              min: 0.0,
-              max: 36.0,
-              divisions: 36,
-              value: a.temperature,
-              activeColor: EaColor.fore,
-              inactiveColor: EaColor.secondaryBack,
-              onChanged: (v) {
-                setState(() => a.temperature = v);
-              },
-            ),
-            Text(
-              "${a.temperature.toStringAsFixed(1)}°C",
-              style: EaText.secondary.copyWith(color: EaColor.fore),
-            ),
-          ],
+        Slider(
+          min: 0.0,
+          max: 36.0,
+          value: a.temperature,
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.temperature = v);
+          },
         ),
       ],
     );
@@ -705,7 +706,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: EaColor.background,
+            color: EaColor.back,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: EaColor.border),
           ),
