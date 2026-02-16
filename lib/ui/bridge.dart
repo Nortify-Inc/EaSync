@@ -130,31 +130,24 @@ typedef _coreRegisterDeviceDart =
       int,
     );
 
-typedef _coreSetPowerC = 
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
-typedef _coreSetPowerDart = 
-    int Function(Pointer<Void>, Pointer<Utf8>, bool);
+typedef _coreSetPowerC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
+typedef _coreSetPowerDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
 
 typedef _coreSetBrightnessC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Int32);
 typedef _coreSetBrightnessDart =
     int Function(Pointer<Void>, Pointer<Utf8>, int);
 
-typedef _coreSetColorC = 
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
-typedef _coreSetColorDart = 
-    int Function(Pointer<Void>, Pointer<Utf8>, int);
+typedef _coreSetColorC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetColorDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 typedef _coreSetTemperatureC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
 typedef _coreSetTemperatureDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
 
-typedef _coreSetTimeC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
-typedef _coreSetTimeDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, int);
-
+typedef _coreSetTimeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
+typedef _coreSetTimeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -200,7 +193,6 @@ final _coreSetTemperatureDart _coreSetTemperature = coreLib
 final _coreSetTimeDart _coreSetTime = coreLib
     .lookupFunction<_coreSetTimeC, _coreSetTimeDart>('core_set_time');
 
-
 class DeviceInfo {
   final String uuid;
   final String name;
@@ -217,18 +209,12 @@ class DeviceInfo {
 
 class DeviceState {
   final bool power;
-  final int brightness;
-  final int color;
-  final double temperature;
-  final int timestamp;
+  int brightness = 0;
+  int color = 0xFFFFFFFF;
+  double temperature = 0.0;
+  int timestamp = 0;
 
-  DeviceState({
-    required this.power,
-    required this.brightness,
-    required this.color,
-    required this.temperature,
-    required this.timestamp,
-  });
+  DeviceState({required this.power});
 }
 
 String _readFixedString(Array<Int8> array, int maxLen) {
@@ -394,13 +380,7 @@ class Bridge {
 
     final s = statePtr.ref;
 
-    final result = DeviceState(
-      power: s.power,
-      brightness: s.brightness,
-      color: s.color,
-      temperature: s.temperature,
-      timestamp: s.timestamp,
-    );
+    final result = DeviceState(power: s.power);
 
     calloc.free(statePtr);
 

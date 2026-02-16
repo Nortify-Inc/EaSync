@@ -75,10 +75,7 @@ class _ManageState extends State<Manage> {
           backgroundColor: EaColor.fore,
           onPressed: () => _openEditor(),
           icon: const Icon(Icons.add, color: Colors.black),
-          label: const Text(
-            "Add device",
-            style: TextStyle(color: Colors.black),
-          ),
+          label: Text("Add device", style: EaText.primaryBack),
         ),
       ),
     );
@@ -107,38 +104,10 @@ class _ManageState extends State<Manage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    EaColor.fore.withValues(alpha: .25),
-                    EaColor.fore.withValues(alpha: .08),
-                  ],
-                ),
-              ),
-              child: const Icon(
-                Icons.devices_other,
-                size: 40,
-                color: EaColor.fore,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              "No devices yet",
-              style: EaText.primary.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: EaColor.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
             Text(
               "Add your first device to get started",
               textAlign: TextAlign.center,
-              style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+              style: EaText.secondaryTranslucent,
             ),
           ],
         ),
@@ -301,13 +270,14 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
   Widget _caps() {
     return Wrap(
+      alignment: WrapAlignment.center,
       spacing: 10,
       runSpacing: 10,
       children: [
         _capChip("Power", CoreCapability.CORE_CAP_POWER),
         _capChip("Brightness", CoreCapability.CORE_CAP_BRIGHTNESS),
         _capChip("Color", CoreCapability.CORE_CAP_COLOR),
-        _capChip("Temp", CoreCapability.CORE_CAP_TEMPERATURE),
+        _capChip("Temperature", CoreCapability.CORE_CAP_TEMPERATURE),
         _capChip("Time", CoreCapability.CORE_CAP_TIMESTAMP),
       ],
     );
@@ -340,21 +310,30 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
             Text(
               widget.device == null ? "New Device" : "Edit Device",
-              style: EaText.primary.copyWith(
-                fontWeight: FontWeight.w600,
-                color: EaColor.textPrimary,
-              ),
+              style: EaText.primary,
             ),
 
             const SizedBox(height: 18),
 
             TextField(
               controller: nameController,
-              style: const TextStyle(color: Colors.white),
+              style: EaText.secondary,
               decoration: InputDecoration(
-                labelText: "Device name",
-                labelStyle: const TextStyle(color: Colors.white70),
+                labelText: "Device Custom Name",
+                labelStyle: EaText.secondaryTranslucent.copyWith(
+                  color: EaColor.textPrimary,
+                ),
+
+                hintText: "e.g. Kitchen Lamp, Bedroom AC (Can be empty)",
+                hintStyle: EaText.secondaryTranslucent,
+
                 border: OutlineInputBorder(
+                  borderSide: BorderSide(color: EaColor.textPrimary),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: EaColor.fore),
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
@@ -390,7 +369,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: const Text("Save Device"),
+                child: Text("Save Device", style: EaText.primaryBack),
               ),
             ),
           ],
