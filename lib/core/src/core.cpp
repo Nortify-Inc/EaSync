@@ -866,6 +866,69 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
 }
 
 
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Timestamp in seconds.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
+ * @return CORE_ERROR if driver fails to set temperature.
+ */
+CoreResult core_set_time(CoreContext* core, const char* uuid, uint64_t value)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_set_time");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    auto it = core->devices.find(uuid);
+
+    if (it == core->devices.end()) {
+        std::ostringstream oss;
+
+        oss << "Device with UUID '" << uuid << "' not found for time change";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_FOUND;
+    }
+
+    if (!hasCapability(it->second, CORE_CAP_TIMESTAMP)) {
+        std::ostringstream oss;
+
+        oss << "Device '" << uuid << "' does not support timestamp control";
+        setError(core, oss.str().c_str());
+
+        return CORE_NOT_SUPPORTED;
+    }
+
+    if (!it->second.driver->setTime(uuid, value)) {
+        std::ostringstream oss;
+
+        oss << "Driver failed to set time for device '" << uuid << "'";
+        setError(core, oss.str().c_str());
+
+        return CORE_ERROR;
+    }
+
+    it->second.driver->getState(uuid, it->second.state);
+
+    CoreEvent ev{};
+
+    ev.type = CORE_EVENT_STATE_CHANGED;
+    std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
+
+    ev.state = it->second.state;
+
+    emitEvent(core, ev);
+
+    return CORE_OK;
+}
 
 /**
  * @brief Retrieve the last error message from the core.

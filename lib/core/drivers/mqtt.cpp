@@ -181,6 +181,29 @@ bool MqttDriver::setTemperature(
     return true;
 }
 
+bool MqttDriver::setTime(
+    const std::string& uuid,
+    uint64_t value
+) {
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+
+    ss << "{ \"timestamp\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+
+    states[uuid].timestamp = value;
+
+    return true;
+}
+
 bool MqttDriver::getState(
     const std::string& uuid,
     CoreDeviceState& outState

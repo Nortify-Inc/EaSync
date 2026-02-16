@@ -232,6 +232,31 @@ bool WifiDriver::setTemperature(
     return true;
 }
 
+bool WifiDriver::setTime(
+    const std::string& uuid,
+    uint64_t value
+) {
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    std::string url =
+        "http://" + deviceIps[uuid] + "/timestamp";
+
+    std::stringstream ss;
+
+    ss << "{ \"value\": " << value << " }";
+
+    if (!httpPost(url, ss.str()))
+        return false;
+
+    states[uuid].timestamp = value;
+
+    return true;
+}
+
 bool WifiDriver::getState(
     const std::string& uuid,
     CoreDeviceState& outState

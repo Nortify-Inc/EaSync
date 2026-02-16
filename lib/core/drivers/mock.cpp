@@ -16,7 +16,7 @@ bool MockDriver::connect(const std::string& uuid) {
     CoreDeviceState st{};
     st.power = false;
     st.brightness = 0;
-    st.color = 0;
+    st.color = 16777215;
     st.temperature = 0.0f;
     st.timestamp = 0;
 
@@ -98,6 +98,20 @@ bool MockDriver::setTemperature(
     return true;
 }
 
+bool MockDriver::setTime(
+    const std::string& uuid,
+    uint64_t value
+) {
+
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].timestamp = value;
+
+    return true;
+}
 
 bool MockDriver::getState(
     const std::string& uuid,
