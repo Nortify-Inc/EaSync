@@ -36,6 +36,11 @@ public:
         float value
     ) override;
 
+    bool setTime(
+        const std::string& uuid,
+        uint64_t value
+    ) override;
+
     bool getState(
         const std::string& uuid,
         CoreDeviceState& outState

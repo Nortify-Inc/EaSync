@@ -87,6 +87,14 @@ public:
         float value
     ) = 0;
 
+    /**
+     * @brief Set timestamp
+     */
+    virtual bool setTime(
+        const std::string& uuid,
+        uint64_t value
+    ) = 0;
+
 
     /**
      * @brief Read device state.

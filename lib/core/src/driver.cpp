@@ -12,21 +12,12 @@
 
 namespace drivers {
 
-/* ============================================================
-   Driver Registry
-============================================================ */
-
 static std::mutex gDriverMutex;
 
 static std::unordered_map<
     CoreProtocol,
     std::unique_ptr<drivers::Driver>
 > gDrivers;
-
-
-/* ============================================================
-   Registration
-============================================================ */
 
 /**
  * @brief Register protocol driver.
