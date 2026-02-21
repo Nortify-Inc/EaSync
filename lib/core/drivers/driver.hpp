@@ -7,7 +7,8 @@
 /**
  * @file driver.hpp
  * @brief Base interface for device drivers.
- *
+ * @author Erick Radmann
+ * 
  * All protocol drivers must implement this interface.
  */
 

@@ -32,8 +32,6 @@ class _HomeState extends State<Home> {
 
   final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
 
-  
-
   int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
 
   @override
@@ -62,7 +60,6 @@ class _HomeState extends State<Home> {
     super.dispose();
   }
 
-  // blur animado do título
   Widget _buildBlurTitle() {
     final title = tabs[selectedIndex];
 

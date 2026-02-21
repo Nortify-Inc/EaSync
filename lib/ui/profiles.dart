@@ -84,6 +84,15 @@ class _ProfilesState extends State<Profiles>
 
   void _applyProfile(Profile profile) {
     try {
+      if(profile.actions.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Profile has no actions", style: EaText.secondary),
+            backgroundColor: EaColor.back,
+          ),
+        );
+        return;
+      }
       for (final a in profile.actions) {
         Bridge.setPower(a.deviceId, a.power);
 
@@ -219,7 +228,7 @@ class _ProfilesState extends State<Profiles>
               children: [
                 Text(p.name, style: EaText.primary),
                 Text(
-                  "${p.actions.length} ${p.actions.length > 1 ? "actions" : "action"}",
+                  "${p.actions.isNotEmpty ? p.actions.length : "No"} ${p.actions.length > 1 ? "actions" : "action"}",
                   style: EaText.secondary,
                 ),
               ],
@@ -306,7 +315,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   void _save() {
     final name = nameController.text.trim();
 
-    if (name.isEmpty || actions.isEmpty) return;
+    if (name.isEmpty) return;
 
     widget.onSaved(Profile(name: name, actions: actions, icon: selectedIcon));
   }
@@ -333,7 +342,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
               _iconPicker(),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
 
               _nameField(),
 
@@ -493,6 +502,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
         Switch(
           activeThumbColor: EaColor.fore,
+          inactiveTrackColor: EaColor.back,
+
           value: a.power,
           onChanged: (v) {
             setState(() => a.power = v);
@@ -520,7 +531,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               "${a.brightness} %",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
-            
+            SizedBox(width: 10)
           ],
         ),
 
@@ -630,6 +641,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 ),
               ),
             ),
+            SizedBox(width: 10,)
           ],
         ),
       ],
@@ -654,7 +666,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               "${a.temperature.toInt()} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
-            
+            SizedBox(width: 10,)
           ],
         ),
 
@@ -726,12 +738,78 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 onPressed: () async {
                   final picked = await showTimePicker(
                     context: context,
-                    initialTime: time ?? TimeOfDay.now(),
-                  );
 
+                    helpText: "Select time",
+                    
+                    initialEntryMode: TimePickerEntryMode.inputOnly,
+                    initialTime: time ?? TimeOfDay.now(),
+
+                    builder: (context, child) {
+                      final base = Theme.of(context);
+
+                      return Theme(
+                        data: base.copyWith(
+                          colorScheme: base.colorScheme.copyWith(
+                            primary: EaColor.fore,
+                          ),
+
+                          inputDecorationTheme: InputDecorationTheme(
+                            labelStyle: EaText.secondary.copyWith(
+                              color: EaColor.fore,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: EaColor.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: EaColor.fore,     // borda ativa (adeus roxo)
+                                width: 2,
+                              ),
+                            ),
+                          ),
+
+                          timePickerTheme: TimePickerThemeData(
+                            helpTextStyle: EaText.secondary,
+                            
+                            backgroundColor: EaColor.back,
+
+                            hourMinuteColor: EaColor.back,
+                            hourMinuteTextColor: EaColor.fore,
+                            hourMinuteTextStyle: EaText.primary,
+                            
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(color: EaColor.border),
+                            ),
+
+                            hourMinuteShape: RoundedRectangleBorder(
+                              side: BorderSide(color: EaColor.border),
+                            ),
+
+                            confirmButtonStyle: ButtonStyle(
+                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              foregroundColor: WidgetStateColor.fromMap({
+                                WidgetState.any: EaColor.fore,
+                                WidgetState.pressed:
+                                    EaColor.fore.withValues(alpha: .75),
+                              }),
+                            ),
+
+                            cancelButtonStyle: ButtonStyle(
+                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              foregroundColor: WidgetStateColor.fromMap({
+                                WidgetState.any: EaColor.fore,
+                                WidgetState.pressed:
+                                    EaColor.fore.withValues(alpha: .75),
+                              }),
+                            ),
+                          ),
+                        ),
+                        child: child!,
+                      );
+                    }
+                  );
                   if (picked != null) {
                     final minutes = toMinutes(picked);
-
                     setState(() => a.time = minutes);
                   }
                 },
@@ -862,7 +940,6 @@ class _HsvWheelPainter extends CustomPainter {
 
     final paint = Paint()..style = PaintingStyle.fill;
 
-    // Sweep gradient usando cores do HSV
     final shader = SweepGradient(
       colors: [
         for (var h = 0; h <= 360; h += 60)
@@ -873,7 +950,6 @@ class _HsvWheelPainter extends CustomPainter {
     paint.shader = shader;
     canvas.drawCircle(center, radius, paint);
 
-    // Overlay para saturação (centro branco, borda transparente)
     final overlay = RadialGradient(
       colors: [Colors.white, Colors.transparent],
     ).createShader(rect);

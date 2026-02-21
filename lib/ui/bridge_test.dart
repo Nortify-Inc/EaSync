@@ -22,6 +22,7 @@ void main() {
       capabilities: [
         CoreCapability.CORE_CAP_POWER,
         CoreCapability.CORE_CAP_TEMPERATURE,
+        CoreCapability.CORE_CAP_TIMESTAMP
       ],
     );
 
@@ -39,10 +40,11 @@ void main() {
 
     Bridge.setPower('lamp-001', true);
     Bridge.setBrightness('lamp-001', 80);
-    Bridge.setColor('lamp-001', 0xFFAA00);
+    Bridge.setColor('lamp-001', 0xFF000000);
 
     Bridge.setPower('ac-001', true);
     Bridge.setTemperature('ac-001', 22.5);
+    Bridge.setTime('ac-001', DateTime.now().second + 3600);
 
     final lampState = Bridge.getState('lamp-001');
     final acState = Bridge.getState('ac-001');
@@ -60,6 +62,7 @@ void main() {
     print('Color: ${acState.color}');
     print('Temp: ${acState.temperature}');
     print('Timestamp: ${acState.timestamp}');
+
   } catch (e) {
     print('Error: $e');
   } finally {
