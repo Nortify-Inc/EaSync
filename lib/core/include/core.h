@@ -374,4 +374,5 @@ CoreResult core_set_event_callback(
 
 #ifdef __cplusplus
 }
+
 #endif

@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:async';
 
 import 'package:ffi/ffi.dart';
 
@@ -245,6 +246,10 @@ class Bridge {
 
   static Pointer<Void>? _ctx;
 
+  static final StreamController<String> _stateController = StreamController.broadcast();
+
+  static Stream<String> get onStateChanged => _stateController.stream;
+
   static void _ensureReady() {
     if (!_ready || _ctx == null) {
       throw Exception("Bridge not initialized. Call Bridge.init() first.");
@@ -382,7 +387,15 @@ class Bridge {
 
     final result = DeviceState(power: s.power);
 
-    calloc.free(statePtr);
+    // Populate remaining fields so UI and tests receive full state
+    try {
+      result.brightness = s.brightness;
+      result.color = s.color;
+      result.temperature = s.temperature;
+      result.timestamp = s.timestamp.toInt();
+    } finally {
+      calloc.free(statePtr);
+    }
 
     return result;
   }
@@ -399,6 +412,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _stateController.add(uuid);
   }
 
   static void setBrightness(String uuid, int value) {
@@ -413,6 +427,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _stateController.add(uuid);
   }
 
   static void setColor(String uuid, int value) {
@@ -427,6 +442,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _stateController.add(uuid);
   }
 
   static void setTemperature(String uuid, double value) {
@@ -441,6 +457,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _stateController.add(uuid);
   }
 
   static void setTime(String uuid, int value) {
@@ -455,5 +472,6 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _stateController.add(uuid);
   }
 }

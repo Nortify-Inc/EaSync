@@ -3,6 +3,7 @@ export 'package:google_fonts/google_fonts.dart';
 
 export 'dart:ffi' hide Size;
 export 'dart:math';
+export 'dart:async';
 
 export 'bridge.dart';
 export 'theme.dart';
