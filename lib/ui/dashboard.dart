@@ -1,5 +1,4 @@
 import 'handler.dart';
-import 'package:flutter/material.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -8,19 +7,29 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard> {
+class _DashboardState extends State<Dashboard>
+    with TickerProviderStateMixin {
+
   bool loading = true;
   String? error;
 
+  List<DeviceInfo> devices = [];
+
   final Map<String, int> capIndexByDevice = {};
+  final Map<String, double> animatedProgress = {};
+  final Map<String, double> previousProgress = {};
+  final Set<String> initializedDevices = {};
+
+  StreamSubscription<String>? _stateSub;
+  final PageStorageBucket _bucket = PageStorageBucket();
 
   @override
   void initState() {
     super.initState();
-    _loadDevices();
+    // Defer loading until after the first frame so PageStorage is available
+    // (ensures stored cap indexes are read correctly when returning).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadDevices());
   }
-
-  StreamSubscription<String>? _stateSub;
 
   @override
   void dispose() {
@@ -29,60 +38,55 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Future<void> _loadDevices() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
+    setState(() => loading = true);
 
     try {
-      final list = Bridge.listDevices();
-      setState(() {
-        devices = list;
-        loading = false;
-        for (var d in devices) {
-          capIndexByDevice.putIfAbsent(d.uuid, () => 0);
-        }
-      });
-      // subscribe to state changes after devices are loaded
-      _stateSub ??= Bridge.onStateChanged.listen((uuid) {
-        // trigger rebuild so latest Bridge.getState is read in cards
+      devices = Bridge.listDevices();
+      for (var d in devices) {
+        final stored = PageStorage.of(context).readState(context, identifier: d.uuid) as int?;
+        final capIndex = stored ?? capIndexByDevice[d.uuid] ?? 0;
+        final cap = d.capabilities[capIndex];
+
+        previousProgress[d.uuid] = 0.0;
+        animatedProgress[d.uuid] = _capProgress(d, cap);
+
+        capIndexByDevice[d.uuid] = capIndex;
+      }
+
+      _stateSub ??=
+        Bridge.onStateChanged.listen((uuid) {
+          final device = devices.firstWhere(
+            (d) => d.uuid == uuid,
+            orElse: () => devices.first,
+          );
+
+          final index = capIndexByDevice[uuid] ?? 0;
+          final cap = device.capabilities[index];
+
+          final newProgress = _capProgress(device, cap);
+          final oldProgress = animatedProgress[uuid] ?? newProgress;
+
+          if ((newProgress - oldProgress).abs() > 0.001) {
+            previousProgress[uuid] = oldProgress;
+            animatedProgress[uuid] = newProgress;
+          }
+
+          setState(() {});
+        });
+
+      loading = false;
+
+      setState(() {});
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {});
       });
+
     } catch (e) {
-      setState(() {
-        error = e.toString();
-        loading = false;
-      });
+      error = e.toString();
+      loading = false;
+      setState(() {});
     }
-  }
-
-  void _nextCap(DeviceInfo device) {
-    setState(() {
-      final current = capIndexByDevice[device.uuid] ?? 0;
-      capIndexByDevice[device.uuid] =
-          (current + 1) % device.capabilities.length;
-    });
-  }
-
-  void _prevCap(DeviceInfo device) {
-    setState(() {
-      final current = capIndexByDevice[device.uuid] ?? 0;
-      capIndexByDevice[device.uuid] =
-          (current - 1 + device.capabilities.length) %
-          device.capabilities.length;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(child: _body());
-  }
-
-  Widget _body() {
-    if (loading) return _loading();
-    if (error != null) return _errorState();
-    if (devices.isEmpty) return _emptyState();
-    return _grid();
   }
 
   Widget _loading() =>
@@ -158,13 +162,131 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  Widget _grid() {
-    return RefreshIndicator(
-      color: EaColor.fore,
-      onRefresh: _loadDevices,
+  double _capProgress(DeviceInfo device, int cap) {
+    final s = Bridge.getState(device.uuid);
+
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return s.power ? 1 : 0;
+
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return (s.brightness / 100).clamp(0.0, 1.0);
+
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return ((s.temperature + 10) / 46).clamp(0.0, 1.0);
+
+      case CoreCapability.CORE_CAP_COLOR:
+        return HSVColor.fromColor(
+          Color(0xFF000000 | s.color),
+        ).value;
+
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        return (s.timestamp % 1440) / 1440;
+
+      default:
+        return 0;
+    }
+  }
+
+  Color _capColor(DeviceInfo device, int cap) {
+    final s = Bridge.getState(device.uuid);
+
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return s.power ? Colors.green : Colors.red;
+
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return Colors.amber;
+
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return Colors.orange;
+
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        return Colors.blue;
+
+      case CoreCapability.CORE_CAP_COLOR:
+        return Color(0xFF000000 | s.color);
+
+      default:
+        return EaColor.fore;
+    }
+  }
+
+  IconData _capIcon(int cap) {
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return Icons.power_settings_new;
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return Icons.brightness_6_outlined;
+      case CoreCapability.CORE_CAP_COLOR:
+        return Icons.color_lens;
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return Icons.thermostat;
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        return Icons.schedule;
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  dynamic _capValue(DeviceInfo device, int cap) {
+    final s = Bridge.getState(device.uuid);
+
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return s.power ? "On" : "Off";
+
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return "${s.brightness}%";
+
+      case CoreCapability.CORE_CAP_COLOR:
+        return s.color;
+
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return "${s.temperature.toStringAsFixed(1)}°C";
+
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        final h = (s.timestamp ~/ 60).toString().padLeft(2, '0');
+        final m = (s.timestamp % 60).toString().padLeft(2, '0');
+
+        return "$h:$m";
+
+      default:
+        return "";
+    }
+  }
+
+  void _changeCap(DeviceInfo device, int dir) {
+    final caps = device.capabilities;
+
+    final current = capIndexByDevice[device.uuid] ?? 0;
+    final next = (current + dir + caps.length) % caps.length;
+
+    capIndexByDevice[device.uuid] = next;
+    PageStorage.of(context).writeState(context, next, identifier: device.uuid);
+
+    final target = _capProgress(device, caps[next]);
+
+    previousProgress[device.uuid] =
+        animatedProgress[device.uuid] ?? target;
+
+    animatedProgress[device.uuid] = target;
+
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return _loading();
+    if (error != null) return _errorState();
+    if (devices.isEmpty) return _emptyState();
+
+    return PageStorage(
+      bucket: _bucket,
       child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        gridDelegate:
+            const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           mainAxisSpacing: 18,
           crossAxisSpacing: 18,
@@ -172,122 +294,7 @@ class _DashboardState extends State<Dashboard> {
         ),
         itemCount: devices.length,
         itemBuilder: (_, i) => _deviceCard(devices[i]),
-      ),
-    );
-  }
-
-  Widget _deviceCard(DeviceInfo device) {
-    final state = Bridge.getState(device.uuid);
-    final caps = device.capabilities;
-    double dragStartX = 0;
-    double dragDelta = 0;
-
-    final Map<int, String> unitMap = {
-      CoreCapability.CORE_CAP_POWER: "",
-      CoreCapability.CORE_CAP_BRIGHTNESS: "%",
-      CoreCapability.CORE_CAP_COLOR: "",
-      CoreCapability.CORE_CAP_TEMPERATURE: "°C",
-      CoreCapability.CORE_CAP_TIMESTAMP: "",
-    };
-
-    final Map<int, dynamic> valueMap = {
-      CoreCapability.CORE_CAP_POWER: state.power ? "On" : "Off",
-      CoreCapability.CORE_CAP_BRIGHTNESS: state.brightness,
-      CoreCapability.CORE_CAP_COLOR: state.color,
-      CoreCapability.CORE_CAP_TEMPERATURE: state.temperature.toStringAsFixed(1),
-      CoreCapability.CORE_CAP_TIMESTAMP:
-          "${DateTime.fromMillisecondsSinceEpoch(state.timestamp * 1000).hour.toString().padLeft(2, '0')}:${DateTime.fromMillisecondsSinceEpoch(state.timestamp * 1000).minute.toString().padLeft(2, '0')}",
-    };
-
-    final int currentCapIndex = capIndexByDevice[device.uuid] ?? 0;
-    final cap = caps[currentCapIndex];
-    final val = valueMap[cap];
-    final unit = unitMap[cap] ?? "";
-
-    return GestureDetector(
-      onTap: () => _openDeviceControl(device),
-      onHorizontalDragStart: (d) => dragStartX = d.globalPosition.dx,
-      onHorizontalDragUpdate: (d) =>
-          dragDelta = d.globalPosition.dx - dragStartX,
-      onHorizontalDragEnd: (d) {
-        if (dragDelta.abs() > 50) {
-          dragDelta < 0 ? _nextCap(device) : _prevCap(device);
-        }
-        dragDelta = 0;
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: EaColor.back,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: EaColor.fore, 
-            width: 1.5
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.tungsten, size: 60, color: EaColor.fore),
-            const SizedBox(height: 15),
-            Row(
-              children: [
-                Icon(
-                  Icons.arrow_left_rounded,
-                  size: 30,
-                  color: EaColor.secondaryFore,
-                ),
-                SizedBox(width: 8),
-                Icon(
-                  cap == CoreCapability.CORE_CAP_POWER
-                      ? Icons.power_settings_new
-                      : cap == CoreCapability.CORE_CAP_BRIGHTNESS
-                          ? Icons.brightness_6_outlined
-                          : cap == CoreCapability.CORE_CAP_COLOR
-                              ? Icons.color_lens
-                              : cap == CoreCapability.CORE_CAP_TEMPERATURE
-                                  ? Icons.thermostat
-                                  : Icons.info_outline,
-                  size: 30,
-                  color: EaColor.fore,
-                ),
-                Spacer(),
-                cap == CoreCapability.CORE_CAP_COLOR
-                    ? Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: Color(0xFF000000 | (val is int ? val : 0)),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: EaColor.fore,
-                            width: 2,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        "$val$unit",
-                        style: EaText.secondary,
-                      ),
-                Spacer(),
-                Icon(
-                  Icons.arrow_right_rounded,
-                  size: 30,
-                  color: EaColor.secondaryFore,
-                )
-              ],
-            ),
-            
-            SizedBox(height: 12),
-            Text(
-              device.name,
-              textAlign: TextAlign.center,
-              style: EaText.secondary,
-            ),
-            Spacer()
-          ],
-        ),
-      ),
+      )
     );
   }
 
@@ -689,5 +696,201 @@ class _DashboardState extends State<Dashboard> {
         ),
       ],
     );
+  }
+
+  Widget _deviceCard(DeviceInfo device) {
+    final caps = device.capabilities;
+    final index = capIndexByDevice[device.uuid] ?? 0;
+    final cap = caps[index];
+
+    final target =
+        animatedProgress[device.uuid] ??
+            _capProgress(device, cap);
+
+    final begin =
+        previousProgress[device.uuid] ?? target;
+
+    final ringColor = _capColor(device, cap);
+
+    double dragStartX = 0;
+    double dragDelta = 0;
+
+    return GestureDetector(
+      onTap: () => _openDeviceControl(device),
+      onHorizontalDragStart: (d) =>
+          dragStartX = d.globalPosition.dx,
+      onHorizontalDragUpdate: (d) =>
+          dragDelta = d.globalPosition.dx - dragStartX,
+      onHorizontalDragEnd: (_) {
+        if (dragDelta.abs() > 50) {
+          _changeCap(device, dragDelta < 0 ? 1 : -1);
+        }
+      },
+
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: begin, end: target),
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+        builder: (_, animated, _) {
+          final scale = 0.95 + sin(animated * pi) * 0.05;
+
+          return LayoutBuilder(
+            builder: (_, c) {
+              const nameHeight = 20.0;
+
+              final size = min(
+                c.maxWidth,
+                c.maxHeight - nameHeight,
+              );
+
+              return Transform.scale(
+                scale: scale,
+                child: Column(
+                  children:[
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size(size, size),
+                          painter: _RingPainter(
+                            ringColor: ringColor,
+                            progress: animated,
+                          ),
+                        ),
+
+                        Container(
+                          width: size * .85,
+                          height: size * .85,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                ringColor.withValues(alpha: .0),
+                                ringColor.withValues(alpha: .05),
+                                ringColor.withValues(alpha: .10),
+                              ],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: ringColor,
+                              width: 1.4,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              const SizedBox(height: 10),
+                              cap == CoreCapability.CORE_CAP_COLOR
+                                ? Container(
+                                    width: 30,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      color: Color(_capValue(device, cap)),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: EaColor.fore,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                  _capValue(device, cap),
+                                  style: EaText.primary,
+                                ),
+                              const SizedBox(height: 8),
+                              Icon(_capIcon(cap),
+                                  size: 20,
+                                  color: EaColor.secondaryFore
+                              ),
+
+                              SizedBox(height: 10),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      device.name,
+                      textAlign: TextAlign.center,
+                      style: EaText.secondary,
+                    ),
+                  ]
+                )
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  final Color ringColor;
+  final double progress;
+  double ringWidth = 6;
+
+  _RingPainter({
+    required this.ringColor,
+    required this.progress,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxR = min(size.width, size.height) / 2;
+    final radius = maxR - ringWidth / 2 - 4;
+
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          ringColor.withValues(alpha: .05),
+          ringColor.withValues(alpha: .0),
+        ],
+      ).createShader(
+        Rect.fromCircle(center: center, radius: radius * 1.15),
+      );
+
+    canvas.drawCircle(center, radius * 1.15, glowPaint);
+
+    final baseRing = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..color = EaColor.background;
+
+    canvas.drawCircle(center, radius, baseRing);
+
+    final start = (5 * pi) / 4;
+    final end = (6 * pi) / 4;
+
+    final sweep = end * progress.clamp(0.0, 1.0);
+
+    final progressPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = ringWidth
+      ..strokeCap = StrokeCap.round
+      ..color = ringColor;
+
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    canvas.drawArc(rect, -start, sweep, false, progressPaint);
+
+    final angle = -start + sweep;
+
+    final dotOffset = Offset(
+      center.dx + cos(angle) * radius,
+      center.dy + sin(angle) * radius,
+    );
+
+    final dotPaint = Paint()..color = ringColor;
+
+    canvas.drawCircle(dotOffset, ringWidth * 0.9, dotPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RingPainter old) {
+    return old.progress != progress ||
+        old.ringColor != ringColor;
   }
 }
