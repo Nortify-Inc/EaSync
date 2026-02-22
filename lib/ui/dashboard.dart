@@ -26,8 +26,6 @@ class _DashboardState extends State<Dashboard>
   @override
   void initState() {
     super.initState();
-    // Defer loading until after the first frame so PageStorage is available
-    // (ensures stored cap indexes are read correctly when returning).
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDevices());
   }
 
@@ -639,7 +637,7 @@ class _DashboardState extends State<Dashboard>
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: EaColor.fore,     // borda ativa (adeus roxo)
+                                color: EaColor.fore,
                                 width: 2,
                               ),
                             ),
@@ -781,30 +779,53 @@ class _DashboardState extends State<Dashboard>
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               const SizedBox(height: 10),
-                              cap == CoreCapability.CORE_CAP_COLOR
-                                ? Container(
-                                    width: 30,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      color: Color(_capValue(device, cap)),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: EaColor.fore,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                  _capValue(device, cap),
-                                  style: EaText.primary,
-                                ),
+            
                               const SizedBox(height: 8),
-                              Icon(_capIcon(cap),
-                                  size: 20,
-                                  color: EaColor.secondaryFore
-                              ),
 
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(width: 15),
+                                  Icon(
+                                    Icons.arrow_left_rounded,
+                                    size: 25,
+                                    color: Colors.white,
+                                  ),
+                                  Spacer(),
+                                  cap == CoreCapability.CORE_CAP_COLOR
+                                  ? Container(
+                                      width: 30,
+                                      height: 30,
+                                      decoration: BoxDecoration(
+                                        color: Color(_capValue(device, cap)),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: EaColor.fore,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : Text(
+                                    _capValue(device, cap),
+                                    style: EaText.primary,
+                                  ),
+                                  Spacer(),
+                                  Icon(
+                                    Icons.arrow_right_outlined,
+                                    size: 25,
+                                    color: Colors.white,
+                                  ),
+                                  SizedBox(width: 15),
+                                ]
+                              ),
+                              SizedBox(height: 5),
+                              Icon(_capIcon(cap),
+                                size: 20,
+                                color: EaColor.secondaryFore
+                              ),
                               SizedBox(height: 10),
+
+
                             ],
                           ),
                         ),
@@ -845,19 +866,19 @@ class _RingPainter extends CustomPainter {
     final glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [
-          ringColor.withValues(alpha: .05),
-          ringColor.withValues(alpha: .0),
+          EaColor.background,
+          EaColor.background
         ],
       ).createShader(
-        Rect.fromCircle(center: center, radius: radius * 1.15),
+        Rect.fromCircle(center: center, radius: radius * 1.2),
       );
 
-    canvas.drawCircle(center, radius * 1.15, glowPaint);
+    canvas.drawCircle(center, radius * 1.2, glowPaint);
 
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = EaColor.background;
+      ..color = ringColor.withValues(alpha: .2);
 
     canvas.drawCircle(center, radius, baseRing);
 
@@ -885,7 +906,7 @@ class _RingPainter extends CustomPainter {
 
     final dotPaint = Paint()..color = ringColor;
 
-    canvas.drawCircle(dotOffset, ringWidth * 0.9, dotPaint);
+    canvas.drawCircle(dotOffset, ringWidth * 1.2, dotPaint);
   }
 
   @override
