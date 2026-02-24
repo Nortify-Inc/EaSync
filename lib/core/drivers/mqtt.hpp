@@ -15,45 +15,25 @@ class MqttDriver : public Driver, public virtual mqtt::callback {
 
 public:
     MqttDriver();
+    ~MqttDriver() override = default;
 
     bool init() override;
 
     bool connect(const std::string& uuid) override;
-
     bool disconnect(const std::string& uuid) override;
 
-    bool setPower(
-        const std::string& uuid,
-        bool value
-    ) override;
+    bool setPower(const std::string& uuid, bool value) override;
+    bool setColor(const std::string& uuid, uint32_t rgb) override;
+    bool setBrightness(const std::string& uuid, uint32_t value) override;
+    bool setTemperature(const std::string& uuid, uint32_t value) override;
+    bool setTime(const std::string& uuid, uint64_t value) override;
 
-    bool setColor(
-        const std::string& uuid,
-        uint32_t rgb
-    ) override;
-    
-    bool setBrightness(
-        const std::string& uuid,
-        int value
-    ) override;
+    bool getState(const std::string& uuid, CoreDeviceState& outState) override;
+    bool isAvailable(const std::string& uuid) override;
 
-    bool setTemperature(
-        const std::string& uuid,
-        float value
-    ) override;
-
-    bool setTime(
-        const std::string& uuid,
-        uint64_t value
-    ) override;
-
-    bool getState(
-        const std::string& uuid,
-        CoreDeviceState& outState
-    ) override;
-
-    virtual bool isAvailable(
-        const std::string& uuid
+    void setEventCallback(
+        DriverEventCallback cb,
+        void* userData
     ) override;
 
 private:
@@ -67,32 +47,29 @@ private:
         const std::string& payload
     );
 
-    void connection_lost(
-        const std::string& cause
-    ) override;
+    void notifyStateChange(
+        const std::string& uuid,
+        const CoreDeviceState& newState
+    );
 
-    void message_arrived(
-        mqtt::const_message_ptr msg
-    ) override;
-
-    void delivery_complete(
-        mqtt::delivery_token_ptr tok
-    ) override;
+    // MQTT callbacks
+    void connection_lost(const std::string& cause) override;
+    void message_arrived(mqtt::const_message_ptr msg) override;
+    void delivery_complete(mqtt::delivery_token_ptr tok) override;
 
 private:
     std::mutex mutex;
-
-    std::unordered_map<
-        std::string,
-        CoreDeviceState
-    > states;
+    std::unordered_map<std::string, CoreDeviceState> states;
 
     std::unique_ptr<mqtt::async_client> client;
 
     bool connected = false;
 
-    std::string brokerUrl;
-    std::string clientId;
+    std::string brokerUrl = "tcp://localhost:1883";
+    std::string clientId = "easync-client";
+
+    DriverEventCallback eventCallback = nullptr;
+    void* eventUserData = nullptr;
 };
 
 }

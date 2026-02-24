@@ -4,6 +4,10 @@
 #include <cstdint>
 #include <core.h>
 
+using DriverEventCallback = void(*)(const std::string& uuid,
+                                    const CoreDeviceState& state,
+                                    void* userdata);
+
 /**
  * @file driver.hpp
  * @brief Base interface for device drivers.
@@ -67,7 +71,7 @@ public:
      */
     virtual bool setBrightness(
         const std::string& uuid,
-        int value
+        uint32_t value
     ) = 0;
 
 
@@ -85,7 +89,7 @@ public:
      */
     virtual bool setTemperature(
         const std::string& uuid,
-        float value
+        uint32_t value
     ) = 0;
 
     /**
@@ -115,6 +119,15 @@ public:
     virtual bool isAvailable(
         const std::string& uuid
     ) = 0;
+
+    /**
+     * @brief Register event callback.
+     */
+    virtual void setEventCallback(
+        DriverEventCallback cb,
+        void* userdata
+    ) = 0;
+
 };
 
 } // namespace drivers

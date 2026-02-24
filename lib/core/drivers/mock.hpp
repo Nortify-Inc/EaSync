@@ -3,8 +3,8 @@
 #include "driver.hpp"
 
 #include <unordered_map>
-#include <unordered_set>
 #include <mutex>
+#include <string>
 
 namespace drivers {
 
@@ -13,50 +13,39 @@ public:
     bool init() override;
 
     bool connect(const std::string& uuid) override;
-
     bool disconnect(const std::string& uuid) override;
 
-    bool setPower(
-        const std::string& uuid,
-        bool value
+    bool setPower(const std::string& uuid, bool value) override;
+    bool setBrightness(const std::string& uuid, uint32_t value) override;
+    bool setColor(const std::string& uuid, uint32_t rgb) override;
+    bool setTemperature(const std::string& uuid, uint32_t value) override;
+    bool setTime(const std::string& uuid, uint64_t value) override;
+
+    bool getState(const std::string& uuid, CoreDeviceState& outState) override;
+    bool isAvailable(const std::string& uuid) override;
+
+    void setEventCallback(
+        DriverEventCallback cb,
+        void* userData
     ) override;
 
-    bool setBrightness(
+    void simulateExternalStateChange(
         const std::string& uuid,
-        int value
-    ) override;
+        const CoreDeviceState& newState
+    );
 
-    bool setColor(
+private:
+    void notifyStateChange(
         const std::string& uuid,
-        uint32_t rgb
-    ) override;
-
-    bool setTemperature(
-        const std::string& uuid,
-        float value
-    ) override;
-
-    bool setTime(
-        const std::string& uuid,
-        uint64_t value
-    ) override;
-
-    bool getState(
-        const std::string& uuid,
-        CoreDeviceState& outState
-    ) override;
-
-    virtual bool isAvailable(
-        const std::string& uuid
-    ) override;
+        const CoreDeviceState& newState
+    );
 
 private:
     std::mutex mutex;
-    
-    std::unordered_map<
-        std::string,
-        CoreDeviceState
-    > states;
+    std::unordered_map<std::string, CoreDeviceState> states;
+
+    DriverEventCallback eventCallback = nullptr;
+    void* eventUserData = nullptr;
 };
 
 }
