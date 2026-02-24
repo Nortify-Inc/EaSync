@@ -1,17 +1,12 @@
 #include "zigbee.hpp"
 
 #include <sstream>
-#include <iostream>
 
 namespace drivers {
 
-ZigBeeDriver::ZigBeeDriver(
-    const std::string& brokerUrl,
-    const std::string& clientId
-)
-    : brokerUrl(brokerUrl),
-      clientId(clientId)
-{
+ZigBeeDriver::ZigBeeDriver(){
+    brokerUrl = "tcp://localhost:1883";
+    clientId = "core_zigbee";
 }
 
 ZigBeeDriver::~ZigBeeDriver() {
@@ -22,150 +17,109 @@ ZigBeeDriver::~ZigBeeDriver() {
 
 bool ZigBeeDriver::init() {
 
-    client = std::make_unique<
-        mqtt::async_client
-    >(brokerUrl, clientId);
+    client = std::make_unique<mqtt::async_client>(
+        brokerUrl,
+        clientId
+    );
 
     client->set_callback(*this);
 
     mqtt::connect_options opts;
 
     try {
-
         client->connect(opts)->wait();
-
-        client->subscribe(
-            "zigbee2mqtt/+/state",
-            1
-        )->wait();
-
+        client->subscribe("zigbee2mqtt/+/state", 1)->wait();
         connected = true;
-
         return true;
-
-    } catch (...) {
-
+    }
+    catch (...) {
         return false;
     }
 }
 
-
-bool ZigBeeDriver::connect(
-    const std::string& uuid
+void ZigBeeDriver::setEventCallback(
+    DriverEventCallback cb,
+    void* userData
 ) {
+    eventCallback = cb;
+    eventUserData = userData;
+}
+
+bool ZigBeeDriver::connect(const std::string& uuid) {
 
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!connected)
         return false;
 
-    std::string topic =
-        "zigbee2mqtt/" + uuid;
-
-    try {
-
-        client->subscribe(topic, 1)->wait();
-
+    if (states.count(uuid))
         return true;
 
-    } catch (...) {
+    states.emplace(uuid, CoreDeviceState{});
 
-        return false;
-    }
+    return true;
 }
 
-
-bool ZigBeeDriver::disconnect(
-    const std::string& uuid
-) {
+bool ZigBeeDriver::disconnect(const std::string& uuid) {
 
     std::lock_guard<std::mutex> lock(mutex);
 
-    std::string topic =
-        "zigbee2mqtt/" + uuid;
+    states.erase(uuid);
 
-    try {
-
-        client->unsubscribe(topic)->wait();
-
-        states.erase(uuid);
-
-        return true;
-
-    } catch (...) {
-
-        return false;
-    }
+    return true;
 }
-
 
 void ZigBeeDriver::publishCommand(
     const std::string& uuid,
     const std::string& json
 ) {
-
     if (!connected)
         return;
 
     std::string topic =
         "zigbee2mqtt/" + uuid + "/set";
 
-    auto msg = mqtt::make_message(
-        topic,
-        json
-    );
-
+    auto msg = mqtt::make_message(topic, json);
     msg->set_qos(1);
 
     client->publish(msg);
 }
 
-
 bool ZigBeeDriver::setPower(
     const std::string& uuid,
     bool value
 ) {
-
     std::stringstream ss;
-
     ss << "{ \"state\": \""
        << (value ? "ON" : "OFF")
        << "\" }";
 
     publishCommand(uuid, ss.str());
-
     return true;
 }
 
-
 bool ZigBeeDriver::setBrightness(
     const std::string& uuid,
-    int value
+    uint32_t value
 ) {
-
     std::stringstream ss;
-
     ss << "{ \"brightness\": "
        << value
        << " }";
 
     publishCommand(uuid, ss.str());
-
     return true;
 }
-
 
 bool ZigBeeDriver::setColor(
     const std::string& uuid,
     uint32_t rgb
 ) {
-
-    int r = (rgb >> 16) & 0xFF;
-    int g = (rgb >> 8) & 0xFF;
-    int b = rgb & 0xFF;
+    uint32_t r = (rgb >> 16) & 0xFF;
+    uint32_t g = (rgb >> 8) & 0xFF;
+    uint32_t b = rgb & 0xFF;
 
     std::stringstream ss;
-
     ss << "{ \"color\": { "
        << "\"r\": " << r << ", "
        << "\"g\": " << g << ", "
@@ -173,90 +127,65 @@ bool ZigBeeDriver::setColor(
        << " } }";
 
     publishCommand(uuid, ss.str());
-
     return true;
 }
 
-
 bool ZigBeeDriver::setTemperature(
     const std::string& uuid,
-    float value
+    uint32_t value
 ) {
-
     std::stringstream ss;
-
     ss << "{ \"temperature\": "
        << value
        << " }";
 
     publishCommand(uuid, ss.str());
-
     return true;
 }
-
 
 bool ZigBeeDriver::setTime(
     const std::string& uuid,
     uint64_t value
 ) {
-
     std::stringstream ss;
-
     ss << "{ \"timestamp\": "
        << value
        << " }";
 
     publishCommand(uuid, ss.str());
-
     return true;
 }
-
 
 bool ZigBeeDriver::getState(
     const std::string& uuid,
     CoreDeviceState& outState
 ) {
-
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!states.count(uuid))
         return false;
 
     outState = states[uuid];
-
     return true;
 }
-
 
 bool ZigBeeDriver::isAvailable(
     const std::string& uuid
 ) {
-
     std::lock_guard<std::mutex> lock(mutex);
-
-    return states.count(uuid);
+    return states.count(uuid) > 0;
 }
-
-
-/* MQTT callbacks */
 
 void ZigBeeDriver::connection_lost(
     const std::string& cause
 ) {
-
     connected = false;
-
-    std::cerr
-        << "ZigBee MQTT lost: "
-        << cause << "\n";
 }
-
 
 void ZigBeeDriver::delivery_complete(
     mqtt::delivery_token_ptr
 ) {
 }
-
 
 void ZigBeeDriver::message_arrived(
     mqtt::const_message_ptr msg
@@ -270,98 +199,102 @@ void ZigBeeDriver::message_arrived(
     if (topic.rfind(prefix, 0) != 0)
         return;
 
-    std::string rest =
-        topic.substr(prefix.size());
+    std::string rest = topic.substr(prefix.size());
 
-    std::string uuid = rest;
+    auto pos = rest.find('/');
+    if (pos == std::string::npos)
+        return;
+
+    std::string uuid = rest.substr(0, pos);
+    std::string type = rest.substr(pos + 1);
+
+    if (type != "state")
+        return;
 
     parseState(uuid, payload);
 }
-
 
 void ZigBeeDriver::parseState(
     const std::string& uuid,
     const std::string& payload
 ) {
 
-    std::lock_guard<std::mutex> lock(mutex);
+    CoreDeviceState newState;
+    CoreDeviceState oldState;
 
-    CoreDeviceState st{};
+    {
+        std::lock_guard<std::mutex> lock(mutex);
 
-    size_t p;
+        auto it = states.find(uuid);
+        if (it == states.end())
+            return;
 
+        oldState = it->second;
+        newState = oldState;
 
-    if ((p = payload.find("\"state\"")) != std::string::npos) {
+        size_t p;
 
-        auto v =
-            payload.substr(
-                payload.find(":", p) + 1
+        if ((p = payload.find("\"state\"")) != std::string::npos) {
+            newState.power =
+                payload.find("ON", p) != std::string::npos;
+        }
+
+        if ((p = payload.find("brightness")) != std::string::npos) {
+            newState.brightness =
+                std::stoi(payload.substr(payload.find(":", p) + 1));
+        }
+
+        if ((p = payload.find("\"r\"")) != std::string::npos) {
+
+            uint32_t r = std::stoi(
+                payload.substr(payload.find(":", p) + 1)
             );
 
-        st.power =
-            v.find("ON") != std::string::npos;
-    }
-
-
-    if ((p = payload.find("brightness")) != std::string::npos) {
-
-        st.brightness =
-            std::stoi(
-                payload.substr(
-                    payload.find(":", p) + 1
-                )
+            uint32_t g = std::stoi(
+                payload.substr(payload.find("\"g\"") + 4)
             );
-    }
 
-
-    if ((p = payload.find("\"r\"")) != std::string::npos) {
-
-        int r = std::stoi(
-            payload.substr(
-                payload.find(":", p) + 1
-            )
-        );
-
-        int g = std::stoi(
-            payload.substr(
-                payload.find("\"g\"") + 4
-            )
-        );
-
-        int b = std::stoi(
-            payload.substr(
-                payload.find("\"b\"") + 4
-            )
-        );
-
-        st.color =
-            (r << 16) | (g << 8) | b;
-    }
-
-
-    if ((p = payload.find("temperature")) != std::string::npos) {
-
-        st.temperature =
-            std::stof(
-                payload.substr(
-                    payload.find(":", p) + 1
-                )
+            uint32_t b = std::stoi(
+                payload.substr(payload.find("\"b\"") + 4)
             );
+
+            newState.color =
+                (r << 16) | (g << 8) | b;
+        }
+
+        if ((p = payload.find("temperature")) != std::string::npos) {
+            newState.temperature =
+                std::stof(payload.substr(payload.find(":", p) + 1));
+        }
+
+        if ((p = payload.find("timestamp")) != std::string::npos) {
+            newState.timestamp =
+                std::stoull(payload.substr(payload.find(":", p) + 1));
+        }
+
+        bool changed =
+            newState.power != oldState.power ||
+            newState.brightness != oldState.brightness ||
+            newState.color != oldState.color ||
+            newState.temperature != oldState.temperature ||
+            newState.timestamp != oldState.timestamp;
+
+        if (!changed)
+            return;
+
+        it->second = newState;
     }
 
+    notifyStateChange(uuid, newState);
+}
 
-    if ((p = payload.find("timestamp")) != std::string::npos) {
-
-        st.timestamp =
-            std::stoull(
-                payload.substr(
-                    payload.find(":", p) + 1
-                )
-            );
+void ZigBeeDriver::notifyStateChange(
+    const std::string& uuid,
+    const CoreDeviceState& newState
+) {
+    if (eventCallback) {
+        eventCallback(uuid, newState, eventUserData);
     }
-
-
-    states[uuid] = st;
 }
 
 }

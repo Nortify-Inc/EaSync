@@ -133,8 +133,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/ext/aligned_buffer.h \
  /usr/include/c++/13/bits/enable_special_members.h \
  /usr/include/c++/13/bits/node_handle.h \
- /usr/include/c++/13/bits/erase_if.h /usr/include/c++/13/unordered_set \
- /usr/include/c++/13/bits/unordered_set.h /usr/include/c++/13/mutex \
+ /usr/include/c++/13/bits/erase_if.h /usr/include/c++/13/mutex \
  /usr/include/c++/13/exception /usr/include/c++/13/bits/exception_ptr.h \
  /usr/include/c++/13/bits/cxxabi_init_exception.h \
  /usr/include/c++/13/typeinfo /usr/include/c++/13/bits/nested_exception.h \
@@ -277,4 +276,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h /usr/include/c++/13/deque \
  /usr/include/c++/13/bits/stl_deque.h /usr/include/c++/13/bits/deque.tcc \
  /usr/include/c++/13/queue /usr/include/c++/13/bits/stl_queue.h \
- /home/radmann/easync/lib/core/drivers/wifi.hpp
+ /home/radmann/easync/lib/core/drivers/wifi.hpp \
+ /home/radmann/easync/lib/core/drivers/zigbee.hpp \
+ /usr/include/c++/13/unordered_set \
+ /usr/include/c++/13/bits/unordered_set.h

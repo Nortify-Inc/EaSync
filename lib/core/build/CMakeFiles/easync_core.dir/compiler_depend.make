@@ -65,7 +65,6 @@ CMakeFiles/easync_core.dir/drivers/mock.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/c++/13/bits/stringfwd.h \
   /usr/include/c++/13/bits/unique_lock.h \
   /usr/include/c++/13/bits/unordered_map.h \
-  /usr/include/c++/13/bits/unordered_set.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
@@ -103,7 +102,6 @@ CMakeFiles/easync_core.dir/drivers/mock.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
   /usr/include/c++/13/unordered_map \
-  /usr/include/c++/13/unordered_set \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -566,8 +564,10 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/asm-generic/posix_types.h \
   /usr/include/asm-generic/socket.h \
   /usr/include/asm-generic/sockios.h \
+  /usr/include/c++/13/array \
   /usr/include/c++/13/backward/binders.h \
   /usr/include/c++/13/bit \
+  /usr/include/c++/13/bits/algorithmfwd.h \
   /usr/include/c++/13/bits/alloc_traits.h \
   /usr/include/c++/13/bits/allocator.h \
   /usr/include/c++/13/bits/basic_ios.h \
@@ -621,23 +621,32 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/c++/13/bits/requires_hosted.h \
   /usr/include/c++/13/bits/sstream.tcc \
   /usr/include/c++/13/bits/std_abs.h \
+  /usr/include/c++/13/bits/std_function.h \
   /usr/include/c++/13/bits/std_mutex.h \
+  /usr/include/c++/13/bits/stl_algo.h \
   /usr/include/c++/13/bits/stl_algobase.h \
+  /usr/include/c++/13/bits/stl_bvector.h \
   /usr/include/c++/13/bits/stl_construct.h \
   /usr/include/c++/13/bits/stl_function.h \
+  /usr/include/c++/13/bits/stl_heap.h \
   /usr/include/c++/13/bits/stl_iterator.h \
   /usr/include/c++/13/bits/stl_iterator_base_funcs.h \
   /usr/include/c++/13/bits/stl_iterator_base_types.h \
   /usr/include/c++/13/bits/stl_pair.h \
+  /usr/include/c++/13/bits/stl_tempbuf.h \
+  /usr/include/c++/13/bits/stl_uninitialized.h \
+  /usr/include/c++/13/bits/stl_vector.h \
   /usr/include/c++/13/bits/streambuf.tcc \
   /usr/include/c++/13/bits/streambuf_iterator.h \
   /usr/include/c++/13/bits/string_view.tcc \
   /usr/include/c++/13/bits/stringfwd.h \
+  /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_lock.h \
   /usr/include/c++/13/bits/unordered_map.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
+  /usr/include/c++/13/bits/vector.tcc \
   /usr/include/c++/13/cctype \
   /usr/include/c++/13/cerrno \
   /usr/include/c++/13/clocale \
@@ -659,10 +668,10 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/c++/13/ext/numeric_traits.h \
   /usr/include/c++/13/ext/string_conversions.h \
   /usr/include/c++/13/ext/type_traits.h \
+  /usr/include/c++/13/functional \
   /usr/include/c++/13/initializer_list \
   /usr/include/c++/13/ios \
   /usr/include/c++/13/iosfwd \
-  /usr/include/c++/13/iostream \
   /usr/include/c++/13/istream \
   /usr/include/c++/13/limits \
   /usr/include/c++/13/mutex \
@@ -681,6 +690,7 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/easync/lib/core/dri
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
   /usr/include/c++/13/unordered_map \
+  /usr/include/c++/13/vector \
   /usr/include/ctype.h \
   /usr/include/endian.h \
   /usr/include/errno.h \
@@ -1174,6 +1184,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/easync/lib/core/src/cor
   /home/radmann/easync/lib/core/drivers/mock.hpp \
   /home/radmann/easync/lib/core/drivers/mqtt.hpp \
   /home/radmann/easync/lib/core/drivers/wifi.hpp \
+  /home/radmann/easync/lib/core/drivers/zigbee.hpp \
   /home/radmann/easync/lib/core/include/core.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
@@ -1787,6 +1798,8 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
   /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h
 
 
+/usr/include/c++/13/unordered_set:
+
 /usr/include/x86_64-linux-gnu/curl/websockets.h:
 
 /usr/include/x86_64-linux-gnu/curl/urlapi.h:
@@ -2023,7 +2036,7 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 
 /usr/include/c++/13/algorithm:
 
-/home/radmann/easync/lib/core/drivers/mqtt.hpp:
+/usr/include/c++/13/string:
 
 /usr/include/c++/13/pstl/pstl_config.h:
 
@@ -2149,10 +2162,6 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 
 /usr/include/c++/13/bits/ranges_base.h:
 
-/usr/include/x86_64-linux-gnu/asm/posix_types.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
-
 /usr/include/x86_64-linux-gnu/c++/13/bits/gthr.h:
 
 /usr/include/c++/13/bits/refwrap.h:
@@ -2180,6 +2189,8 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 /usr/include/c++/13/bits/locale_conv.h:
 
 /usr/include/c++/13/bits/basic_string.tcc:
+
+/home/radmann/easync/lib/core/drivers/mqtt.hpp:
 
 /usr/include/c++/13/cerrno:
 
@@ -2331,8 +2342,6 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 
 /usr/include/c++/13/bits/node_handle.h:
 
-/usr/include/c++/13/string:
-
 /usr/include/c++/13/backward/auto_ptr.h:
 
 /usr/include/c++/13/exception:
@@ -2358,8 +2367,6 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 /usr/include/c++/13/bits/semaphore_base.h:
 
 /usr/include/c++/13/unordered_map:
-
-/usr/include/c++/13/unordered_set:
 
 /usr/include/c++/13/bits/cxxabi_init_exception.h:
 
@@ -2394,14 +2401,6 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 /usr/include/c++/13/bits/cxxabi_forced.h:
 
 /usr/include/x86_64-linux-gnu/bits/timesize.h:
-
-/usr/include/x86_64-linux-gnu/curl/curlver.h:
-
-/home/radmann/easync/lib/core/drivers/mqtt.cpp:
-
-/usr/include/c++/13/ext/atomicity.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
 
 /usr/local/include/mqtt/buffer_ref.h:
 
@@ -2479,9 +2478,13 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 
 /usr/include/x86_64-linux-gnu/bits/types/FILE.h:
 
-/home/radmann/easync/lib/core/drivers/zigbee.cpp:
+/usr/include/x86_64-linux-gnu/asm/posix_types.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
 /usr/include/c++/13/bits/unordered_set.h:
+
+/home/radmann/easync/lib/core/drivers/zigbee.cpp:
 
 /usr/include/c++/13/bits/hashtable_policy.h:
 
@@ -2568,3 +2571,11 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
 /usr/include/c++/13/bits/ranges_util.h:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
+
+/usr/include/x86_64-linux-gnu/curl/curlver.h:
+
+/usr/include/c++/13/ext/atomicity.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
+
+/home/radmann/easync/lib/core/drivers/mqtt.cpp:
