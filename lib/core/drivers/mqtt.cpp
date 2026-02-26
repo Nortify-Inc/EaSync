@@ -91,7 +91,7 @@ bool MqttDriver::setColor(const std::string& uuid, uint32_t rgb) {
     return true;
 }
 
-bool MqttDriver::setTemperature(const std::string& uuid, uint32_t value) {
+bool MqttDriver::setTemperature(const std::string& uuid, float value) {
     std::lock_guard<std::mutex> lock(mutex);
     if (!states.count(uuid))
         return false;

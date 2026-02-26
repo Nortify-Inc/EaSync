@@ -89,7 +89,7 @@ public:
      */
     virtual bool setTemperature(
         const std::string& uuid,
-        uint32_t value
+        float value
     ) = 0;
 
     /**

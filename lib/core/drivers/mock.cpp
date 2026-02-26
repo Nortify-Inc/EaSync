@@ -59,7 +59,7 @@ bool MockDriver::setColor(const std::string& uuid, uint32_t rgb) {
     return true;
 }
 
-bool MockDriver::setTemperature(const std::string& uuid, uint32_t value) {
+bool MockDriver::setTemperature(const std::string& uuid, float value) {
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!states.count(uuid))

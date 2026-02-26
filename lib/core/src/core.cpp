@@ -707,7 +707,7 @@ CoreResult core_set_color(CoreContext* core, const char* uuid, uint32_t value){
  * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
  * @return CORE_ERROR if driver fails to set temperature.
  */
-CoreResult core_set_temperature(CoreContext* core, const char* uuid, uint32_t value){
+CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
 
@@ -720,7 +720,7 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, uint32_t va
         if (it == core->devices.end())
             return CORE_NOT_FOUND;
 
-        if (!hasCapability(it->second, CORE_CAP_COLOR))
+        if (!hasCapability(it->second, CORE_CAP_TEMPERATURE))
             return CORE_NOT_SUPPORTED;
 
         driver = it->second.driver;
@@ -742,8 +742,8 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, uint32_t va
  * @return CORE_OK if successful.
  * @return CORE_INVALID_ARGUMENT if parameters are invalid.
  * @return CORE_NOT_FOUND if device does not exist.
- * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
- * @return CORE_ERROR if driver fails to set temperature.
+ * @return CORE_NOT_SUPPORTED if device lacks time capability.
+ * @return CORE_ERROR if driver fails to set time.
  */
 CoreResult core_set_time(CoreContext* core, const char* uuid, uint32_t value){
     if (!core || !uuid)
@@ -758,7 +758,7 @@ CoreResult core_set_time(CoreContext* core, const char* uuid, uint32_t value){
         if (it == core->devices.end())
             return CORE_NOT_FOUND;
 
-        if (!hasCapability(it->second, CORE_CAP_COLOR))
+        if (!hasCapability(it->second, CORE_CAP_TIMESTAMP))
             return CORE_NOT_SUPPORTED;
 
         driver = it->second.driver;

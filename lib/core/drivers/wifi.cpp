@@ -116,7 +116,7 @@ bool WifiDriver::setColor(const std::string& uuid, uint32_t rgb) {
     return httpPost("http://" + ip + "/color", ss.str());
 }
 
-bool WifiDriver::setTemperature(const std::string& uuid, uint32_t value) {
+bool WifiDriver::setTemperature(const std::string& uuid, float value) {
 
     std::string ip;
 

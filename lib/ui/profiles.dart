@@ -13,7 +13,7 @@ class DeviceAction {
     required this.deviceId,
     this.power = false,
     this.brightness = 0,
-    this.temperature = 0,
+    this.temperature = 0.0,
     this.color = 0xFFFFFFFF,
     this.time = 0,
   });
@@ -673,7 +673,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         Slider(
           min: 0.0,
           max: 36.0,
-          value: a.temperature,
+          value: a.temperature.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {

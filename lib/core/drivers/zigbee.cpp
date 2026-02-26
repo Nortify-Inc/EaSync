@@ -132,7 +132,7 @@ bool ZigBeeDriver::setColor(
 
 bool ZigBeeDriver::setTemperature(
     const std::string& uuid,
-    uint32_t value
+    float value
 ) {
     std::stringstream ss;
     ss << "{ \"temperature\": "
