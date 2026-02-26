@@ -805,22 +805,26 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                 child: cap != CoreCapability.CORE_CAP_COLOR
-                                    ? Text(
-                                        _capValue(device, cap),
-                                        style: EaText.primary,
-                                      )
+                                    ? Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          _capIcon(cap),
+                                          size: 20,
+                                          color: EaColor.secondaryFore,
+                                        ),
+                                        SizedBox(width: 3),
+                                        Text(
+                                          _capValue(device, cap),
+                                          style: EaText.secondary,
+                                        )
+                                      ]
+                                    )
                                     : null,
                               ),
                             ],
                           ),
-
-                          const SizedBox(height: 6),
-                          Icon(
-                            _capIcon(cap),
-                            size: 20,
-                            color: EaColor.secondaryFore,
-                          ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
@@ -829,11 +833,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               );
             },
           ),
-          const SizedBox(height: 8),
           Text(
             device.name,
             textAlign: TextAlign.center,
-            style: EaText.secondary,
+            style: EaText.secondary.copyWith(fontSize: 12),
           ),
         ],
       ),
