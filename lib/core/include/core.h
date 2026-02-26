@@ -123,7 +123,7 @@ typedef struct {
     uint32_t color;
 
     /** Temperature in Celsius (-1 = unsupported) */
-    uint32_t temperature;
+    float temperature;
 
     /** Last update timestamp (unix ms, 0 = unsupported) */
     uint64_t timestamp;
@@ -298,7 +298,7 @@ CoreResult core_set_color(
 CoreResult core_set_temperature(
     CoreContext* core,
     const char* uuid,
-    uint32_t value
+    float value
 );
 
 

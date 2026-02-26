@@ -281,24 +281,22 @@ class _DashboardState extends State<Dashboard>
 
     return PageStorage(
       bucket: _bucket,
-      child: GridView.builder(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        gridDelegate:
-            const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 18,
-          crossAxisSpacing: 18,
-          childAspectRatio: 1,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+        child: Wrap(
+          spacing: 18,
+          runSpacing: 18,
+          children: devices
+              .map((d) => _deviceCard(d))
+              .toList(),
         ),
-        itemCount: devices.length,
-        itemBuilder: (_, i) => _deviceCard(devices[i]),
       )
     );
   }
 
   Future<void> _openDeviceControl(DeviceInfo device) async {
     final state = Bridge.getState(device.uuid);
-    double brightness = state.brightness.toDouble();
+    int brightness = state.brightness;
     double temperature = state.temperature;
     int color = state.color;
     bool power = state.power;
@@ -388,11 +386,11 @@ class _DashboardState extends State<Dashboard>
                             min: 0,
                             max: 100,
                             divisions: 100,
-                            value: brightness,
+                            value: brightness.toDouble(),
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              setInnerState(() => brightness = v);
+                              setInnerState(() => brightness = v.round());
                               Bridge.setBrightness(device.uuid, v.round());
                               setState(() {});
                             },
@@ -530,6 +528,7 @@ class _DashboardState extends State<Dashboard>
                             Slider(
                               min: -10,
                               max: 36,
+                              divisions: (10 + 36) * 2,
                               value: temperature,
                               activeColor: EaColor.fore,
                               inactiveColor: EaColor.fore.withValues(alpha: .25),
@@ -697,6 +696,8 @@ class _DashboardState extends State<Dashboard>
   }
 
   Widget _deviceCard(DeviceInfo device) {
+
+    double size = 145;
     final caps = device.capabilities;
     final index = capIndexByDevice[device.uuid] ?? 0;
     final cap = caps[index];
@@ -710,138 +711,101 @@ class _DashboardState extends State<Dashboard>
 
     final ringColor = _capColor(device, cap);
 
+
+
+
     double dragStartX = 0;
     double dragDelta = 0;
 
-    return GestureDetector(
-      onTap: () => _openDeviceControl(device),
-      onHorizontalDragStart: (d) =>
-          dragStartX = d.globalPosition.dx,
-      onHorizontalDragUpdate: (d) =>
-          dragDelta = d.globalPosition.dx - dragStartX,
-      onHorizontalDragEnd: (_) {
-        if (dragDelta.abs() > 50) {
-          _changeCap(device, dragDelta < 0 ? 1 : -1);
-        }
-      },
-
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: begin, end: target),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-        builder: (_, animated, _) {
-          final scale = 0.95 + sin(animated * pi) * 0.05;
-
-          return LayoutBuilder(
-            builder: (_, c) {
-              const nameHeight = 20.0;
-
-              final size = min(
-                c.maxWidth,
-                c.maxHeight - nameHeight,
-              );
-
-              return Transform.scale(
-                scale: scale,
-                child: Column(
-                  children:[
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CustomPaint(
-                          size: Size(size, size),
-                          painter: _RingPainter(
-                            ringColor: ringColor,
-                            progress: animated,
-                          ),
-                        ),
-
-                        Container(
-                          width: size * .85,
-                          height: size * .85,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                ringColor.withValues(alpha: .0),
-                                ringColor.withValues(alpha: .05),
-                                ringColor.withValues(alpha: .10),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: ringColor,
-                              width: 1.4,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              const SizedBox(height: 10),
-            
-                              const SizedBox(height: 8),
-
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(width: 15),
-                                  Icon(
-                                    Icons.arrow_left_rounded,
-                                    size: 25,
-                                    color: Colors.white,
-                                  ),
-                                  Spacer(),
-                                  cap == CoreCapability.CORE_CAP_COLOR
-                                  ? Container(
-                                      width: 30,
-                                      height: 30,
-                                      decoration: BoxDecoration(
-                                        color: Color(_capValue(device, cap)),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: EaColor.fore,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    )
-                                  : Text(
-                                    _capValue(device, cap),
-                                    style: EaText.primary,
-                                  ),
-                                  Spacer(),
-                                  Icon(
-                                    Icons.arrow_right_outlined,
-                                    size: 25,
-                                    color: Colors.white,
-                                  ),
-                                  SizedBox(width: 15),
-                                ]
-                              ),
-                              SizedBox(height: 5),
-                              Icon(_capIcon(cap),
-                                size: 20,
-                                color: EaColor.secondaryFore
-                              ),
-                              SizedBox(height: 10),
-
-
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      device.name,
-                      textAlign: TextAlign.center,
-                      style: EaText.secondary,
-                    ),
-                  ]
-                )
-              );
-            },
-          );
+    return SizedBox(
+      width: size + 40,
+      height: size + 60,
+      child: GestureDetector(
+        onTap: () {
+          _openDeviceControl(device);
         },
+        onHorizontalDragStart: (d) {
+          dragStartX = d.globalPosition.dx;
+        },
+        onHorizontalDragUpdate: (d) {
+          dragDelta = d.globalPosition.dx - dragStartX;
+        },
+        onHorizontalDragEnd: (_) {
+          if (dragDelta.abs() > 50) {
+            _changeCap(device, dragDelta < 0 ? 1 : -1);
+          }
+        },
+        child: Column(
+          children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: begin, end: target),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutQuad,
+              builder: (_, animated, _) {
+                return Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    CustomPaint(
+                      size: Size(size + 30, size + 30),
+                      painter: _RingPainter(
+                        ringColor: ringColor,
+                        progress: animated,
+                      ),
+                    ),
+                    Container(
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: ringColor,
+                          width: 1.4,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          cap == CoreCapability.CORE_CAP_COLOR
+                              ? Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: Color(
+                                        0xFF000000 |
+                                            _capValue(device, cap)),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: EaColor.fore,
+                                      width: 2,
+                                    ),
+                                  ),
+                                )
+                              : Text(
+                                  _capValue(device, cap),
+                                  style: EaText.primary,
+                                ),
+                          const SizedBox(height: 6),
+                          Icon(
+                            _capIcon(cap),
+                            size: 20,
+                            color: EaColor.secondaryFore,
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              device.name,
+              textAlign: TextAlign.center,
+              style: EaText.secondary,
+            ),
+          ],
+        ),
       ),
     );
   }

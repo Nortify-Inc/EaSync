@@ -190,15 +190,6 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Value Computed by CMake
-core_BINARY_DIR:STATIC=/home/radmann/easync/lib/core/build
-
-//Value Computed by CMake
-core_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-core_SOURCE_DIR:STATIC=/home/radmann/easync/lib/core
-
-//Value Computed by CMake
 easync_core_BINARY_DIR:STATIC=/home/radmann/easync/lib/core/build
 
 //Value Computed by CMake

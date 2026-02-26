@@ -25,7 +25,7 @@ public:
     bool setPower(const std::string& uuid, bool value) override;
     bool setColor(const std::string& uuid, uint32_t rgb) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;
-    bool setTemperature(const std::string& uuid, uint32_t value) override;
+    bool setTemperature(const std::string& uuid, float value) override;
     bool setTime(const std::string& uuid, uint64_t value) override;
 
     bool getState(const std::string& uuid, CoreDeviceState& outState) override;
