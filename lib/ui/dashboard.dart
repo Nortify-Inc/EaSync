@@ -7,9 +7,7 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard>
-    with TickerProviderStateMixin {
-
+class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   bool loading = true;
   String? error;
 
@@ -41,7 +39,9 @@ class _DashboardState extends State<Dashboard>
     try {
       devices = Bridge.listDevices();
       for (var d in devices) {
-        final stored = PageStorage.of(context).readState(context, identifier: d.uuid) as int?;
+        final stored =
+            PageStorage.of(context).readState(context, identifier: d.uuid)
+                as int?;
         final capIndex = stored ?? capIndexByDevice[d.uuid] ?? 0;
         final cap = d.capabilities[capIndex];
 
@@ -51,26 +51,25 @@ class _DashboardState extends State<Dashboard>
         capIndexByDevice[d.uuid] = capIndex;
       }
 
-      _stateSub ??=
-        Bridge.onStateChanged.listen((uuid) {
-          final device = devices.firstWhere(
-            (d) => d.uuid == uuid,
-            orElse: () => devices.first,
-          );
+      _stateSub ??= Bridge.onStateChanged.listen((uuid) {
+        final device = devices.firstWhere(
+          (d) => d.uuid == uuid,
+          orElse: () => devices.first,
+        );
 
-          final index = capIndexByDevice[uuid] ?? 0;
-          final cap = device.capabilities[index];
+        final index = capIndexByDevice[uuid] ?? 0;
+        final cap = device.capabilities[index];
 
-          final newProgress = _capProgress(device, cap);
-          final oldProgress = animatedProgress[uuid] ?? newProgress;
+        final newProgress = _capProgress(device, cap);
+        final oldProgress = animatedProgress[uuid] ?? newProgress;
 
-          if ((newProgress - oldProgress).abs() > 0.001) {
-            previousProgress[uuid] = oldProgress;
-            animatedProgress[uuid] = newProgress;
-          }
+        if ((newProgress - oldProgress).abs() > 0.001) {
+          previousProgress[uuid] = oldProgress;
+          animatedProgress[uuid] = newProgress;
+        }
 
-          setState(() {});
-        });
+        setState(() {});
+      });
 
       loading = false;
 
@@ -79,7 +78,6 @@ class _DashboardState extends State<Dashboard>
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() {});
       });
-
     } catch (e) {
       error = e.toString();
       loading = false;
@@ -174,9 +172,7 @@ class _DashboardState extends State<Dashboard>
         return ((s.temperature + 10) / 46).clamp(0.0, 1.0);
 
       case CoreCapability.CORE_CAP_COLOR:
-        return HSVColor.fromColor(
-          Color(0xFF000000 | s.color),
-        ).value;
+        return HSVColor.fromColor(Color(0xFF000000 | s.color)).value;
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
         return (s.timestamp % 1440) / 1440;
@@ -265,8 +261,7 @@ class _DashboardState extends State<Dashboard>
 
     final target = _capProgress(device, caps[next]);
 
-    previousProgress[device.uuid] =
-        animatedProgress[device.uuid] ?? target;
+    previousProgress[device.uuid] = animatedProgress[device.uuid] ?? target;
 
     animatedProgress[device.uuid] = target;
 
@@ -286,11 +281,9 @@ class _DashboardState extends State<Dashboard>
         child: Wrap(
           spacing: 18,
           runSpacing: 18,
-          children: devices
-              .map((d) => _deviceCard(d))
-              .toList(),
+          children: devices.map((d) => _deviceCard(d)).toList(),
         ),
-      )
+      ),
     );
   }
 
@@ -323,17 +316,18 @@ class _DashboardState extends State<Dashboard>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      device.name,
-                      style: EaText.primary
-                    ),
+                    Text(device.name, style: EaText.primary),
                     const SizedBox(height: 16),
                     if (device.capabilities.contains(
                       CoreCapability.CORE_CAP_POWER,
                     ))
                       Row(
                         children: [
-                          const Icon(Icons.power_settings_new, size: 18, color: EaColor.fore),
+                          const Icon(
+                            Icons.power_settings_new,
+                            size: 18,
+                            color: EaColor.fore,
+                          ),
 
                           const SizedBox(width: 8),
 
@@ -364,7 +358,11 @@ class _DashboardState extends State<Dashboard>
                           const SizedBox(height: 14),
                           Row(
                             children: [
-                              const Icon(Icons.brightness_6_outlined, size: 18, color: EaColor.fore),
+                              const Icon(
+                                Icons.brightness_6_outlined,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
 
                               const SizedBox(width: 8),
 
@@ -372,16 +370,17 @@ class _DashboardState extends State<Dashboard>
 
                               const Spacer(),
 
-                              Text("${brightness.round()}%",
-                                  style: EaText.secondary.copyWith(
-                                    color: EaColor.fore,
-                                  )
+                              Text(
+                                "${brightness.round()}%",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
                               ),
 
-                              SizedBox(width: 10)
+                              SizedBox(width: 10),
                             ],
                           ),
-                          
+
                           Slider(
                             min: 0,
                             max: 100,
@@ -395,7 +394,7 @@ class _DashboardState extends State<Dashboard>
                               setState(() {});
                             },
                           ),
-                          
+
                           SizedBox(height: 8),
                         ],
                       ),
@@ -434,8 +433,9 @@ class _DashboardState extends State<Dashboard>
                                             Container(
                                               width: 40,
                                               height: 40,
-                                              margin:
-                                                  const EdgeInsets.only(bottom: 16),
+                                              margin: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
                                               decoration: BoxDecoration(
                                                 color: selected,
                                                 shape: BoxShape.circle,
@@ -447,18 +447,24 @@ class _DashboardState extends State<Dashboard>
                                             ),
 
                                             RgbColorWheel(
-                                              
                                               color: selected,
                                               onChanged: (c) {
-                                                setModalState(() => selected = c);
+                                                setModalState(
+                                                  () => selected = c,
+                                                );
                                               },
                                             ),
 
                                             const SizedBox(height: 16),
                                             ElevatedButton(
                                               onPressed: () {
-                                                final rgb = selected.toARGB32() & 0xFFFFFFFF;
-                                                Bridge.setColor(device.uuid, rgb);
+                                                final rgb =
+                                                    selected.toARGB32() &
+                                                    0xFFFFFFFF;
+                                                Bridge.setColor(
+                                                  device.uuid,
+                                                  rgb,
+                                                );
                                                 setState(() {});
                                                 Navigator.pop(context);
                                               },
@@ -478,7 +484,9 @@ class _DashboardState extends State<Dashboard>
                                 },
                               );
 
-                              setInnerState(() => color = selected.toARGB32() & 0xFFFFFFFF);
+                              setInnerState(
+                                () => color = selected.toARGB32() & 0xFFFFFFFF,
+                              );
                               setState(() {});
                             },
                             child: Container(
@@ -495,59 +503,64 @@ class _DashboardState extends State<Dashboard>
                             ),
                           ),
 
-                          const SizedBox(width: 10)
+                          const SizedBox(width: 10),
                         ],
                       ),
-                       if (device.capabilities.contains(
-                        CoreCapability.CORE_CAP_TEMPERATURE,
-                      ))
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                const Icon(Icons.thermostat, size: 18, color: EaColor.fore),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_TEMPERATURE,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.thermostat,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
 
-                                const SizedBox(width: 8),
+                              const SizedBox(width: 8),
 
-                                Text("Temperature", style: EaText.secondary),
+                              Text("Temperature", style: EaText.secondary),
 
-                                const Spacer(),
+                              const Spacer(),
 
-                                Text("${temperature.toStringAsFixed(1)}°C",
-                                    style: EaText.secondary.copyWith(
-                                      color: EaColor.fore,
-                                    )
+                              Text(
+                                "${temperature.toStringAsFixed(1)}°C",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
                                 ),
+                              ),
 
-                                SizedBox(width: 10)
-                              ],
-                            ),
+                              SizedBox(width: 10),
+                            ],
+                          ),
 
-                            Slider(
-                              min: -10,
-                              max: 36,
-                              divisions: (10 + 36) * 2,
-                              value: temperature,
-                              activeColor: EaColor.fore,
-                              inactiveColor: EaColor.fore.withValues(alpha: .25),
-                              onChanged: (v) {
-                                setInnerState(() => temperature = v);
-                                Bridge.setTemperature(device.uuid, v);
-                                setState(() {});
-                              },
-                              onChangeEnd: (_) {},
-                            ),
-                          ],
-                        ),
-                  if (device.capabilities.contains(
-                    CoreCapability.CORE_CAP_TIMESTAMP,
-                  ))
-                    _buildScheduleControl(device, setInnerState),
+                          Slider(
+                            min: -10,
+                            max: 36,
+                            divisions: (10 + 36) * 2,
+                            value: temperature,
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => temperature = v);
+                              Bridge.setTemperature(device.uuid, v);
+                              setState(() {});
+                            },
+                            onChangeEnd: (_) {},
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_TIMESTAMP,
+                    ))
+                      _buildScheduleControl(device, setInnerState),
                   ],
                 ),
-              )
+              ),
             );
           },
         );
@@ -556,7 +569,10 @@ class _DashboardState extends State<Dashboard>
     setState(() {});
   }
 
-  Widget _buildScheduleControl(DeviceInfo device, void Function(void Function()) setInnerState) {
+  Widget _buildScheduleControl(
+    DeviceInfo device,
+    void Function(void Function()) setInnerState,
+  ) {
     final state = Bridge.getState(device.uuid);
 
     TimeOfDay? toTime(int? m) {
@@ -614,7 +630,7 @@ class _DashboardState extends State<Dashboard>
                     context: context,
 
                     helpText: "Select time",
-                    
+
                     initialEntryMode: TimePickerEntryMode.inputOnly,
                     initialTime: time ?? TimeOfDay.now(),
 
@@ -644,13 +660,13 @@ class _DashboardState extends State<Dashboard>
 
                           timePickerTheme: TimePickerThemeData(
                             helpTextStyle: EaText.secondary,
-                            
+
                             backgroundColor: EaColor.back,
 
                             hourMinuteColor: EaColor.back,
                             hourMinuteTextColor: EaColor.fore,
                             hourMinuteTextStyle: EaText.primary,
-                            
+
                             shape: RoundedRectangleBorder(
                               side: BorderSide(color: EaColor.border),
                             ),
@@ -660,27 +676,33 @@ class _DashboardState extends State<Dashboard>
                             ),
 
                             confirmButtonStyle: ButtonStyle(
-                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              textStyle: WidgetStatePropertyAll(
+                                EaText.secondary,
+                              ),
                               foregroundColor: WidgetStateColor.fromMap({
                                 WidgetState.any: EaColor.fore,
-                                WidgetState.pressed:
-                                    EaColor.fore.withValues(alpha: .75),
+                                WidgetState.pressed: EaColor.fore.withValues(
+                                  alpha: .75,
+                                ),
                               }),
                             ),
 
                             cancelButtonStyle: ButtonStyle(
-                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              textStyle: WidgetStatePropertyAll(
+                                EaText.secondary,
+                              ),
                               foregroundColor: WidgetStateColor.fromMap({
                                 WidgetState.any: EaColor.fore,
-                                WidgetState.pressed:
-                                    EaColor.fore.withValues(alpha: .75),
+                                WidgetState.pressed: EaColor.fore.withValues(
+                                  alpha: .75,
+                                ),
                               }),
                             ),
                           ),
                         ),
                         child: child!,
                       );
-                    }
+                    },
                   );
                   if (picked != null) {
                     final minutes = toMinutes(picked);
@@ -696,21 +718,16 @@ class _DashboardState extends State<Dashboard>
   }
 
   Widget _deviceCard(DeviceInfo device) {
-
     double size = 145;
     final caps = device.capabilities;
     final index = capIndexByDevice[device.uuid] ?? 0;
     final cap = caps[index];
 
-    final target =
-        animatedProgress[device.uuid] ??
-            _capProgress(device, cap);
+    final target = animatedProgress[device.uuid] ?? _capProgress(device, cap);
 
-    final begin =
-        previousProgress[device.uuid] ?? target;
+    final begin = previousProgress[device.uuid] ?? target;
 
     final ringColor = _capColor(device, cap);
-
 
     double dragStartX = 0;
     double dragDelta = 0;
@@ -718,47 +735,44 @@ class _DashboardState extends State<Dashboard>
     return SizedBox(
       width: size + 40,
       height: size + 60,
-      child: GestureDetector(
-        onTap: () {
-          _openDeviceControl(device);
-        },
-        onHorizontalDragStart: (d) {
-          dragStartX = d.globalPosition.dx;
-        },
-        onHorizontalDragUpdate: (d) {
-          dragDelta = d.globalPosition.dx - dragStartX;
-        },
-        onHorizontalDragEnd: (_) {
-          if (dragDelta.abs() > 50) {
-            _changeCap(device, dragDelta < 0 ? 1 : -1);
-          }
-        },
-        child: Column(
-          children: [
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: begin, end: target),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutSine,
-              builder: (_, animated, _) {
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CustomPaint(
-                      size: Size(size + 30, size + 30),
-                      painter: _RingPainter(
-                        ringColor: ringColor,
-                        progress: animated,
-                      ),
+      child: Column(
+        children: [
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: begin, end: target),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutSine,
+            builder: (_, animated, _) {
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: Size(size + 30, size + 30),
+                    painter: _RingPainter(
+                      ringColor: ringColor,
+                      progress: animated,
                     ),
-                    Container(
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      _openDeviceControl(device);
+                    },
+                    onHorizontalDragStart: (d) {
+                      dragStartX = d.globalPosition.dx;
+                    },
+                    onHorizontalDragUpdate: (d) {
+                      dragDelta = d.globalPosition.dx - dragStartX;
+                    },
+                    onHorizontalDragEnd: (_) {
+                      if (dragDelta.abs() > 50) {
+                        _changeCap(device, dragDelta < 0 ? 1 : -1);
+                      }
+                    },
+                    child: Container(
                       width: size,
                       height: size,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: ringColor,
-                          width: 1.4,
-                        ),
+                        border: Border.all(color: ringColor, width: 1.4),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -767,36 +781,39 @@ class _DashboardState extends State<Dashboard>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                width: cap != CoreCapability.CORE_CAP_COLOR ? null : 30,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                width: cap != CoreCapability.CORE_CAP_COLOR
+                                    ? null
+                                    : 30,
                                 height: 30,
                                 alignment: Alignment.center,
-                                decoration: cap != CoreCapability.CORE_CAP_COLOR 
-                                ? BoxDecoration(
-                                  color: EaColor.back,
-                                  border: BoxBorder.all(
-                                    color: EaColor.fore
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                              
-                                ) : BoxDecoration(
-                                  color: ringColor,
-                                  border: BoxBorder.all(
-                                    color: EaColor.fore
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                              
-                                ),
+                                decoration: cap != CoreCapability.CORE_CAP_COLOR
+                                    ? BoxDecoration(
+                                        color: EaColor.back,
+                                        border: BoxBorder.all(
+                                          color: EaColor.fore,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      )
+                                    : BoxDecoration(
+                                        color: ringColor,
+                                        border: BoxBorder.all(
+                                          color: EaColor.fore,
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
                                 child: cap != CoreCapability.CORE_CAP_COLOR
-                                ? Text(
-                                    _capValue(device, cap),
-                                    style: EaText.primary,
-                                  )
-                                : null,
+                                    ? Text(
+                                        _capValue(device, cap),
+                                        style: EaText.primary,
+                                      )
+                                    : null,
                               ),
                             ],
                           ),
-                          
+
                           const SizedBox(height: 6),
                           Icon(
                             _capIcon(cap),
@@ -807,18 +824,18 @@ class _DashboardState extends State<Dashboard>
                         ],
                       ),
                     ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            Text(
-              device.name,
-              textAlign: TextAlign.center,
-              style: EaText.secondary,
-            ),
-          ],
-        ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          Text(
+            device.name,
+            textAlign: TextAlign.center,
+            style: EaText.secondary,
+          ),
+        ],
       ),
     );
   }
@@ -829,10 +846,7 @@ class _RingPainter extends CustomPainter {
   final double progress;
   double ringWidth = 6;
 
-  _RingPainter({
-    required this.ringColor,
-    required this.progress,
-  });
+  _RingPainter({required this.ringColor, required this.progress});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -842,13 +856,8 @@ class _RingPainter extends CustomPainter {
 
     final glowPaint = Paint()
       ..shader = RadialGradient(
-        colors: [
-          EaColor.background,
-          EaColor.background
-        ],
-      ).createShader(
-        Rect.fromCircle(center: center, radius: radius * 1.2),
-      );
+        colors: [EaColor.background, EaColor.background],
+      ).createShader(Rect.fromCircle(center: center, radius: radius * 1.2));
 
     canvas.drawCircle(center, radius * 1.2, glowPaint);
 
@@ -888,7 +897,6 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RingPainter old) {
-    return old.progress != progress ||
-        old.ringColor != ringColor;
+    return old.progress != progress || old.ringColor != ringColor;
   }
 }

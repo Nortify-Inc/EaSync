@@ -22,7 +22,7 @@ void main() {
       capabilities: [
         CoreCapability.CORE_CAP_POWER,
         CoreCapability.CORE_CAP_TEMPERATURE,
-        CoreCapability.CORE_CAP_TIMESTAMP
+        CoreCapability.CORE_CAP_TIMESTAMP,
       ],
     );
 
@@ -62,7 +62,6 @@ void main() {
     print('Color: ${acState.color}');
     print('Temp: ${acState.temperature}');
     print('Timestamp: ${acState.timestamp}');
-
   } catch (e) {
     print('Error: $e');
   } finally {

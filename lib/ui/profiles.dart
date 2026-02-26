@@ -84,7 +84,7 @@ class _ProfilesState extends State<Profiles>
 
   void _applyProfile(Profile profile) {
     try {
-      if(profile.actions.isEmpty) {
+      if (profile.actions.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Profile has no actions", style: EaText.secondary),
@@ -531,7 +531,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               "${a.brightness} %",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
-            SizedBox(width: 10)
+            SizedBox(width: 10),
           ],
         ),
 
@@ -641,7 +641,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 ),
               ),
             ),
-            SizedBox(width: 10,)
+            SizedBox(width: 10),
           ],
         ),
       ],
@@ -666,7 +666,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               "${a.temperature.toInt()} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
-            SizedBox(width: 10,)
+            SizedBox(width: 10),
           ],
         ),
 
@@ -740,7 +740,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                     context: context,
 
                     helpText: "Select time",
-                    
+
                     initialEntryMode: TimePickerEntryMode.inputOnly,
                     initialTime: time ?? TimeOfDay.now(),
 
@@ -762,7 +762,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: EaColor.fore,     // borda ativa (adeus roxo)
+                                color: EaColor.fore, // borda ativa (adeus roxo)
                                 width: 2,
                               ),
                             ),
@@ -770,13 +770,13 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
                           timePickerTheme: TimePickerThemeData(
                             helpTextStyle: EaText.secondary,
-                            
+
                             backgroundColor: EaColor.back,
 
                             hourMinuteColor: EaColor.back,
                             hourMinuteTextColor: EaColor.fore,
                             hourMinuteTextStyle: EaText.primary,
-                            
+
                             shape: RoundedRectangleBorder(
                               side: BorderSide(color: EaColor.border),
                             ),
@@ -786,27 +786,33 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                             ),
 
                             confirmButtonStyle: ButtonStyle(
-                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              textStyle: WidgetStatePropertyAll(
+                                EaText.secondary,
+                              ),
                               foregroundColor: WidgetStateColor.fromMap({
                                 WidgetState.any: EaColor.fore,
-                                WidgetState.pressed:
-                                    EaColor.fore.withValues(alpha: .75),
+                                WidgetState.pressed: EaColor.fore.withValues(
+                                  alpha: .75,
+                                ),
                               }),
                             ),
 
                             cancelButtonStyle: ButtonStyle(
-                              textStyle: WidgetStatePropertyAll(EaText.secondary),
+                              textStyle: WidgetStatePropertyAll(
+                                EaText.secondary,
+                              ),
                               foregroundColor: WidgetStateColor.fromMap({
                                 WidgetState.any: EaColor.fore,
-                                WidgetState.pressed:
-                                    EaColor.fore.withValues(alpha: .75),
+                                WidgetState.pressed: EaColor.fore.withValues(
+                                  alpha: .75,
+                                ),
                               }),
                             ),
                           ),
                         ),
                         child: child!,
                       );
-                    }
+                    },
                   );
                   if (picked != null) {
                     final minutes = toMinutes(picked);
