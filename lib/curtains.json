@@ -1,0 +1,59 @@
+{  
+  "curtains": [
+    {
+      "brand": "Aqara",
+      "model": "Curtain Driver E1",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "SwitchBot",
+      "model": "Curtain 3",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "Somfy",
+      "model": "TaHoma RTS",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "IKEA",
+      "model": "FYRTUR",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "Eve",
+      "model": "MotionBlinds",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    }
+  ]
+}

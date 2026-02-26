@@ -1,0 +1,59 @@
+{
+  "locks": [
+    {
+      "brand": "Nuki",
+      "model": "Smart Lock 3.0 Pro",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "August",
+      "model": "Wi-Fi Smart Lock 4th Gen",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "Yale",
+      "model": "Assure Lock SL",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "Schlage",
+      "model": "Encode Smart WiFi",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "Aqara",
+      "model": "Smart Lock U100",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    }
+  ]
+}
