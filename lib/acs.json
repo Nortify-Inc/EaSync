@@ -1,0 +1,79 @@
+{
+  "acs": [
+    {
+      "brand": "Daikin",
+      "model": "FTXM35R",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 30 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    },
+    {
+      "brand": "LG",
+      "model": "Dual Inverter V",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 30 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    },
+    {
+      "brand": "Mitsubishi",
+      "model": "MSZ-AP25VG",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 31 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    },
+    {
+      "brand": "Gree",
+      "model": "Fairy GWH12ACC",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 30 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    },
+    {
+      "brand": "Panasonic",
+      "model": "CS-Z25VKEW",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 30 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    }
+  ]
+}

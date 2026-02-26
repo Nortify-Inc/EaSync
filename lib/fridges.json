@@ -1,0 +1,153 @@
+{
+  "fridges": [
+    {
+      "brand": "Midea",
+      "model": "Side by Side 442L",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": {
+          "topic": "device/{uuid}/set",
+          "template": { "power": "{value}" }
+        },
+        "temperature_fridge": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_fridge": "{value}" }
+        },
+        "temperature_freezer": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_freezer": "{value}" }
+        },
+        "mode": {
+          "topic": "device/{uuid}/set",
+          "template": { "mode": "{value}" }
+        }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 2, "max": 8 },
+        "temperature_freezer": { "min": -24, "max": -15 },
+        "mode": ["normal", "eco", "super_freeze"]
+      }
+    },
+
+    {
+      "brand": "Samsung",
+      "model": "Family Hub RF28R7551SR",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": {
+          "topic": "device/{uuid}/set",
+          "template": { "power": "{value}" }
+        },
+        "temperature_fridge": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_fridge": "{value}" }
+        },
+        "temperature_freezer": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_freezer": "{value}" }
+        },
+        "mode": {
+          "topic": "device/{uuid}/set",
+          "template": { "mode": "{value}" }
+        }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 1, "max": 7 },
+        "temperature_freezer": { "min": -23, "max": -15 },
+        "mode": ["normal", "vacation", "power_freeze"]
+      }
+    },
+
+    {
+      "brand": "LG",
+      "model": "InstaView Door-in-Door GC-X257CSAV",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": {
+          "topic": "device/{uuid}/set",
+          "template": { "power": "{value}" }
+        },
+        "temperature_fridge": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_fridge": "{value}" }
+        },
+        "temperature_freezer": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_freezer": "{value}" }
+        },
+        "mode": {
+          "topic": "device/{uuid}/set",
+          "template": { "mode": "{value}" }
+        }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 1, "max": 7 },
+        "temperature_freezer": { "min": -24, "max": -14 },
+        "mode": ["normal", "eco", "express_freeze"]
+      }
+    },
+
+    {
+      "brand": "Bosch",
+      "model": "Serie 6 KGN86AI30",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": {
+          "topic": "device/{uuid}/set",
+          "template": { "power": "{value}" }
+        },
+        "temperature_fridge": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_fridge": "{value}" }
+        },
+        "temperature_freezer": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_freezer": "{value}" }
+        },
+        "mode": {
+          "topic": "device/{uuid}/set",
+          "template": { "mode": "{value}" }
+        }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 2, "max": 8 },
+        "temperature_freezer": { "min": -24, "max": -16 },
+        "mode": ["normal", "eco", "super_freeze"]
+      }
+    },
+
+    {
+      "brand": "Electrolux",
+      "model": "DM84X",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": {
+          "topic": "device/{uuid}/set",
+          "template": { "power": "{value}" }
+        },
+        "temperature_fridge": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_fridge": "{value}" }
+        },
+        "temperature_freezer": {
+          "topic": "device/{uuid}/set",
+          "template": { "temperature_freezer": "{value}" }
+        },
+        "mode": {
+          "topic": "device/{uuid}/set",
+          "template": { "mode": "{value}" }
+        }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 2, "max": 8 },
+        "temperature_freezer": { "min": -23, "max": -15 },
+        "mode": ["normal", "eco", "turbo"]
+      }
+    }
+  ]
+}

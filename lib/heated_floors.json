@@ -1,0 +1,76 @@
+{
+  "heated_floors": [
+    {
+      "brand": "Warmup",
+      "model": "6iE Smart WiFi Thermostat",
+      "capabilities": ["power", "temperature", "mode", "schedule"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } },
+        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 5, "max": 35 },
+        "mode": ["manual", "auto"]
+      }
+    },
+    {
+      "brand": "Heatmiser",
+      "model": "neoStat-e",
+      "capabilities": ["power", "temperature", "schedule"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 5, "max": 35 }
+      }
+    },
+    {
+      "brand": "DEVI",
+      "model": "reg Smart",
+      "capabilities": ["power", "temperature"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 5, "max": 45 }
+      }
+    },
+    {
+      "brand": "Netatmo",
+      "model": "Smart Thermostat",
+      "capabilities": ["power", "temperature", "schedule"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 7, "max": 30 }
+      }
+    },
+    {
+      "brand": "Danfoss",
+      "model": "Icon2 Floor Heating",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 5, "max": 35 },
+        "mode": ["manual", "auto"]
+      }
+    }
+  ]
+}
