@@ -673,7 +673,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         Slider(
           min: -10.0,
           max: 36.0,
-          divisions: (36 + 10) * 2,
+          divisions: (36 + 10) * 2, 
           value: a.temperature.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
