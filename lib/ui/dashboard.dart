@@ -712,8 +712,6 @@ class _DashboardState extends State<Dashboard>
     final ringColor = _capColor(device, cap);
 
 
-
-
     double dragStartX = 0;
     double dragDelta = 0;
 
@@ -740,7 +738,7 @@ class _DashboardState extends State<Dashboard>
             TweenAnimationBuilder<double>(
               tween: Tween(begin: begin, end: target),
               duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutQuad,
+              curve: Curves.easeOutSine,
               builder: (_, animated, _) {
                 return Stack(
                   alignment: Alignment.center,
@@ -765,25 +763,40 @@ class _DashboardState extends State<Dashboard>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          cap == CoreCapability.CORE_CAP_COLOR
-                              ? Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: Color(
-                                        0xFF000000 |
-                                            _capValue(device, cap)),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: EaColor.fore,
-                                      width: 2,
-                                    ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                width: cap != CoreCapability.CORE_CAP_COLOR ? null : 30,
+                                height: 30,
+                                alignment: Alignment.center,
+                                decoration: cap != CoreCapability.CORE_CAP_COLOR 
+                                ? BoxDecoration(
+                                  color: EaColor.back,
+                                  border: BoxBorder.all(
+                                    color: EaColor.fore
                                   ),
-                                )
-                              : Text(
-                                  _capValue(device, cap),
-                                  style: EaText.primary,
+                                  borderRadius: BorderRadius.circular(20),
+                              
+                                ) : BoxDecoration(
+                                  color: ringColor,
+                                  border: BoxBorder.all(
+                                    color: EaColor.fore
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                              
                                 ),
+                                child: cap != CoreCapability.CORE_CAP_COLOR
+                                ? Text(
+                                    _capValue(device, cap),
+                                    style: EaText.primary,
+                                  )
+                                : null,
+                              ),
+                            ],
+                          ),
+                          
                           const SizedBox(height: 6),
                           Icon(
                             _capIcon(cap),
@@ -842,7 +855,7 @@ class _RingPainter extends CustomPainter {
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = ringColor.withValues(alpha: .2);
+      ..color = ringColor.withValues(alpha: .05);
 
     canvas.drawCircle(center, radius, baseRing);
 
@@ -870,7 +883,7 @@ class _RingPainter extends CustomPainter {
 
     final dotPaint = Paint()..color = ringColor;
 
-    canvas.drawCircle(dotOffset, ringWidth * 1.2, dotPaint);
+    canvas.drawCircle(dotOffset, ringWidth * 1.4, dotPaint);
   }
 
   @override
