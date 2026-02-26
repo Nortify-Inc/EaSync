@@ -663,7 +663,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.temperature.toInt()} °C",
+              "${a.temperature.toStringAsFixed(1)} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -671,8 +671,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: 0.0,
+          min: -10.0,
           max: 36.0,
+          divisions: (36 + 10) * 2,
           value: a.temperature.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
