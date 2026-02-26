@@ -246,7 +246,8 @@ class Bridge {
 
   static Pointer<Void>? _ctx;
 
-  static final StreamController<String> _stateController = StreamController.broadcast();
+  static final StreamController<String> _stateController =
+      StreamController.broadcast();
 
   static Stream<String> get onStateChanged => _stateController.stream;
 
