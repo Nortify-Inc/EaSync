@@ -9,6 +9,7 @@ class DeviceTemplate {
   final String category;
   final String brand;
   final String model;
+  final String protocol;
   final List<String> capabilities;
   final Map<String, dynamic> payloads;
   final Map<String, dynamic> constrains;
@@ -17,6 +18,7 @@ class DeviceTemplate {
     required this.category,
     required this.brand,
     required this.model,
+    required this.protocol,
     required this.capabilities,
     required this.payloads,
     required this.constrains,
@@ -27,6 +29,7 @@ class DeviceTemplate {
       category: category,
       brand: json["brand"],
       model: json["model"],
+      protocol: (json["protocol"] ?? "mock").toString(),
       capabilities: List<String>.from(json["capabilities"]),
       payloads: json["payloads"],
       constrains: json["constrains"],
@@ -338,6 +341,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     "locks",
     "curtains",
     "heated_floors",
+    "mocks",
   ];
 
   @override
@@ -408,11 +412,12 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       Bridge.registerDevice(
         uuid: uuid,
         name: name,
-        protocol: CoreProtocol.CORE_PROTOCOL_MOCK,
+        protocol: _mapProtocol(selectedTemplate!.protocol),
         capabilities: selectedTemplate!.capabilities
             .map(_mapCapability)
             .toList(),
         modeLabels: modeLabels,
+        constraints: selectedTemplate!.constrains,
       );
 
       widget.onSaved();
@@ -429,6 +434,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       'locks': 'Smart Locks',
       'curtains': 'Curtains',
       'heated_floors': 'Heated Floors',
+      'mocks': 'Mock Devices',
     };
     return names[raw] ??
         raw
@@ -463,6 +469,22 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         return CoreCapability.CORE_CAP_POSITION;
       default:
         throw Exception("Unsupported capability: $cap");
+    }
+  }
+
+  int _mapProtocol(String protocol) {
+    switch (protocol.toLowerCase()) {
+      case 'mqtt':
+        return CoreProtocol.CORE_PROTOCOL_MQTT;
+      case 'wifi':
+        return CoreProtocol.CORE_PROTOCOL_WIFI;
+      case 'zigbee':
+        return CoreProtocol.CORE_PROTOCOL_ZIGBEE;
+      case 'ble':
+        return CoreProtocol.CORE_PROTOCOL_BLE;
+      case 'mock':
+      default:
+        return CoreProtocol.CORE_PROTOCOL_MOCK;
     }
   }
 
@@ -573,6 +595,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                                         Text(
                                           _prettyCategory(t.category),
                                           style: EaText.secondary,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          "Protocol: ${t.protocol.toUpperCase()}",
+                                          style: EaText.secondaryTranslucent,
                                         ),
                                         const SizedBox(height: 6),
                                         Wrap(

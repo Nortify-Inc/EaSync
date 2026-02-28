@@ -3,6 +3,7 @@
     {
       "brand": "Aqara",
       "model": "Curtain Driver E1",
+      "protocol": "zigbee",
       "capabilities": ["position"],
       "payloads": {
         "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
@@ -14,6 +15,7 @@
     {
       "brand": "SwitchBot",
       "model": "Curtain 3",
+      "protocol": "ble",
       "capabilities": ["position"],
       "payloads": {
         "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
@@ -25,6 +27,7 @@
     {
       "brand": "Somfy",
       "model": "TaHoma RTS",
+      "protocol": "wifi",
       "capabilities": ["position"],
       "payloads": {
         "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
@@ -36,6 +39,7 @@
     {
       "brand": "IKEA",
       "model": "FYRTUR",
+      "protocol": "zigbee",
       "capabilities": ["position"],
       "payloads": {
         "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
@@ -47,6 +51,19 @@
     {
       "brand": "Eve",
       "model": "MotionBlinds",
+      "protocol": "wifi",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "Tuya",
+      "model": "AM43 Curtain Motor",
+      "protocol": "wifi",
       "capabilities": ["position"],
       "payloads": {
         "position": { "topic": "device/{uuid}/set", "template": { "position": "{value}" } }

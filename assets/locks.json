@@ -3,6 +3,7 @@
     {
       "brand": "Nuki",
       "model": "Smart Lock 3.0 Pro",
+      "protocol": "wifi",
       "capabilities": ["lock"],
       "payloads": {
         "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
@@ -14,6 +15,7 @@
     {
       "brand": "August",
       "model": "Wi-Fi Smart Lock 4th Gen",
+      "protocol": "wifi",
       "capabilities": ["lock"],
       "payloads": {
         "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
@@ -25,6 +27,7 @@
     {
       "brand": "Yale",
       "model": "Assure Lock SL",
+      "protocol": "zigbee",
       "capabilities": ["lock"],
       "payloads": {
         "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
@@ -36,6 +39,7 @@
     {
       "brand": "Schlage",
       "model": "Encode Smart WiFi",
+      "protocol": "wifi",
       "capabilities": ["lock"],
       "payloads": {
         "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
@@ -47,6 +51,19 @@
     {
       "brand": "Aqara",
       "model": "Smart Lock U100",
+      "protocol": "zigbee",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "Tedee",
+      "model": "Tedee Pro",
+      "protocol": "ble",
       "capabilities": ["lock"],
       "payloads": {
         "lock": { "topic": "device/{uuid}/set", "template": { "lock": "{value}" } }

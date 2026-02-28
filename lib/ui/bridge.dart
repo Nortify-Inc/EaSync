@@ -397,6 +397,7 @@ class Bridge {
 
   static final Map<String, DeviceState> _stateCache = {};
   static final Map<String, List<String>> _modeLabelsByDevice = {};
+  static final Map<String, Map<String, dynamic>> _constraintsByDevice = {};
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -496,6 +497,7 @@ class Bridge {
     _simulateTimer = null;
     _stateCache.clear();
     _modeLabelsByDevice.clear();
+    _constraintsByDevice.clear();
 
     if (_ctx != null) {
       _coreDestroy(_ctx!);
@@ -510,6 +512,7 @@ class Bridge {
     required int protocol,
     required List<int> capabilities,
     List<String>? modeLabels,
+    Map<String, dynamic>? constraints,
   }) {
     _ensureReady();
 
@@ -542,6 +545,17 @@ class Bridge {
     if (modeLabels != null && modeLabels.isNotEmpty) {
       _modeLabelsByDevice[uuid] = modeLabels;
     }
+
+    if (constraints != null && constraints.isNotEmpty) {
+      _constraintsByDevice[uuid] = Map<String, dynamic>.from(constraints);
+
+      if ((modeLabels == null || modeLabels.isEmpty) &&
+          constraints['mode'] is List) {
+        _modeLabelsByDevice[uuid] = (constraints['mode'] as List)
+            .map((e) => e.toString())
+            .toList();
+      }
+    }
   }
 
   static String modeName(String uuid, int modeIndex) {
@@ -558,6 +572,36 @@ class Bridge {
     final labels = _modeLabelsByDevice[uuid];
     if (labels == null || labels.isEmpty) return 6;
     return labels.length;
+  }
+
+  static double _constraintNumber(
+    String uuid,
+    String key,
+    String field,
+    double fallback,
+  ) {
+    final constraints = _constraintsByDevice[uuid];
+    if (constraints == null) return fallback;
+
+    final value = constraints[key];
+    if (value is! Map) return fallback;
+
+    final numValue = value[field];
+    if (numValue is num) return numValue.toDouble();
+
+    return fallback;
+  }
+
+  static double constraintMin(String uuid, String key, double fallback) {
+    return _constraintNumber(uuid, key, 'min', fallback);
+  }
+
+  static double constraintMax(String uuid, String key, double fallback) {
+    return _constraintNumber(uuid, key, 'max', fallback);
+  }
+
+  static double constraintStep(String uuid, String key, double fallback) {
+    return _constraintNumber(uuid, key, 'step', fallback);
   }
 
   static List<DeviceInfo> listDevices() {
@@ -872,6 +916,7 @@ class Bridge {
       } else if (e.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
         _invalidateState(uuid);
         _modeLabelsByDevice.remove(uuid);
+        _constraintsByDevice.remove(uuid);
       }
     } catch (_) {
       // swallow errors to avoid crashing native callback

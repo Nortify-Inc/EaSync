@@ -1,0 +1,55 @@
+{
+  "mocks": [
+    {
+      "brand": "EaSync",
+      "model": "Mock Lamp QA",
+      "protocol": "mock",
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "brightness": { "topic": "mock/{uuid}/set", "template": { "brightness": "{value}" } },
+        "color": { "topic": "mock/{uuid}/set", "template": { "color": "{value}" } },
+        "colorTemperature": { "topic": "mock/{uuid}/set", "template": { "colorTemperature": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "brightness": { "min": 0, "max": 100 },
+        "colorTemperature": { "min": 2200, "max": 6500 }
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock AC QA",
+      "protocol": "mock",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "mock/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 16, "max": 30, "step": 0.5 },
+        "mode": ["Cool", "Heat", "Dry", "Fan", "Auto"]
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Fridge QA",
+      "protocol": "mock",
+      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature_fridge": { "topic": "mock/{uuid}/set", "template": { "temperature_fridge": "{value}" } },
+        "temperature_freezer": { "topic": "mock/{uuid}/set", "template": { "temperature_freezer": "{value}" } },
+        "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature_fridge": { "min": 1, "max": 8, "step": 0.5 },
+        "temperature_freezer": { "min": -24, "max": -14, "step": 0.5 },
+        "mode": ["normal", "eco", "super_freeze"]
+      }
+    }
+  ]
+}

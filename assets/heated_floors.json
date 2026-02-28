@@ -3,6 +3,7 @@
     {
       "brand": "Warmup",
       "model": "6iE Smart WiFi Thermostat",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -12,13 +13,14 @@
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 5, "max": 35 },
+        "temperature": { "min": 5, "max": 35, "step": 0.5 },
         "mode": ["manual", "auto"]
       }
     },
     {
       "brand": "Heatmiser",
       "model": "neoStat-e",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -27,12 +29,13 @@
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 5, "max": 35 }
+        "temperature": { "min": 5, "max": 35, "step": 0.5 }
       }
     },
     {
       "brand": "DEVI",
       "model": "reg Smart",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -40,12 +43,13 @@
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 5, "max": 45 }
+        "temperature": { "min": 5, "max": 45, "step": 0.5 }
       }
     },
     {
       "brand": "Netatmo",
       "model": "Smart Thermostat",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -54,12 +58,13 @@
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 7, "max": 30 }
+        "temperature": { "min": 7, "max": 30, "step": 0.5 }
       }
     },
     {
       "brand": "Danfoss",
       "model": "Icon2 Floor Heating",
+      "protocol": "zigbee",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -68,8 +73,25 @@
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 5, "max": 35 },
+        "temperature": { "min": 5, "max": 35, "step": 0.5 },
         "mode": ["manual", "auto"]
+      }
+    },
+    {
+      "brand": "Google Nest",
+      "model": "Nest Learning Thermostat",
+      "protocol": "wifi",
+      "capabilities": ["power", "temperature", "mode", "time"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } },
+        "time": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 9, "max": 32, "step": 0.5 },
+        "mode": ["heat", "eco", "auto"]
       }
     }
   ]
