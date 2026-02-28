@@ -3,13 +3,18 @@
 #include "driver.hpp"
 
 #include <unordered_map>
+#include <atomic>
 #include <mutex>
+#include <thread>
 #include <string>
 
 namespace drivers {
 
 class MockDriver : public Driver {
 public:
+    MockDriver() = default;
+    ~MockDriver() override;
+
     bool init() override;
 
     bool connect(const std::string& uuid) override;
@@ -41,6 +46,10 @@ public:
     );
 
 private:
+    void startSimulation();
+    void stopSimulation();
+    void simulationLoop();
+
     void notifyStateChange(
         const std::string& uuid,
         const CoreDeviceState& newState
@@ -49,6 +58,9 @@ private:
 private:
     std::mutex mutex;
     std::unordered_map<std::string, CoreDeviceState> states;
+
+    std::atomic<bool> running{false};
+    std::thread simulationThread;
 
     DriverEventCallback eventCallback = nullptr;
     void* eventUserData = nullptr;

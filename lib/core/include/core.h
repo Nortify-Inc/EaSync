@@ -405,6 +405,14 @@ CoreResult core_set_position(
     float value
 );
 
+/**
+ * @brief Simulate external state changes for all devices.
+ *
+ * Generates random values for supported capabilities and dispatches
+ * STATE_CHANGED events so consumers can observe UI updates.
+ */
+CoreResult core_simulate(CoreContext* core);
+
 
 /**
  * @brief Get last error message.
