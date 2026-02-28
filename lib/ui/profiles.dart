@@ -3,19 +3,31 @@ import 'handler.dart';
 class DeviceAction {
   final String deviceId;
 
-  bool power;
-  int brightness;
-  double temperature;
-  int color;
-  int time;
+  bool? power;
+  int? brightness;
+  double? temperature;
+  double? temperatureFridge;
+  double? temperatureFreezer;
+  int? color;
+  int? colorTemperature;
+  int? time;
+  bool? lock;
+  int? mode;
+  double? position;
 
   DeviceAction({
     required this.deviceId,
-    this.power = false,
-    this.brightness = 0,
-    this.temperature = 0.0,
-    this.color = 0xFFFFFFFF,
-    this.time = 0,
+    this.power,
+    this.brightness,
+    this.temperature,
+    this.temperatureFridge,
+    this.temperatureFreezer,
+    this.color,
+    this.colorTemperature,
+    this.time,
+    this.lock,
+    this.mode,
+    this.position,
   });
 }
 
@@ -38,6 +50,7 @@ class _ProfilesState extends State<Profiles>
     with AutomaticKeepAliveClientMixin {
   final List<Profile> profiles = [];
   List<DeviceInfo> devices = [];
+  StreamSubscription<CoreEventData>? _eventSub;
 
   @override
   bool get wantKeepAlive => true;
@@ -46,6 +59,18 @@ class _ProfilesState extends State<Profiles>
   void initState() {
     super.initState();
     _loadDevices();
+    _eventSub = Bridge.onEvents.listen((event) {
+      if (event.type == CoreEventType.CORE_EVENT_DEVICE_ADDED ||
+          event.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
+        _loadDevices();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSub?.cancel();
+    super.dispose();
   }
 
   void _loadDevices() {
@@ -94,22 +119,46 @@ class _ProfilesState extends State<Profiles>
         return;
       }
       for (final a in profile.actions) {
-        Bridge.setPower(a.deviceId, a.power);
+        if (a.power != null) Bridge.setPower(a.deviceId, a.power!);
 
-        if (a.brightness > 0) {
-          Bridge.setBrightness(a.deviceId, a.brightness);
+        if (a.brightness != null) {
+          Bridge.setBrightness(a.deviceId, a.brightness!);
         }
 
-        if (a.temperature > 0) {
-          Bridge.setTemperature(a.deviceId, a.temperature);
+        if (a.temperature != null) {
+          Bridge.setTemperature(a.deviceId, a.temperature!);
         }
 
-        if (a.color != 0xFFFFFFFF) {
-          Bridge.setColor(a.deviceId, a.color);
+        if (a.temperatureFridge != null) {
+          Bridge.setTemperatureFridge(a.deviceId, a.temperatureFridge!);
         }
 
-        if (a.time > 0) {
-          Bridge.setTime(a.deviceId, a.time);
+        if (a.temperatureFreezer != null) {
+          Bridge.setTemperatureFreezer(a.deviceId, a.temperatureFreezer!);
+        }
+
+        if (a.color != null) {
+          Bridge.setColor(a.deviceId, a.color!);
+        }
+
+        if (a.colorTemperature != null) {
+          Bridge.setColorTemperature(a.deviceId, a.colorTemperature!);
+        }
+
+        if (a.time != null) {
+          Bridge.setTime(a.deviceId, a.time!);
+        }
+
+        if (a.lock != null) {
+          Bridge.setLock(a.deviceId, a.lock!);
+        }
+
+        if (a.mode != null) {
+          Bridge.setMode(a.deviceId, a.mode!);
+        }
+
+        if (a.position != null) {
+          Bridge.setPosition(a.deviceId, a.position!);
         }
       }
 
@@ -302,7 +351,24 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   void _addAction(DeviceInfo d) {
     if (actions.any((a) => a.deviceId == d.uuid)) return;
 
-    actions.add(DeviceAction(deviceId: d.uuid));
+    final state = Bridge.getState(d.uuid);
+
+    actions.add(
+      DeviceAction(
+        deviceId: d.uuid,
+        power: state.power,
+        brightness: state.brightness,
+        temperature: state.temperature,
+        temperatureFridge: state.temperatureFridge,
+        temperatureFreezer: state.temperatureFreezer,
+        color: state.color,
+        colorTemperature: state.colorTemperature,
+        time: state.timestamp,
+        lock: state.lock,
+        mode: state.mode,
+        position: state.position,
+      ),
+    );
 
     setState(() {});
   }
@@ -445,7 +511,21 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     final hasTemperature = d.capabilities.contains(
       CoreCapability.CORE_CAP_TEMPERATURE,
     );
+    final hasTemperatureFridge = d.capabilities.contains(
+      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+    );
+    final hasTemperatureFreezer = d.capabilities.contains(
+      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+    );
     final hasTime = d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP);
+    final hasColorTemperature = d.capabilities.contains(
+      CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
+    );
+    final hasLock = d.capabilities.contains(CoreCapability.CORE_CAP_LOCK);
+    final hasMode = d.capabilities.contains(CoreCapability.CORE_CAP_MODE);
+    final hasPosition = d.capabilities.contains(
+      CoreCapability.CORE_CAP_POSITION,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -483,6 +563,18 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
           if (hasTemperature) _temperatureRow(a),
 
+          if (hasTemperatureFridge) _temperatureFridgeRow(a),
+
+          if (hasTemperatureFreezer) _temperatureFreezerRow(a),
+
+          if (hasColorTemperature) _colorTemperatureRow(a),
+
+          if (hasLock) _lockRow(a),
+
+          if (hasMode) _modeRow(a),
+
+          if (hasPosition) _positionRow(a),
+
           if (hasTime) _timeRow(a),
         ],
       ),
@@ -504,7 +596,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           activeThumbColor: EaColor.fore,
           inactiveTrackColor: EaColor.back,
 
-          value: a.power,
+          value: a.power ?? false,
           onChanged: (v) {
             setState(() => a.power = v);
           },
@@ -528,7 +620,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.brightness} %",
+              "${a.brightness ?? 0} %",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -538,7 +630,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         Slider(
           min: 0.0,
           max: 100.0,
-          value: a.brightness.toDouble(),
+          value: (a.brightness ?? 0).toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
@@ -550,7 +642,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   }
 
   Widget _colorRow(DeviceAction a) {
-    Color current = Color(0xFF000000 | a.color);
+    final colorValue = a.color ?? 0xFFFFFFFF;
+    Color current = Color(0xFF000000 | colorValue);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -663,7 +756,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.temperature.toStringAsFixed(1)} °C",
+              "${a.temperature?.toStringAsFixed(1)} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -674,11 +767,214 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           min: -10.0,
           max: 36.0,
           divisions: (36 + 10) * 2,
-          value: a.temperature.toDouble(),
+          value: (a.temperature ?? 0).toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
             setState(() => a.temperature = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _temperatureFridgeRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            const Icon(Icons.kitchen_outlined, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Fridge", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${(a.temperatureFridge ?? 0).toStringAsFixed(1)} °C",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
+
+        Slider(
+          min: -5.0,
+          max: 12.0,
+          value: (a.temperatureFridge ?? 4.0),
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.temperatureFridge = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _temperatureFreezerRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            const Icon(Icons.ac_unit, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Freezer", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${(a.temperatureFreezer ?? -18).toStringAsFixed(1)} °C",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
+
+        Slider(
+          min: -32.0,
+          max: 0.0,
+          value: (a.temperatureFreezer ?? -18.0),
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.temperatureFreezer = v);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _colorTemperatureRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            const Icon(Icons.tonality, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Color temp", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${a.colorTemperature ?? 2700} K",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
+
+        Slider(
+          min: 1500.0,
+          max: 9000.0,
+          value: (a.colorTemperature ?? 2700).toDouble(),
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.colorTemperature = v.round());
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _lockRow(DeviceAction a) {
+    return Row(
+      children: [
+        const Icon(Icons.lock_outline, size: 18, color: EaColor.fore),
+
+        const SizedBox(width: 8),
+
+        Text("Lock", style: EaText.secondary),
+
+        const Spacer(),
+
+        Switch(
+          activeThumbColor: EaColor.fore,
+          inactiveTrackColor: EaColor.back,
+          value: a.lock ?? false,
+          onChanged: (v) => setState(() => a.lock = v),
+        ),
+      ],
+    );
+  }
+
+  Widget _modeRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            const Icon(Icons.tune, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Mode", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${a.mode ?? 0}",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
+
+        Slider(
+          min: 0,
+          max: 5,
+          divisions: 5,
+          value: (a.mode ?? 0).toDouble(),
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.mode = v.round());
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _positionRow(DeviceAction a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+
+        Row(
+          children: [
+            const Icon(Icons.straighten, size: 18, color: EaColor.fore),
+            const SizedBox(width: 8),
+            Text("Position", style: EaText.secondary),
+
+            const Spacer(),
+
+            Text(
+              "${(a.position ?? 0).round()} %",
+              style: EaText.secondary.copyWith(color: EaColor.fore),
+            ),
+            SizedBox(width: 10),
+          ],
+        ),
+
+        Slider(
+          min: 0,
+          max: 100,
+          divisions: 100,
+          value: (a.position ?? 0).clamp(0, 100),
+          activeColor: EaColor.fore,
+          inactiveColor: EaColor.secondaryBack,
+          onChanged: (v) {
+            setState(() => a.position = v);
           },
         ),
       ],
@@ -699,7 +995,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       return t.hour * 60 + t.minute;
     }
 
-    final time = toTime(a.time);
+    final time = toTime(a.time ?? -1);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

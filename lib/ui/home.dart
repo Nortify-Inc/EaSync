@@ -17,6 +17,7 @@ class _HomeState extends State<Home> {
 
   int selectedIndex = 0;
   int currentFakePage = startPage;
+  StreamSubscription<CoreEventData>? _eventSub;
 
   final PageController pageController = PageController(initialPage: startPage);
 
@@ -33,6 +34,14 @@ class _HomeState extends State<Home> {
   final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
 
   int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventSub = Bridge.onEvents.listen((_) {
+      setState(() {});
+    });
+  }
 
   @override
   void didChangeDependencies() {
@@ -56,6 +65,7 @@ class _HomeState extends State<Home> {
 
   @override
   void dispose() {
+    _eventSub?.cancel();
     pageController.dispose();
     super.dispose();
   }

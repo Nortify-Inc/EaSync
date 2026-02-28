@@ -19,6 +19,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   final Set<String> initializedDevices = {};
 
   StreamSubscription<String>? _stateSub;
+  StreamSubscription<CoreEventData>? _eventSub;
   final PageStorageBucket _bucket = PageStorageBucket();
 
   @override
@@ -30,6 +31,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   @override
   void dispose() {
     _stateSub?.cancel();
+    _eventSub?.cancel();
     super.dispose();
   }
 
@@ -39,10 +41,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     try {
       devices = Bridge.listDevices();
       for (var d in devices) {
+        if (d.capabilities.isEmpty) continue;
+
         final stored =
             PageStorage.of(context).readState(context, identifier: d.uuid)
                 as int?;
-        final capIndex = stored ?? capIndexByDevice[d.uuid] ?? 0;
+        final rawCapIndex = stored ?? capIndexByDevice[d.uuid] ?? 0;
+        final capIndex = rawCapIndex.clamp(0, d.capabilities.length - 1);
         final cap = d.capabilities[capIndex];
 
         previousProgress[d.uuid] = 0.0;
@@ -52,13 +57,24 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       }
 
       _stateSub ??= Bridge.onStateChanged.listen((uuid) {
-        final device = devices.firstWhere(
-          (d) => d.uuid == uuid,
-          orElse: () => devices.first,
-        );
+        if (devices.isEmpty) return;
 
-        final index = capIndexByDevice[uuid] ?? 0;
-        final cap = device.capabilities[index];
+        final maybeDevice = devices.where((d) => d.uuid == uuid);
+        if (maybeDevice.isEmpty) {
+          _loadDevices();
+          return;
+        }
+
+        final device = maybeDevice.first;
+        if (device.capabilities.isEmpty) return;
+
+        final safeIndex = (capIndexByDevice[uuid] ?? 0).clamp(
+          0,
+          device.capabilities.length - 1,
+        );
+        capIndexByDevice[uuid] = safeIndex;
+
+        final cap = device.capabilities[safeIndex];
 
         final newProgress = _capProgress(device, cap);
         final oldProgress = animatedProgress[uuid] ?? newProgress;
@@ -68,7 +84,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           animatedProgress[uuid] = newProgress;
         }
 
-        setState(() {});
+        if (mounted) setState(() {});
+      });
+
+      _eventSub ??= Bridge.onEvents.listen((event) {
+        if (event.type == CoreEventType.CORE_EVENT_DEVICE_ADDED ||
+            event.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
+          _loadDevices();
+        }
       });
 
       loading = false;
@@ -171,8 +194,26 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       case CoreCapability.CORE_CAP_TEMPERATURE:
         return ((s.temperature + 10) / 46).clamp(0.0, 1.0);
 
+      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
+        return ((s.temperatureFridge + 30) / 45).clamp(0.0, 1.0);
+
+      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
+        return ((-s.temperatureFreezer + 40) / 50).clamp(0.0, 1.0);
+
       case CoreCapability.CORE_CAP_COLOR:
         return HSVColor.fromColor(Color(0xFF000000 | s.color)).value;
+
+      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
+        return (s.colorTemperature / 9000).clamp(0.0, 1.0);
+
+      case CoreCapability.CORE_CAP_LOCK:
+        return s.lock ? 1 : 0;
+
+      case CoreCapability.CORE_CAP_MODE:
+        return (s.mode % 6) / 5;
+
+      case CoreCapability.CORE_CAP_POSITION:
+        return (s.position / 100).clamp(0.0, 1.0);
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
         return (s.timestamp % 1440) / 1440;
@@ -190,13 +231,31 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return s.power ? Colors.green : Colors.red;
 
       case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return Colors.amber;
+        return Colors.deepOrangeAccent;
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
-        return Colors.orange;
+        return Colors.deepPurple;
+
+      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
+        return Colors.lightBlue;
+
+      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
+        return Colors.blueGrey;
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
         return Colors.blue;
+
+      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
+        return Colors.amber;
+
+      case CoreCapability.CORE_CAP_LOCK:
+        return s.lock ? Colors.redAccent : Colors.green;
+
+      case CoreCapability.CORE_CAP_MODE:
+        return Colors.indigo;
+
+      case CoreCapability.CORE_CAP_POSITION:
+        return Colors.teal;
 
       case CoreCapability.CORE_CAP_COLOR:
         return Color(0xFF000000 | s.color);
@@ -216,8 +275,20 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return Icons.color_lens;
       case CoreCapability.CORE_CAP_TEMPERATURE:
         return Icons.thermostat;
+      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
+        return Icons.kitchen_outlined;
+      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
+        return Icons.ac_unit;
       case CoreCapability.CORE_CAP_TIMESTAMP:
         return Icons.schedule;
+      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
+        return Icons.tonality;
+      case CoreCapability.CORE_CAP_LOCK:
+        return Icons.lock_outline;
+      case CoreCapability.CORE_CAP_MODE:
+        return Icons.tune;
+      case CoreCapability.CORE_CAP_POSITION:
+        return Icons.straighten;
       default:
         return Icons.info_outline;
     }
@@ -238,6 +309,24 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
         return "${s.temperature.toStringAsFixed(1)}°C";
+
+      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
+        return "${s.temperatureFridge.toStringAsFixed(1)}°C";
+
+      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
+        return "${s.temperatureFreezer.toStringAsFixed(1)}°C";
+
+      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
+        return "${s.colorTemperature}K";
+
+      case CoreCapability.CORE_CAP_LOCK:
+        return s.lock ? "Locked" : "Unlocked";
+
+      case CoreCapability.CORE_CAP_MODE:
+        return "Mode ${s.mode}";
+
+      case CoreCapability.CORE_CAP_POSITION:
+        return "${s.position.toStringAsFixed(0)}%";
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
         final h = (s.timestamp ~/ 60).toString().padLeft(2, '0');
@@ -293,6 +382,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     double temperature = state.temperature;
     int color = state.color;
     bool power = state.power;
+    double temperatureFridge = state.temperatureFridge;
+    double temperatureFreezer = state.temperatureFreezer;
+    int colorTemperature = state.colorTemperature;
+    bool lock = state.lock;
+    int mode = state.mode;
+    double position = state.position;
 
     await showModalBottomSheet(
       context: context,
@@ -555,6 +650,276 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         ],
                       ),
                     if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.kitchen_outlined,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text("Fridge temp", style: EaText.secondary),
+
+                              const Spacer(),
+
+                              Text(
+                                "${temperatureFridge.toStringAsFixed(1)}°C",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
+                              ),
+
+                              SizedBox(width: 10),
+                            ],
+                          ),
+
+                          Slider(
+                            min: -5,
+                            max: 12,
+                            divisions: 34,
+                            value: temperatureFridge,
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => temperatureFridge = v);
+                              Bridge.setTemperatureFridge(device.uuid, v);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.ac_unit,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text("Freezer temp", style: EaText.secondary),
+
+                              const Spacer(),
+
+                              Text(
+                                "${temperatureFreezer.toStringAsFixed(1)}°C",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
+                              ),
+
+                              SizedBox(width: 10),
+                            ],
+                          ),
+
+                          Slider(
+                            min: -32,
+                            max: 0,
+                            divisions: 32,
+                            value: temperatureFreezer,
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => temperatureFreezer = v);
+                              Bridge.setTemperatureFreezer(device.uuid, v);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.tonality,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text(
+                                "Color temperature",
+                                style: EaText.secondary,
+                              ),
+
+                              const Spacer(),
+
+                              Text(
+                                "${colorTemperature.round()}K",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
+                              ),
+
+                              SizedBox(width: 10),
+                            ],
+                          ),
+
+                          Slider(
+                            min: 1500,
+                            max: 9000,
+                            divisions: 75,
+                            value: colorTemperature
+                                .clamp(1500, 9000)
+                                .toDouble(),
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => colorTemperature = v.round());
+                              Bridge.setColorTemperature(
+                                device.uuid,
+                                v.round(),
+                              );
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_LOCK,
+                    ))
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.lock_outline,
+                            size: 18,
+                            color: EaColor.fore,
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Text("Lock", style: EaText.secondary),
+
+                          const Spacer(),
+
+                          Switch(
+                            value: lock,
+                            activeThumbColor: EaColor.fore,
+                            inactiveTrackColor: EaColor.back,
+                            onChanged: (v) {
+                              setInnerState(() => lock = v);
+                              Bridge.setLock(device.uuid, v);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_MODE,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.tune,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text("Mode", style: EaText.secondary),
+
+                              const Spacer(),
+
+                              Text(
+                                "$mode",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                            ],
+                          ),
+
+                          Slider(
+                            min: 0,
+                            max: 5,
+                            divisions: 5,
+                            value: mode.toDouble().clamp(0, 5),
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => mode = v.round());
+                              Bridge.setMode(device.uuid, v.round());
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
+                      CoreCapability.CORE_CAP_POSITION,
+                    ))
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.straighten,
+                                size: 18,
+                                color: EaColor.fore,
+                              ),
+
+                              const SizedBox(width: 8),
+
+                              Text("Position", style: EaText.secondary),
+
+                              const Spacer(),
+
+                              Text(
+                                "${position.round()}%",
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                            ],
+                          ),
+
+                          Slider(
+                            min: 0,
+                            max: 100,
+                            divisions: 100,
+                            value: position.clamp(0, 100),
+                            activeColor: EaColor.fore,
+                            inactiveColor: EaColor.fore.withValues(alpha: .25),
+                            onChanged: (v) {
+                              setInnerState(() => position = v);
+                              Bridge.setPosition(device.uuid, v);
+                              setState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    if (device.capabilities.contains(
                       CoreCapability.CORE_CAP_TIMESTAMP,
                     ))
                       _buildScheduleControl(device, setInnerState),
@@ -707,6 +1072,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   if (picked != null) {
                     final minutes = toMinutes(picked);
                     setState(() => state.timestamp = minutes);
+                    Bridge.setTime(device.uuid, minutes);
                   }
                 },
               ),
@@ -868,7 +1234,7 @@ class _RingPainter extends CustomPainter {
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = ringColor.withValues(alpha: .05);
+      ..color = EaColor.background;
 
     canvas.drawCircle(center, radius, baseRing);
 
