@@ -103,6 +103,30 @@ bool MqttDriver::setTemperature(const std::string& uuid, float value) {
     return true;
 }
 
+bool MqttDriver::setTemperatureFridge(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"temperature_fridge\": " << value << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool MqttDriver::setTemperatureFreezer(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"temperature_freezer\": " << value << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
 bool MqttDriver::setTime(const std::string& uuid, uint64_t value) {
     std::lock_guard<std::mutex> lock(mutex);
     if (!states.count(uuid))
@@ -110,6 +134,54 @@ bool MqttDriver::setTime(const std::string& uuid, uint64_t value) {
 
     std::stringstream ss;
     ss << "{ \"timestamp\": " << value << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool MqttDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"colorTemperature\": " << value << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool MqttDriver::setLock(const std::string& uuid, bool value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"lock\": " << (value ? 1 : 0) << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool MqttDriver::setMode(const std::string& uuid, uint32_t value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"mode\": " << value << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool MqttDriver::setPosition(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    std::stringstream ss;
+    ss << "{ \"position\": " << value << " }";
 
     publishCommand(uuid, ss.str());
     return true;
@@ -217,16 +289,46 @@ void MqttDriver::parseState(
             newState.temperature =
                 std::stof(payload.substr(payload.find(":", p) + 1));
 
+        if ((p = payload.find("temperature_fridge")) != std::string::npos)
+            newState.temperatureFridge =
+                std::stof(payload.substr(payload.find(":", p) + 1));
+
+        if ((p = payload.find("temperature_freezer")) != std::string::npos)
+            newState.temperatureFreezer =
+                std::stof(payload.substr(payload.find(":", p) + 1));
+
         if ((p = payload.find("timestamp")) != std::string::npos)
             newState.timestamp =
                 std::stoull(payload.substr(payload.find(":", p) + 1));
+
+        if ((p = payload.find("colorTemperature")) != std::string::npos)
+            newState.colorTemperature =
+                std::stoul(payload.substr(payload.find(":", p) + 1));
+
+        if ((p = payload.find("lock")) != std::string::npos)
+            newState.lock =
+                std::stoi(payload.substr(payload.find(":", p) + 1)) != 0;
+
+        if ((p = payload.find("mode")) != std::string::npos)
+            newState.mode =
+                std::stoul(payload.substr(payload.find(":", p) + 1));
+
+        if ((p = payload.find("position")) != std::string::npos)
+            newState.position =
+                std::stof(payload.substr(payload.find(":", p) + 1));
 
         bool changed =
             newState.power != oldState.power ||
             newState.brightness != oldState.brightness ||
             newState.color != oldState.color ||
             newState.temperature != oldState.temperature ||
-            newState.timestamp != oldState.timestamp;
+            newState.temperatureFridge != oldState.temperatureFridge ||
+            newState.temperatureFreezer != oldState.temperatureFreezer ||
+            newState.timestamp != oldState.timestamp ||
+            newState.colorTemperature != oldState.colorTemperature ||
+            newState.lock != oldState.lock ||
+            newState.mode != oldState.mode ||
+            newState.position != oldState.position;
 
         if (!changed)
             return;
