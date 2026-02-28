@@ -31,6 +31,8 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <random>
+#include <algorithm>
 
 extern "C" {
 
@@ -243,30 +245,17 @@ CoreResult core_init(CoreContext* core) {
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
-    std::unordered_set<CoreProtocol> usedProtocols;
-    for (const auto& pair : core->devices) {
-        usedProtocols.insert(pair.second.protocol);
-    }
+    for (auto& pair : core->drivers) {
+        auto& driver = pair.second;
+        if (!driver) continue;
 
-    for (auto protocol : usedProtocols) {
-        auto it = core->drivers.find(protocol);
-
-        if (it == core->drivers.end()) {
-            std::ostringstream oss;
-
-            oss << "No driver registered for protocol " << protocol;
-            setError(core, oss.str().c_str());
-
-            return CORE_NOT_SUPPORTED;
-        }
-
-        if (!it->second->init()) {
+        if (!driver->init()) {
+            // log and continue; core must stay up even without optional drivers
             setError(core, "Driver initialization failed");
-
-            return CORE_ERROR;
+            continue;
         }
 
-        it->second->setEventCallback(driverEventForwarder, core);
+        driver->setEventCallback(driverEventForwarder, core);
     }
 
     core->initialized = true;
@@ -992,6 +981,147 @@ CoreResult core_set_position(CoreContext* core, const char* uuid, float value){
 
     if (!driver->setPosition(uuid, value))
         return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+struct SimTarget {
+    std::string uuid;
+    std::vector<CoreCapability> caps;
+    std::shared_ptr<drivers::Driver> driver;
+};
+
+static bool hasCap(const SimTarget& t, CoreCapability cap) {
+    return std::find(t.caps.begin(), t.caps.end(), cap) != t.caps.end();
+}
+
+static int clampInt(int v, int lo, int hi) {
+    return std::max(lo, std::min(v, hi));
+}
+
+static int64_t clampInt64(int64_t v, int64_t lo, int64_t hi) {
+    return std::max(lo, std::min(v, hi));
+}
+
+static float clampFloat(float v, float lo, float hi) {
+    return std::max(lo, std::min(v, hi));
+}
+
+CoreResult core_simulate(CoreContext* core)
+{
+    if (!core)
+        return CORE_INVALID_ARGUMENT;
+
+    std::vector<SimTarget> targets;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized)
+            return CORE_NOT_INITIALIZED;
+
+        for (auto& pair : core->devices) {
+            SimTarget t;
+            t.uuid = pair.first;
+            t.caps = pair.second.capabilities;
+            t.driver = pair.second.driver;
+            targets.push_back(std::move(t));
+        }
+    }
+
+    if (targets.empty())
+        return CORE_OK;
+
+    static thread_local std::mt19937 rng{std::random_device{}()};
+
+    std::uniform_int_distribution<int> flipChance(0, 99);
+    std::uniform_int_distribution<int> brightStep(-8, 8);
+    std::uniform_int_distribution<int> colorStep(-0x00030303, 0x00030303);
+    std::uniform_real_distribution<float> tempStep(-0.3f, 0.3f);
+    std::uniform_int_distribution<uint32_t> modeDist(0, 5);
+    std::uniform_real_distribution<float> posStep(-4.f, 4.f);
+    std::uniform_int_distribution<int> ctempStep(-220, 220);
+
+    for (auto& t : targets) {
+        if (!t.driver)
+            continue;
+
+        CoreDeviceState state{};
+        if (!t.driver->getState(t.uuid, state))
+            continue;
+
+        // build a new state with some randomness
+        if (hasCap(t, CORE_CAP_POWER) && flipChance(rng) < 12)
+            state.power = !state.power;
+
+        if (hasCap(t, CORE_CAP_BRIGHTNESS))
+            state.brightness = clampInt(
+                static_cast<int>(state.brightness) + brightStep(rng),
+                0,
+                100
+            );
+
+        if (hasCap(t, CORE_CAP_COLOR)) {
+            auto nextColor = static_cast<int64_t>(state.color) + colorStep(rng);
+            nextColor = clampInt64(nextColor, 0, 0x00FFFFFF);
+            state.color = static_cast<uint32_t>(nextColor);
+        }
+
+        if (hasCap(t, CORE_CAP_TEMPERATURE))
+            state.temperature = clampFloat(state.temperature + tempStep(rng), 16.f, 30.f);
+
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE))
+            state.temperatureFridge = clampFloat(
+                state.temperatureFridge + tempStep(rng),
+                1.f,
+                8.f
+            );
+
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER))
+            state.temperatureFreezer = clampFloat(
+                state.temperatureFreezer + tempStep(rng),
+                -24.f,
+                -14.f
+            );
+
+        if (hasCap(t, CORE_CAP_TIMESTAMP))
+            state.timestamp += 60;
+
+        if (hasCap(t, CORE_CAP_COLOR_TEMP)) {
+            auto nextTemp = static_cast<int>(state.colorTemperature) + ctempStep(rng);
+            nextTemp = clampInt(nextTemp, 2000, 9000);
+            state.colorTemperature = static_cast<uint32_t>(nextTemp);
+        }
+
+        if (hasCap(t, CORE_CAP_LOCK) && flipChance(rng) < 8)
+            state.lock = !state.lock;
+
+        if (hasCap(t, CORE_CAP_MODE) && flipChance(rng) < 10)
+            state.mode = modeDist(rng);
+
+        if (hasCap(t, CORE_CAP_POSITION))
+            state.position = clampFloat(state.position + posStep(rng), 0.f, 100.f);
+
+        // apply via driver setters to keep driver state consistent
+        if (hasCap(t, CORE_CAP_POWER)) t.driver->setPower(t.uuid, state.power);
+        if (hasCap(t, CORE_CAP_BRIGHTNESS)) t.driver->setBrightness(t.uuid, state.brightness);
+        if (hasCap(t, CORE_CAP_COLOR)) t.driver->setColor(t.uuid, state.color);
+        if (hasCap(t, CORE_CAP_TEMPERATURE)) t.driver->setTemperature(t.uuid, state.temperature);
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE)) t.driver->setTemperatureFridge(t.uuid, state.temperatureFridge);
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER)) t.driver->setTemperatureFreezer(t.uuid, state.temperatureFreezer);
+        if (hasCap(t, CORE_CAP_TIMESTAMP)) t.driver->setTime(t.uuid, state.timestamp);
+        if (hasCap(t, CORE_CAP_COLOR_TEMP)) t.driver->setColorTemperature(t.uuid, state.colorTemperature);
+        if (hasCap(t, CORE_CAP_LOCK)) t.driver->setLock(t.uuid, state.lock);
+        if (hasCap(t, CORE_CAP_MODE)) t.driver->setMode(t.uuid, state.mode);
+        if (hasCap(t, CORE_CAP_POSITION)) t.driver->setPosition(t.uuid, state.position);
+
+        CoreDeviceState refreshed{};
+        if (!t.driver->getState(t.uuid, refreshed))
+            continue;
+
+        // forward as a state change event
+        driverEventForwarder(t.uuid, refreshed, core);
+    }
 
     return CORE_OK;
 }
