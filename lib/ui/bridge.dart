@@ -13,6 +13,8 @@ const String CORE_API_VERSION = "0.0.1";
 const int CORE_MAX_CAPS = 16;
 const int CORE_MAX_NAME = 64;
 const int CORE_MAX_UUID = 64;
+const int CORE_MAX_BRAND = 16;
+const int CORE_MAX_MODEL = 32;
 
 class CoreResult {
   static const int CORE_OK = 0;
@@ -38,7 +40,13 @@ class CoreCapability {
   static const int CORE_CAP_BRIGHTNESS = 1;
   static const int CORE_CAP_COLOR = 2;
   static const int CORE_CAP_TEMPERATURE = 3;
-  static const int CORE_CAP_TIMESTAMP = 4;
+  static const int CORE_CAP_TEMPERATURE_FRIDGE = 4;
+  static const int CORE_CAP_TEMPERATURE_FREEZER = 5;
+  static const int CORE_CAP_TIMESTAMP = 6;
+  static const int CORE_CAP_COLOR_TEMPERATURE = 7;
+  static const int CORE_CAP_LOCK = 8;
+  static const int CORE_CAP_MODE = 9;
+  static const int CORE_CAP_POSITION = 10;
 }
 
 class CoreEventType {
@@ -46,6 +54,19 @@ class CoreEventType {
   static const int CORE_EVENT_DEVICE_REMOVED = 1;
   static const int CORE_EVENT_STATE_CHANGED = 2;
   static const int CORE_EVENT_ERROR = 3;
+}
+
+base class CoreEventNative extends Struct {
+  @Int32()
+  external int type;
+
+  @Array(CORE_MAX_UUID)
+  external Array<Int8> uuid;
+
+  external CoreDeviceState state;
+
+  @Int32()
+  external int errorCode;
 }
 
 base class CoreDeviceState extends Struct {
@@ -60,6 +81,12 @@ base class CoreDeviceState extends Struct {
 
   @Float()
   external double temperature;
+
+  @Float()
+  external double temperatureFridge;
+
+  @Float()
+  external double temperatureFreezer;
 
   @Uint64()
   external int timestamp;
@@ -83,6 +110,12 @@ base class CoreDeviceInfo extends Struct {
 
   @Array(CORE_MAX_NAME)
   external Array<Int8> name;
+
+  @Array(CORE_MAX_BRAND)
+  external Array<Int8> brand;
+
+  @Array(CORE_MAX_MODEL)
+  external Array<Int8> model;
 
   @Int32()
   external int protocol;
@@ -172,8 +205,10 @@ typedef _coreSetTemperatureFreezerDart =
 typedef _coreSetTimeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
 typedef _coreSetTimeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
-typedef _coreSetColorTemperatureC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
-typedef _coreSetColorTemperatureDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
+typedef _coreSetColorTemperatureC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetColorTemperatureDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 typedef _coreSetLockC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
 typedef _coreSetLockDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
@@ -181,10 +216,29 @@ typedef _coreSetLockDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
 typedef _coreSetModeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
 typedef _coreSetModeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
 
-typedef _coreSetPositionC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
+typedef _coreSetPositionC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
 typedef _coreSetPositionDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
+
+typedef _coreSimulateC = Int32 Function(Pointer<Void>);
+typedef _coreSimulateDart = int Function(Pointer<Void>);
+
+typedef _coreEventTrampolineC = Void Function(
+  Pointer<CoreEventNative>,
+  Pointer<Void>,
+);
+
+typedef _coreSetEventCallbackC = Int32 Function(
+  Pointer<Void>,
+  Pointer<NativeFunction<_coreEventTrampolineC>>,
+  Pointer<Void>,
+);
+
+typedef _coreSetEventCallbackDart = int Function(
+  Pointer<Void>,
+  Pointer<NativeFunction<_coreEventTrampolineC>>,
+  Pointer<Void>,
+);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -233,9 +287,10 @@ final _coreSetTemperatureFridgeDart _coreSetTemperatureFridge = coreLib
     );
 
 final _coreSetTemperatureFreezerDart _coreSetTemperatureFreezer = coreLib
-    .lookupFunction<_coreSetTemperatureFreezerC, _coreSetTemperatureFreezerDart>(
-      'core_set_temperature_freezer',
-    );
+    .lookupFunction<
+      _coreSetTemperatureFreezerC,
+      _coreSetTemperatureFreezerDart
+    >('core_set_temperature_freezer');
 
 final _coreSetTimeDart _coreSetTime = coreLib
     .lookupFunction<_coreSetTimeC, _coreSetTimeDart>('core_set_time');
@@ -256,15 +311,27 @@ final _coreSetPositionDart _coreSetPosition = coreLib
       'core_set_position',
     );
 
+final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
+    .lookupFunction<_coreSetEventCallbackC, _coreSetEventCallbackDart>(
+      'core_set_event_callback',
+    );
+
+final _coreSimulateDart _coreSimulate = coreLib
+    .lookupFunction<_coreSimulateC, _coreSimulateDart>('core_simulate');
+
 class DeviceInfo {
   final String uuid;
   final String name;
+  final String brand;
+  final String model;
   final int protocol;
   final List<int> capabilities;
 
   DeviceInfo({
     required this.uuid,
     required this.name,
+    required this.brand,
+    required this.model,
     required this.protocol,
     required this.capabilities,
   });
@@ -275,6 +342,8 @@ class DeviceState {
   int brightness = 0;
   int color = 0xFFFFFFFF;
   double temperature = 0.0;
+  double temperatureFridge = 0.0;
+  double temperatureFreezer = 0.0;
   int timestamp = 0;
   int colorTemperature = 0;
   bool lock = false;
@@ -282,6 +351,20 @@ class DeviceState {
   double position = 0.0;
 
   DeviceState({required this.power});
+}
+
+class CoreEventData {
+  final int type;
+  final String uuid;
+  final DeviceState state;
+  final int errorCode;
+
+  CoreEventData({
+    required this.type,
+    required this.uuid,
+    required this.state,
+    required this.errorCode,
+  });
 }
 
 String _readFixedString(Array<Int8> array, int maxLen) {
@@ -312,10 +395,61 @@ class Bridge {
 
   static Pointer<Void>? _ctx;
 
+  static final Map<String, DeviceState> _stateCache = {};
+
   static final StreamController<String> _stateController =
       StreamController.broadcast();
 
+  static final StreamController<CoreEventData> _eventController =
+      StreamController.broadcast();
+
+  static Pointer<NativeFunction<_coreEventTrampolineC>>?
+      _eventCallbackPointer;
+
+    static Timer? _simulateTimer;
+    static bool _simulating = false;
+
   static Stream<String> get onStateChanged => _stateController.stream;
+
+  static Stream<CoreEventData> get onEvents => _eventController.stream;
+
+  static DeviceState _cloneState(DeviceState s) {
+    final clone = DeviceState(power: s.power);
+    clone.brightness = s.brightness;
+    clone.color = s.color;
+    clone.temperature = s.temperature;
+    clone.temperatureFridge = s.temperatureFridge;
+    clone.temperatureFreezer = s.temperatureFreezer;
+    clone.timestamp = s.timestamp;
+    clone.colorTemperature = s.colorTemperature;
+    clone.lock = s.lock;
+    clone.mode = s.mode;
+    clone.position = s.position;
+    return clone;
+  }
+
+  static void _invalidateState(String uuid) {
+    _stateCache.remove(uuid);
+  }
+
+  static void _startSimulationLoop() {
+    _simulateTimer ??=
+        Timer.periodic(const Duration(milliseconds: 800), (_) async {
+      if (_simulating || !_ready) return;
+      _simulating = true;
+
+      try {
+        final res = _coreSimulate(_ctx!);
+        if (res != 0) {
+          _throwLastError(res);
+        }
+      } catch (_) {
+        // ignore simulation errors to keep loop alive
+      } finally {
+        _simulating = false;
+      }
+    });
+  }
 
   static void _ensureReady() {
     if (!_ready || _ctx == null) {
@@ -338,10 +472,28 @@ class Bridge {
       _throwLastError(res);
     }
 
+    _eventCallbackPointer ??=
+        Pointer.fromFunction<_coreEventTrampolineC>(_onCoreEvent);
+
+    final cbRes = _coreSetEventCallback(
+      _ctx!,
+      _eventCallbackPointer!,
+      nullptr,
+    );
+
+    if (cbRes != 0) {
+      _throwLastError(cbRes);
+    }
+
+    _startSimulationLoop();
+
     _ready = true;
   }
 
   static void destroy() {
+    _simulateTimer?.cancel();
+    _simulateTimer = null;
+
     if (_ctx != null) {
       _coreDestroy(_ctx!);
       _ctx = null;
@@ -423,6 +575,8 @@ class Bridge {
         DeviceInfo(
           uuid: _readFixedString(item.uuid, CORE_MAX_UUID),
           name: _readFixedString(item.name, CORE_MAX_NAME),
+          brand: _readFixedString(item.brand, CORE_MAX_BRAND),
+          model: _readFixedString(item.model, CORE_MAX_MODEL),
           protocol: item.protocol,
           capabilities: caps,
         ),
@@ -438,6 +592,18 @@ class Bridge {
   static DeviceState getState(String uuid) {
     _ensureReady();
 
+    final cached = _stateCache[uuid];
+    if (cached != null) return _cloneState(cached);
+
+    final result = _fetchState(uuid);
+    _stateCache[uuid] = result;
+
+    return _cloneState(result);
+  }
+
+  static DeviceState _fetchState(String uuid) {
+    _ensureReady();
+
     final uuidPtr = uuid.toNativeUtf8();
     final statePtr = calloc<CoreDeviceState>();
 
@@ -450,23 +616,26 @@ class Bridge {
       _throwLastError(res);
     }
 
-    final s = statePtr.ref;
+    final result = _mapState(statePtr.ref);
 
+    calloc.free(statePtr);
+
+    return result;
+  }
+
+  static DeviceState _mapState(CoreDeviceState s) {
     final result = DeviceState(power: s.power);
 
-    try {
-      result.brightness = s.brightness;
-      result.color = s.color;
-      result.temperature = s.temperature;
-      result.timestamp = s.timestamp.toInt();
-      result.colorTemperature = s.colorTemperature;
-      result.lock = s.lock;
-      result.mode = s.mode;
-      result.position = s.position;
-
-    } finally {
-      calloc.free(statePtr);
-    }
+    result.brightness = s.brightness;
+    result.color = s.color;
+    result.temperature = s.temperature;
+    result.temperatureFridge = s.temperatureFridge;
+    result.temperatureFreezer = s.temperatureFreezer;
+    result.timestamp = s.timestamp.toInt();
+    result.colorTemperature = s.colorTemperature;
+    result.lock = s.lock;
+    result.mode = s.mode;
+    result.position = s.position;
 
     return result;
   }
@@ -483,6 +652,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -498,6 +668,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -513,6 +684,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -528,6 +700,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -543,6 +716,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -558,6 +732,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -573,6 +748,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -588,6 +764,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -603,6 +780,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -618,6 +796,7 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
   }
 
@@ -633,6 +812,44 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+    _invalidateState(uuid);
     _stateController.add(uuid);
+  }
+
+  static void simulateOnce() {
+    _ensureReady();
+    final res = _coreSimulate(_ctx!);
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
+  static void _onCoreEvent(
+    Pointer<CoreEventNative> eventPtr,
+    Pointer<Void> userData,
+  ) {
+    try {
+      final e = eventPtr.ref;
+      final uuid = _readFixedString(e.uuid, CORE_MAX_UUID);
+      final mappedState = _mapState(e.state);
+
+      final data = CoreEventData(
+        type: e.type,
+        uuid: uuid,
+        state: mappedState,
+        errorCode: e.errorCode,
+      );
+
+      _eventController.add(data);
+
+      if (e.type == CoreEventType.CORE_EVENT_STATE_CHANGED) {
+        _stateCache[uuid] = mappedState;
+        _stateController.add(uuid);
+      } else if (e.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
+        _invalidateState(uuid);
+      }
+    } catch (_) {
+      // swallow errors to avoid crashing native callback
+    }
   }
 }

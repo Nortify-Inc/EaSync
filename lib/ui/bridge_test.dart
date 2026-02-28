@@ -27,9 +27,7 @@ void main() {
     );
 
     final devices = Bridge.listDevices();
-
     print('Devices:');
-
     for (final d in devices) {
       print('---');
       print('UUID: ${d.uuid}');
@@ -38,6 +36,15 @@ void main() {
       print('Caps: ${d.capabilities}');
     }
 
+    // Subscribe to events
+    Bridge.onEvents.listen((e) {
+      print('[EVENT] type=${e.type} uuid=${e.uuid} power=${e.state.power} br=${e.state.brightness} color=${e.state.color} temp=${e.state.temperature} ts=${e.state.timestamp} mode=${e.state.mode} pos=${e.state.position}');
+    });
+
+    // Kick a first simulate to start flow
+    Bridge.simulateOnce();
+
+    // Also trigger a few manual commands
     Bridge.setPower('lamp-001', true);
     Bridge.setBrightness('lamp-001', 80);
     Bridge.setColor('lamp-001', 0xFF000000);
@@ -46,25 +53,13 @@ void main() {
     Bridge.setTemperature('ac-001', 22.5);
     Bridge.setTime('ac-001', DateTime.now().second + 3600);
 
-    final lampState = Bridge.getState('lamp-001');
-    final acState = Bridge.getState('ac-001');
-
-    print('\nLamp State:');
-    print('Power: ${lampState.power}');
-    print('Brightness: ${lampState.brightness}');
-    print('Color: ${lampState.color}');
-    print('Temp: ${lampState.temperature}');
-    print('Timestamp: ${lampState.timestamp}');
-
-    print('\nAC State:');
-    print('Power: ${acState.power}');
-    print('Brightness: ${acState.brightness}');
-    print('Color: ${acState.color}');
-    print('Temp: ${acState.temperature}');
-    print('Timestamp: ${acState.timestamp}');
+    // Keep process alive to observe events
+    Future.delayed(const Duration(seconds: 10), () {
+      print('Stopping after demo window');
+      Bridge.destroy();
+    });
   } catch (e) {
     print('Error: $e');
-  } finally {
     Bridge.destroy();
   }
 }

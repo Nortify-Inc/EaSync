@@ -8,13 +8,13 @@
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
       },
       "constrains": {
         "power": true,
         "brightness": { "min": 1, "max": 254 },
         "color": { "type": "hs" },
-        "temperature": { "min": 153, "max": 500 }
+        "colorTemperature": { "min": 153, "max": 500 }
       }
     },
     {
@@ -25,13 +25,13 @@
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
       },
       "constrains": {
         "power": true,
         "brightness": { "min": 0, "max": 100 },
         "color": { "type": "hsbk" },
-        "temperature": { "min": 1500, "max": 9000 }
+        "colorTemperature": { "min": 1500, "max": 9000 }
       }
     },
     {
@@ -42,13 +42,13 @@
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
       },
       "constrains": {
         "power": true,
         "brightness": { "min": 1, "max": 100 },
         "color": { "type": "hs" },
-        "temperature": { "min": 2500, "max": 6500 }
+        "colorTemperature": { "min": 2500, "max": 6500 }
       }
     },
     {
@@ -59,13 +59,13 @@
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
       },
       "constrains": {
         "power": true,
         "brightness": { "min": 1, "max": 100 },
         "color": { "type": "rgb" },
-        "temperature": { "min": 1700, "max": 6500 }
+        "colorTemperature": { "min": 1700, "max": 6500 }
       }
     },
     {
@@ -75,12 +75,12 @@
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
-        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
       },
       "constrains": {
         "power": true,
         "brightness": { "min": 1, "max": 254 },
-        "temperature": { "min": 250, "max": 454 }
+        "colorTemperature": { "min": 250, "max": 454 }
       }
     }
   ]
