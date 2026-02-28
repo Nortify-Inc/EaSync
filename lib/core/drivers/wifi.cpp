@@ -133,6 +133,40 @@ bool WifiDriver::setTemperature(const std::string& uuid, float value) {
     return httpPost("http://" + ip + "/temperature", ss.str());
 }
 
+bool WifiDriver::setTemperatureFridge(const std::string& uuid, float value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << value << " }";
+
+    return httpPost("http://" + ip + "/temperatureFridge", ss.str());
+}
+
+bool WifiDriver::setTemperatureFreezer(const std::string& uuid, float value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << value << " }";
+
+    return httpPost("http://" + ip + "/temperatureFreezer", ss.str());
+}
+
 bool WifiDriver::setTime(const std::string& uuid, uint64_t value) {
 
     std::string ip;
@@ -148,6 +182,74 @@ bool WifiDriver::setTime(const std::string& uuid, uint64_t value) {
     ss << "{ \"value\": " << value << " }";
 
     return httpPost("http://" + ip + "/timestamp", ss.str());
+}
+
+bool WifiDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << value << " }";
+
+    return httpPost("http://" + ip + "/colorTemperature", ss.str());
+}
+
+bool WifiDriver::setLock(const std::string& uuid, bool value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << (value ? 1 : 0) << " }";
+
+    return httpPost("http://" + ip + "/lock", ss.str());
+}
+
+bool WifiDriver::setMode(const std::string& uuid, uint32_t value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << value << " }";
+
+    return httpPost("http://" + ip + "/mode", ss.str());
+}
+
+bool WifiDriver::setPosition(const std::string& uuid, float value) {
+
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::stringstream ss;
+    ss << "{ \"value\": " << value << " }";
+
+    return httpPost("http://" + ip + "/position", ss.str());
 }
 
 bool WifiDriver::getState(

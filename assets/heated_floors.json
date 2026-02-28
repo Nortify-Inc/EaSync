@@ -3,12 +3,12 @@
     {
       "brand": "Warmup",
       "model": "6iE Smart WiFi Thermostat",
-      "capabilities": ["power", "temperature", "mode", "schedule"],
+      "capabilities": ["power", "temperature", "mode", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
         "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } },
-        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+        "time": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -19,11 +19,11 @@
     {
       "brand": "Heatmiser",
       "model": "neoStat-e",
-      "capabilities": ["power", "temperature", "schedule"],
+      "capabilities": ["power", "temperature", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+        "time": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -46,11 +46,11 @@
     {
       "brand": "Netatmo",
       "model": "Smart Thermostat",
-      "capabilities": ["power", "temperature", "schedule"],
+      "capabilities": ["power", "temperature", "time"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "schedule": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
+        "time": { "topic": "device/{uuid}/set", "template": { "schedule": "{value}" } }
       },
       "constrains": {
         "power": true,

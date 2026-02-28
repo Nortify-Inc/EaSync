@@ -143,12 +143,90 @@ bool ZigBeeDriver::setTemperature(
     return true;
 }
 
+bool ZigBeeDriver::setTemperatureFridge(
+    const std::string& uuid,
+    float value
+) {
+    std::stringstream ss;
+    ss << "{ \"temperatureFridge\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool ZigBeeDriver::setTemperatureFreezer(
+    const std::string& uuid,
+    float value
+) {
+    std::stringstream ss;
+    ss << "{ \"temperatureFreezer\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
 bool ZigBeeDriver::setTime(
     const std::string& uuid,
     uint64_t value
 ) {
     std::stringstream ss;
     ss << "{ \"timestamp\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool ZigBeeDriver::setColorTemperature(
+    const std::string& uuid,
+    uint32_t value
+) {
+    std::stringstream ss;
+    ss << "{ \"colorTemperature\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool ZigBeeDriver::setLock(
+    const std::string& uuid,
+    bool value
+) {
+    std::stringstream ss;
+    ss << "{ \"lock\": "
+       << (value ? 1 : 0)
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool ZigBeeDriver::setMode(
+    const std::string& uuid,
+    uint32_t value
+) {
+    std::stringstream ss;
+    ss << "{ \"mode\": "
+       << value
+       << " }";
+
+    publishCommand(uuid, ss.str());
+    return true;
+}
+
+bool ZigBeeDriver::setPosition(
+    const std::string& uuid,
+    float value
+) {
+    std::stringstream ss;
+    ss << "{ \"position\": "
        << value
        << " }";
 

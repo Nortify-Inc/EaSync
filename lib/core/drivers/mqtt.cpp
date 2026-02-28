@@ -18,7 +18,7 @@ bool MqttDriver::init() {
         connected = true;
 
         client->subscribe("easync/+/state", 1)->wait();
-        client->start_consuming(); // opcional recomendado
+        client->start_consuming();
 
         return true;
     }

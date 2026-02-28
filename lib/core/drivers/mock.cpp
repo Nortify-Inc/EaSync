@@ -69,6 +69,26 @@ bool MockDriver::setTemperature(const std::string& uuid, float value) {
     return true;
 }
 
+bool MockDriver::setTemperatureFridge(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].temperatureFridge = value;
+    return true;
+}
+
+bool MockDriver::setTemperatureFreezer(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].temperatureFreezer = value;
+    return true;
+}
+
 bool MockDriver::setTime(const std::string& uuid, uint64_t value) {
     std::lock_guard<std::mutex> lock(mutex);
 
@@ -79,10 +99,47 @@ bool MockDriver::setTime(const std::string& uuid, uint64_t value) {
     return true;
 }
 
-bool MockDriver::getState(
-    const std::string& uuid,
-    CoreDeviceState& outState
-) {
+bool MockDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].colorTemperature = value;
+    return true;
+}
+
+bool MockDriver::setLock(const std::string& uuid, bool value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].lock = value;
+    return true;
+}
+
+bool MockDriver::setMode(const std::string& uuid, uint32_t value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].mode = value;
+    return true;
+}
+
+bool MockDriver::setPosition(const std::string& uuid, float value) {
+    std::lock_guard<std::mutex> lock(mutex);
+
+    if (!states.count(uuid))
+        return false;
+
+    states[uuid].position = value;
+    return true;
+}
+
+bool MockDriver::getState(const std::string& uuid, CoreDeviceState& outState) {
     std::lock_guard<std::mutex> lock(mutex);
 
     if (!states.count(uuid))

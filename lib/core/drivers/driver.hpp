@@ -92,12 +92,68 @@ public:
         float value
     ) = 0;
 
+
+    /**
+     * @brief Set temperature for fridge.
+     */
+    virtual bool setTemperatureFridge(
+        const std::string& uuid,
+        float value
+    ) = 0;
+
+
+
+    /**
+     * @brief Set temperature for freezer.
+     */
+    virtual bool setTemperatureFreezer(
+        const std::string& uuid,
+        float value
+    ) = 0;
+
+
     /**
      * @brief Set timestamp
      */
     virtual bool setTime(
         const std::string& uuid,
         uint64_t value
+    ) = 0;
+
+
+    /**
+     * @brief Set color temperature.
+     */
+    virtual bool setColorTemperature(
+        const std::string& uuid,
+        uint32_t value
+    ) = 0;  
+
+
+    /**
+     * @brief Set lock state.
+     */
+    virtual bool setLock(
+        const std::string& uuid,
+        bool value
+    ) = 0;
+
+
+    /**
+    * @brief Set mode state.
+    */  
+    virtual bool setMode(
+        const std::string& uuid,
+        uint32_t value
+    ) = 0;  
+
+
+    /**
+    * @brief Set position state.
+    */  
+    virtual bool setPosition(
+        const std::string& uuid,
+        float value
     ) = 0;
 
 

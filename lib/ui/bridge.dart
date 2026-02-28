@@ -63,6 +63,18 @@ base class CoreDeviceState extends Struct {
 
   @Uint64()
   external int timestamp;
+
+  @Uint32()
+  external int colorTemperature;
+
+  @Bool()
+  external bool lock;
+
+  @Uint32()
+  external int mode;
+
+  @Float()
+  external double position;
 }
 
 base class CoreDeviceInfo extends Struct {
@@ -147,8 +159,32 @@ typedef _coreSetTemperatureC =
 typedef _coreSetTemperatureDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
 
+typedef _coreSetTemperatureFridgeC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
+typedef _coreSetTemperatureFridgeDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, double);
+
+typedef _coreSetTemperatureFreezerC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
+typedef _coreSetTemperatureFreezerDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, double);
+
 typedef _coreSetTimeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
 typedef _coreSetTimeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
+
+typedef _coreSetColorTemperatureC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetColorTemperatureDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
+
+typedef _coreSetLockC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
+typedef _coreSetLockDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
+
+typedef _coreSetModeC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint32);
+typedef _coreSetModeDart = int Function(Pointer<Void>, Pointer<Utf8>, int);
+
+typedef _coreSetPositionC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
+typedef _coreSetPositionDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, double);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -191,8 +227,34 @@ final _coreSetTemperatureDart _coreSetTemperature = coreLib
       'core_set_temperature',
     );
 
+final _coreSetTemperatureFridgeDart _coreSetTemperatureFridge = coreLib
+    .lookupFunction<_coreSetTemperatureFridgeC, _coreSetTemperatureFridgeDart>(
+      'core_set_temperature_fridge',
+    );
+
+final _coreSetTemperatureFreezerDart _coreSetTemperatureFreezer = coreLib
+    .lookupFunction<_coreSetTemperatureFreezerC, _coreSetTemperatureFreezerDart>(
+      'core_set_temperature_freezer',
+    );
+
 final _coreSetTimeDart _coreSetTime = coreLib
     .lookupFunction<_coreSetTimeC, _coreSetTimeDart>('core_set_time');
+
+final _coreSetColorTemperatureDart _coreSetColorTemperature = coreLib
+    .lookupFunction<_coreSetColorTemperatureC, _coreSetColorTemperatureDart>(
+      'core_set_color_temperature',
+    );
+
+final _coreSetLockDart _coreSetLock = coreLib
+    .lookupFunction<_coreSetLockC, _coreSetLockDart>('core_set_lock');
+
+final _coreSetModeDart _coreSetMode = coreLib
+    .lookupFunction<_coreSetModeC, _coreSetModeDart>('core_set_mode');
+
+final _coreSetPositionDart _coreSetPosition = coreLib
+    .lookupFunction<_coreSetPositionC, _coreSetPositionDart>(
+      'core_set_position',
+    );
 
 class DeviceInfo {
   final String uuid;
@@ -214,6 +276,10 @@ class DeviceState {
   int color = 0xFFFFFFFF;
   double temperature = 0.0;
   int timestamp = 0;
+  int colorTemperature = 0;
+  bool lock = false;
+  int mode = 0;
+  double position = 0.0;
 
   DeviceState({required this.power});
 }
@@ -388,12 +454,16 @@ class Bridge {
 
     final result = DeviceState(power: s.power);
 
-    // Populate remaining fields so UI and tests receive full state
     try {
       result.brightness = s.brightness;
       result.color = s.color;
       result.temperature = s.temperature;
       result.timestamp = s.timestamp.toInt();
+      result.colorTemperature = s.colorTemperature;
+      result.lock = s.lock;
+      result.mode = s.mode;
+      result.position = s.position;
+
     } finally {
       calloc.free(statePtr);
     }
@@ -461,12 +531,102 @@ class Bridge {
     _stateController.add(uuid);
   }
 
+  static void setTemperatureFridge(String uuid, double value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetTemperatureFridge(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
+  static void setTemperatureFreezer(String uuid, double value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetTemperatureFreezer(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
   static void setTime(String uuid, int value) {
     _ensureReady();
 
     final uuidPtr = uuid.toNativeUtf8();
 
     final res = _coreSetTime(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
+  static void setColorTemperature(String uuid, int value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetColorTemperature(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
+  static void setLock(String uuid, bool value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetLock(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
+  static void setMode(String uuid, int value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetMode(_ctx!, uuidPtr, value);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+    _stateController.add(uuid);
+  }
+
+  static void setPosition(String uuid, double value) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+
+    final res = _coreSetPosition(_ctx!, uuidPtr, value);
 
     calloc.free(uuidPtr);
 
