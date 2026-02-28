@@ -3,12 +3,12 @@
     {
       "brand": "Philips",
       "model": "Hue White and Color Ambiance E27",
-      "capabilities": ["power", "brightness", "color", "temperature"],
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -20,12 +20,12 @@
     {
       "brand": "LIFX",
       "model": "A19",
-      "capabilities": ["power", "brightness", "color", "temperature"],
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -37,12 +37,12 @@
     {
       "brand": "TP-Link",
       "model": "Tapo L530E",
-      "capabilities": ["power", "brightness", "color", "temperature"],
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -54,12 +54,12 @@
     {
       "brand": "Yeelight",
       "model": "YLDP06YL",
-      "capabilities": ["power", "brightness", "color", "temperature"],
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
         "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
       },
       "constrains": {
         "power": true,
@@ -71,11 +71,11 @@
     {
       "brand": "IKEA",
       "model": "TRADFRI E27 1000lm",
-      "capabilities": ["power", "brightness", "temperature"],
+      "capabilities": ["power", "brightness", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
         "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } }
       },
       "constrains": {
         "power": true,

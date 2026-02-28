@@ -673,7 +673,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         Slider(
           min: -10.0,
           max: 36.0,
-          divisions: (36 + 10) * 2, 
+          divisions: (36 + 10) * 2,
           value: a.temperature.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
@@ -913,13 +913,10 @@ class _RgbColorWheelState extends State<RgbColorWheel> {
 
     if (dist > radius) return;
 
-    // Hue = ângulo do ponto
     hue = (atan2(dy, dx) * 180 / pi + 360) % 360;
 
-    // Saturation = distância do centro normalizada
     saturation = (dist / radius).clamp(0.0, 1.0);
 
-    // Valor fixo máximo (v = 1)
     value = 1;
 
     widget.onChanged(HSVColor.fromAHSV(1, hue, saturation, value).toColor());

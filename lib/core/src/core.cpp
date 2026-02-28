@@ -732,6 +732,80 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
     return CORE_OK;
 }
 
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Temperature in degrees Celsius.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
+ * @return CORE_ERROR if driver fails to set temperature.
+ */
+CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, float value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_TEMPERATURE_FRIDGE))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setTemperatureFridge(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Temperature in degrees Celsius.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks temperature capability.
+ * @return CORE_ERROR if driver fails to set temperature.
+ */
+CoreResult core_set_temperature_freezer(CoreContext* core, const char* uuid, float value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_TEMPERATURE_FREEZER))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setTemperatureFreezer(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
 
 /**
  * @brief Set temperature for a device.
@@ -745,7 +819,7 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
  * @return CORE_NOT_SUPPORTED if device lacks time capability.
  * @return CORE_ERROR if driver fails to set time.
  */
-CoreResult core_set_time(CoreContext* core, const char* uuid, uint32_t value){
+CoreResult core_set_time(CoreContext* core, const char* uuid, uint64_t value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
 
@@ -765,6 +839,158 @@ CoreResult core_set_time(CoreContext* core, const char* uuid, uint32_t value){
     }
 
     if (!driver->setTime(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Timestamp in seconds.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks time capability.
+ * @return CORE_ERROR if driver fails to set time.
+ */
+CoreResult core_set_color_temperature(CoreContext* core, const char* uuid, uint32_t value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_COLOR_TEMP))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setColorTemperature(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Timestamp in seconds.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks time capability.
+ * @return CORE_ERROR if driver fails to set time.
+ */
+CoreResult core_set_lock(CoreContext* core, const char* uuid, bool value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_LOCK))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setLock(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Timestamp in seconds.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks time capability.
+ * @return CORE_ERROR if driver fails to set time.
+ */
+CoreResult core_set_mode(CoreContext* core, const char* uuid, uint32_t value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_MODE))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setMode(uuid, value))
+        return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+
+/**
+ * @brief Set temperature for a device.
+ *
+ * @param core Pointer to CoreContext.
+ * @param uuid UUID of the device.
+ * @param value Timestamp in seconds.
+ * @return CORE_OK if successful.
+ * @return CORE_INVALID_ARGUMENT if parameters are invalid.
+ * @return CORE_NOT_FOUND if device does not exist.
+ * @return CORE_NOT_SUPPORTED if device lacks time capability.
+ * @return CORE_ERROR if driver fails to set time.
+ */
+CoreResult core_set_position(CoreContext* core, const char* uuid, float value){
+    if (!core || !uuid)
+        return CORE_INVALID_ARGUMENT;
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (!hasCapability(it->second, CORE_CAP_POSITION))
+            return CORE_NOT_SUPPORTED;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver->setPosition(uuid, value))
         return CORE_ERROR;
 
     return CORE_OK;

@@ -1,7 +1,58 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'handler.dart';
+
+class DeviceTemplate {
+  final String category;
+  final String brand;
+  final String model;
+  final List<String> capabilities;
+  final Map<String, dynamic> payloads;
+  final Map<String, dynamic> constrains;
+
+  DeviceTemplate({
+    required this.category,
+    required this.brand,
+    required this.model,
+    required this.capabilities,
+    required this.payloads,
+    required this.constrains,
+  });
+
+  factory DeviceTemplate.fromJson(
+      String category, Map<String, dynamic> json) {
+    return DeviceTemplate(
+      category: category,
+      brand: json["brand"],
+      model: json["model"],
+      capabilities: List<String>.from(json["capabilities"]),
+      payloads: json["payloads"],
+      constrains: json["constrains"],
+    );
+  }
+}
+
+/* ============================================================
+   TEMPLATE REPOSITORY
+============================================================ */
+
+class TemplateRepository {
+  static Future<List<DeviceTemplate>> loadCategory(String category) async {
+    final raw = await rootBundle.loadString("assets/$category.json");
+    final decoded = jsonDecode(raw);
+
+    final list = decoded[category] as List;
+
+    return list.map((e) => DeviceTemplate.fromJson(category, e)).toList();
+  }
+}
+
+/* ============================================================
+   MANAGE PAGE
+============================================================ */
 
 class Manage extends StatefulWidget {
   const Manage({super.key});
@@ -12,7 +63,6 @@ class Manage extends StatefulWidget {
 
 class _ManageState extends State<Manage> {
   List<DeviceInfo> devices = [];
-
   bool loading = true;
 
   @override
@@ -88,30 +138,14 @@ class _ManageState extends State<Manage> {
       );
     }
 
-    if (devices.isEmpty) return _emptyState();
+    if (devices.isEmpty) {
+      return const Center(child: Text("Add your first device"));
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       itemCount: devices.length,
       itemBuilder: (_, i) => _row(devices[i]),
-    );
-  }
-
-  Widget _emptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "Add your first device to get started",
-              textAlign: TextAlign.center,
-              style: EaText.secondaryTranslucent,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -128,38 +162,18 @@ class _ManageState extends State<Manage> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: EaColor.fore.withValues(alpha: .15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Icon(Icons.devices, color: EaColor.fore),
-            ),
+            const Icon(Icons.devices, color: EaColor.fore),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    d.name,
-                    style: EaText.primary.copyWith(color: EaColor.textPrimary),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    d.uuid,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: EaText.secondary.copyWith(
-                      fontSize: 11,
-                      color: EaColor.textSecondary,
-                    ),
-                  ),
+                  Text(d.name, style: EaText.primary),
+                  Text(d.uuid,
+                      style: EaText.secondary.copyWith(fontSize: 11)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: EaColor.textSecondary),
           ],
         ),
       ),
@@ -183,41 +197,75 @@ class _DeviceEditor extends StatefulWidget {
 
 class _DeviceEditorState extends State<_DeviceEditor> {
   late TextEditingController nameController;
+  late TextEditingController searchController;
 
-  final Set<int> caps = {};
+  String selectedCategory = "acs";
+  DeviceTemplate? selectedTemplate;
+
+  List<DeviceTemplate> templates = [];
+  List<DeviceTemplate> filteredTemplates = [];
+
+  final categories = [
+    "acs",
+    "lamps",
+    "fridges",
+    "locks",
+    "curtains",
+    "heated_floors",
+  ];
 
   @override
   void initState() {
     super.initState();
 
-    nameController = TextEditingController(text: widget.device?.name ?? "");
+    nameController = TextEditingController();
+    searchController = TextEditingController();
 
-    if (widget.device != null) {
-      caps.addAll(widget.device!.capabilities);
-    }
+    searchController.addListener(_filterTemplates);
+
+    _loadTemplates();
+  }
+
+  Future<void> _loadTemplates() async {
+    templates = await TemplateRepository.loadCategory(selectedCategory);
+
+    filteredTemplates = List.from(templates);
+    selectedTemplate = null;
+
+    setState(() {});
+  }
+
+  void _filterTemplates() {
+    final query = searchController.text.toLowerCase();
+
+    setState(() {
+      filteredTemplates = templates.where((t) {
+        final text = "${t.brand} ${t.model}".toLowerCase();
+        return text.contains(query);
+      }).toList();
+    });
   }
 
   void _save() {
-    final name = nameController.text.trim();
-
-    if (name.isEmpty) {
-      _showError("Name is required");
+    if (selectedTemplate == null) {
+      _showError("Select a model");
       return;
     }
 
-    if (caps.isEmpty) {
-      _showError("Select at least one capability");
-      return;
-    }
+    final name = nameController.text.trim().isEmpty
+        ? "${selectedTemplate!.brand} ${selectedTemplate!.model}"
+        : nameController.text.trim();
 
-    final uuid = widget.device?.uuid ?? _generateUuid();
+    final uuid = _generateUuid();
 
     try {
       Bridge.registerDevice(
         uuid: uuid,
         name: name,
         protocol: CoreProtocol.CORE_PROTOCOL_MOCK,
-        capabilities: caps.toList(),
+        capabilities: selectedTemplate!.capabilities
+            .map(_mapCapability)
+            .toList(),
       );
 
       widget.onSaved();
@@ -226,61 +274,34 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     }
   }
 
+  int _mapCapability(String cap) {
+    switch (cap) {
+      case "power":
+        return CoreCapability.CORE_CAP_POWER;
+      case "brightness":
+        return CoreCapability.CORE_CAP_BRIGHTNESS;
+      case "color":
+        return CoreCapability.CORE_CAP_COLOR;
+      case "temperature":
+        return CoreCapability.CORE_CAP_TEMPERATURE;
+      case "time":
+        return CoreCapability.CORE_CAP_TIMESTAMP;
+      default:
+        return CoreCapability.CORE_CAP_POWER;
+    }
+  }
+
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
   }
 
   String _generateUuid() {
     final r = Random();
-
     return List.generate(
       4,
       (_) => r.nextInt(0xFFFF).toRadixString(16).padLeft(4, '0'),
     ).join("-");
-  }
-
-  Widget _capChip(String label, int cap) {
-    final active = caps.contains(cap);
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          active ? caps.remove(cap) : caps.add(cap);
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? EaColor.fore.withValues(alpha: .25) : EaColor.back,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: active ? EaColor.fore : EaColor.border),
-        ),
-        child: Text(
-          label,
-          style: EaText.secondary.copyWith(
-            color: active ? EaColor.fore : EaColor.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _caps() {
-    return Wrap(
-      alignment: WrapAlignment.center,
-      spacing: 10,
-      runSpacing: 10,
-      children: [
-        _capChip("Power", CoreCapability.CORE_CAP_POWER),
-        _capChip("Brightness", CoreCapability.CORE_CAP_BRIGHTNESS),
-        _capChip("Color", CoreCapability.CORE_CAP_COLOR),
-        _capChip("Temperature", CoreCapability.CORE_CAP_TEMPERATURE),
-        _capChip("Time", CoreCapability.CORE_CAP_TIMESTAMP),
-      ],
-    );
   }
 
   @override
@@ -293,83 +314,131 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: EaColor.back,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              height: 4,
-              width: 44,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(
-                color: EaColor.border,
-                borderRadius: BorderRadius.circular(4),
-              ),
+            Text("New Device", style: EaText.primary),
+            const SizedBox(height: 16),
+
+            DropdownButtonFormField<String>(
+              initialValue: selectedCategory,
+              items: categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
+              onChanged: (v) async {
+                selectedCategory = v!;
+                await _loadTemplates();
+              },
+              decoration: const InputDecoration(labelText: "Category"),
             ),
 
-            Text(
-              widget.device == null ? "New Device" : "Edit Device",
-              style: EaText.primary,
+            const SizedBox(height: 16),
+
+            Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: EaColor.border),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14),
+                  child: TextField(
+                    controller: searchController,
+                    style:
+                        EaText.primary.copyWith(color: Colors.black),
+                    decoration: InputDecoration(
+                      hintText: "Search model...",
+                      hintStyle:
+                          TextStyle(color: EaColor.border),
+                      border: InputBorder.none,
+                      icon:
+                          Icon(Icons.search, color: EaColor.border),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                if (filteredTemplates.isNotEmpty)
+                  Container(
+                    constraints:
+                        const BoxConstraints(maxHeight: 220),
+                    decoration: BoxDecoration(
+                      color: EaColor.back,
+                      borderRadius: BorderRadius.circular(18),
+                      border:
+                          Border.all(color: EaColor.border),
+                    ),
+                    child: ListView.builder(
+                      itemCount: filteredTemplates.length,
+                      itemBuilder: (_, i) {
+                        final t = filteredTemplates[i];
+                        final selected =
+                            t == selectedTemplate;
+
+                        return InkWell(
+                          onTap: () {
+                            setState(() {
+                              selectedTemplate = t;
+                              searchController.text =
+                                  "${t.brand} ${t.model}";
+                              filteredTemplates = [];
+                            });
+                          },
+                          child: Container(
+                            padding:
+                                const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? EaColor.fore.withAlpha(25)
+                                  : Colors.transparent,
+                              borderRadius:
+                                  BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.memory,
+                                    size: 18,
+                                    color: EaColor.fore),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    "${t.brand} ${t.model}",
+                                    style: EaText.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
             TextField(
               controller: nameController,
-              style: EaText.secondary,
-              decoration: InputDecoration(
-                labelText: "Device Custom Name",
-                labelStyle: EaText.secondaryTranslucent.copyWith(
-                  color: EaColor.textPrimary,
-                ),
-
-                hintText: "e.g. Kitchen Lamp, Bedroom AC (Can be empty)",
-                hintStyle: EaText.secondaryTranslucent,
-
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: EaColor.textPrimary),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: EaColor.fore),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
+              decoration:
+                  const InputDecoration(labelText: "Device Name"),
             ),
 
-            const SizedBox(height: 18),
-
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Capabilities",
-                style: EaText.secondary.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: EaColor.textSecondary,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            _caps(),
-
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: EaColor.fore,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                child: Text("Save Device", style: EaText.primaryBack),
+                child: const Text("Save"),
               ),
             ),
           ],

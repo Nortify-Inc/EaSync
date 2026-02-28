@@ -67,7 +67,14 @@ typedef enum {
     CORE_CAP_BRIGHTNESS,
     CORE_CAP_COLOR,
     CORE_CAP_TEMPERATURE,
-    CORE_CAP_TIMESTAMP
+    CORE_CAP_TEMPERATURE_FRIDGE,
+    CORE_CAP_TEMPERATURE_FREEZER,
+    CORE_CAP_TIMESTAMP, 
+    CORE_CAP_COLOR_TEMP,
+    CORE_CAP_LOCK,
+    CORE_CAP_MODE,
+    CORE_CAP_POSITION
+
 
 } CoreCapability;
 
@@ -78,9 +85,11 @@ typedef enum {
 typedef struct CoreContext CoreContext;
 
 
-#define CORE_MAX_CAPS   16
+#define CORE_MAX_CAPS  16
 #define CORE_MAX_NAME  64
 #define CORE_MAX_UUID  64
+#define CORE_MAX_BRAND 16
+#define CORE_MAX_MODEL 32
 
 
 /**
@@ -91,8 +100,14 @@ typedef struct {
     /** Unique device identifier */
     char uuid[CORE_MAX_UUID];
 
-    /** Human-readable name */
+    /** Human-defineable name */
     char name[CORE_MAX_NAME];
+
+    /** Brand of device */
+    char band[CORE_MAX_BRAND];
+
+    /** Model of device */
+    char model[CORE_MAX_MODEL];
 
     /** Communication protocol */
     CoreProtocol protocol;
@@ -117,7 +132,7 @@ typedef struct {
     bool power;
 
     /** Brightness (0-100, -1 = unsupported) */
-    int brightness;
+    uint32_t brightness;
 
     /** RGB color (0xRRGGBB, 0 = unsupported) */
     uint32_t color;
@@ -125,9 +140,27 @@ typedef struct {
     /** Temperature in Celsius (-1 = unsupported) */
     float temperature;
 
+    /** Temperature to fridge in Celsius (-1 = unsupported) */
+    float temperatureFridge;
+
+    /** Temperature in Celsius (-1 = unsupported) */
+    float temperatureFreezer;
+
     /** Last update timestamp (unix ms, 0 = unsupported) */
     uint64_t timestamp;
 
+    /**Color temperature to supported lamps*/
+    uint32_t colorTemperature;
+
+    /** Lock state */
+    bool lock;
+
+    /** Mode state */
+    uint32_t mode;
+
+    /** Position value (-1 = unsupported) */
+    float position;
+    
 } CoreDeviceState;
 
 
@@ -296,6 +329,77 @@ CoreResult core_set_color(
  * @brief Set temperature value.
  */
 CoreResult core_set_temperature(
+    CoreContext* core,
+    const char* uuid,
+    float value
+);
+
+
+/**
+ * @brief Set temperature for fridge.
+ */
+CoreResult core_set_temperature_fridge(
+    CoreContext* core,
+    const char* uuid,   
+    float value
+);
+
+
+/**
+ * @brief Set temperature for freezer.
+ */
+CoreResult core_set_temperature_freezer(
+    CoreContext* core,
+    const char* uuid,
+    float value
+);
+
+
+/**
+ * @brief Set timestamp value.
+ */
+CoreResult core_set_time(
+    CoreContext* core,
+    const char* uuid,
+    uint64_t value
+);
+
+
+/**
+ * @brief Set color warmth value.
+ */
+CoreResult core_set_color_temperature(
+    CoreContext* core,
+    const char* uuid,
+    uint32_t value
+);
+
+
+/**
+ * @brief Set lock state.
+ */
+CoreResult core_set_lock(
+    CoreContext* core,
+    const char* uuid,
+    bool value
+);
+
+
+
+/**
+ * @brief Set mode state.
+ */
+CoreResult core_set_mode(   
+    CoreContext* core,
+    const char* uuid,
+    uint32_t value
+);
+
+
+/**
+ * @brief Set position value.
+ */
+CoreResult core_set_position(
     CoreContext* core,
     const char* uuid,
     float value

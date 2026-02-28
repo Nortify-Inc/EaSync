@@ -806,20 +806,21 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                       ),
                                 child: cap != CoreCapability.CORE_CAP_COLOR
                                     ? Row(
-                                      crossAxisAlignment: CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          _capIcon(cap),
-                                          size: 20,
-                                          color: EaColor.secondaryFore,
-                                        ),
-                                        SizedBox(width: 3),
-                                        Text(
-                                          _capValue(device, cap),
-                                          style: EaText.secondary,
-                                        )
-                                      ]
-                                    )
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            _capIcon(cap),
+                                            size: 20,
+                                            color: EaColor.secondaryFore,
+                                          ),
+                                          SizedBox(width: 3),
+                                          Text(
+                                            _capValue(device, cap),
+                                            style: EaText.secondary,
+                                          ),
+                                        ],
+                                      )
                                     : null,
                               ),
                             ],
