@@ -125,6 +125,11 @@ static float quantizeHalfStep(float value) {
     return std::round(value * 2.0f) / 2.0f;
 }
 
+static bool isHalfStep(float value) {
+    float scaled = value * 2.0f;
+    return std::fabs(scaled - std::round(scaled)) < 0.0001f;
+}
+
 static void driverEventForwarder(const std::string& uuid,
                                  const CoreDeviceState& newState,
                                  void* userData)
@@ -705,6 +710,11 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
 
+    if (!isHalfStep(value)) {
+        setError(core, "Temperature must be in .0 or .5 steps");
+        return CORE_INVALID_ARGUMENT;
+    }
+
     value = quantizeHalfStep(value);
 
     std::shared_ptr<drivers::Driver> driver;
@@ -743,6 +753,11 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
 CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, float value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
+
+    if (!isHalfStep(value)) {
+        setError(core, "Fridge temperature must be in .0 or .5 steps");
+        return CORE_INVALID_ARGUMENT;
+    }
 
     value = quantizeHalfStep(value);
 
@@ -783,6 +798,11 @@ CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, floa
 CoreResult core_set_temperature_freezer(CoreContext* core, const char* uuid, float value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
+
+    if (!isHalfStep(value)) {
+        setError(core, "Freezer temperature must be in .0 or .5 steps");
+        return CORE_INVALID_ARGUMENT;
+    }
 
     value = quantizeHalfStep(value);
 
@@ -1051,14 +1071,15 @@ CoreResult core_simulate(CoreContext* core)
     static thread_local std::mt19937 rng{std::random_device{}()};
 
     std::uniform_int_distribution<int> startActionChance(0, 99);
-    std::uniform_int_distribution<int> actionLenDist(2, 8);
-    std::uniform_int_distribution<int> idleLenDist(2, 14);
+    std::uniform_int_distribution<int> actionLenDist(1, 4);
+    std::uniform_int_distribution<int> idleLenDist(4, 22);
     std::uniform_int_distribution<int> flipChance(0, 99);
-    std::uniform_int_distribution<int> brightStep(-7, 7);
-    std::uniform_int_distribution<int> colorStep(-0x00020202, 0x00020202);
-    std::uniform_real_distribution<float> tempStep(-0.5f, 0.5f);
+    std::uniform_int_distribution<int> brightStep(-12, 12);
+    std::uniform_int_distribution<int> colorStep(-0x00050505, 0x00050505);
+    std::uniform_int_distribution<int> tempJumpMag(3, 5);
+    std::uniform_int_distribution<int> tempDir(0, 1);
     std::uniform_int_distribution<uint32_t> modeDist(0, 5);
-    std::uniform_real_distribution<float> posStep(-3.5f, 3.5f);
+    std::uniform_real_distribution<float> posStep(-8.f, 8.f);
     std::uniform_int_distribution<int> ctempStep(-180, 180);
 
     static thread_local std::unordered_map<std::string, SimSession> sessions;
@@ -1089,76 +1110,119 @@ CoreResult core_simulate(CoreContext* core)
 
         session.actionTicks--;
 
-        // build a new state with some randomness
-        if (hasCap(t, CORE_CAP_POWER) && flipChance(rng) < 12)
-            state.power = !state.power;
+        std::vector<CoreCapability> actionCaps;
+        if (hasCap(t, CORE_CAP_POWER)) actionCaps.push_back(CORE_CAP_POWER);
+        if (hasCap(t, CORE_CAP_BRIGHTNESS)) actionCaps.push_back(CORE_CAP_BRIGHTNESS);
+        if (hasCap(t, CORE_CAP_COLOR)) actionCaps.push_back(CORE_CAP_COLOR);
+        if (hasCap(t, CORE_CAP_TEMPERATURE)) actionCaps.push_back(CORE_CAP_TEMPERATURE);
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE)) actionCaps.push_back(CORE_CAP_TEMPERATURE_FRIDGE);
+        if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER)) actionCaps.push_back(CORE_CAP_TEMPERATURE_FREEZER);
+        if (hasCap(t, CORE_CAP_TIMESTAMP)) actionCaps.push_back(CORE_CAP_TIMESTAMP);
+        if (hasCap(t, CORE_CAP_COLOR_TEMP)) actionCaps.push_back(CORE_CAP_COLOR_TEMP);
+        if (hasCap(t, CORE_CAP_LOCK)) actionCaps.push_back(CORE_CAP_LOCK);
+        if (hasCap(t, CORE_CAP_POSITION)) actionCaps.push_back(CORE_CAP_POSITION);
+        if (hasCap(t, CORE_CAP_MODE) && flipChance(rng) < 12) actionCaps.push_back(CORE_CAP_MODE);
 
-        if (hasCap(t, CORE_CAP_BRIGHTNESS))
-            state.brightness = clampInt(
-                static_cast<int>(state.brightness) + brightStep(rng),
-                0,
-                100
-            );
-
-        if (hasCap(t, CORE_CAP_COLOR)) {
-            auto nextColor = static_cast<int64_t>(state.color) + colorStep(rng);
-            nextColor = clampInt64(nextColor, 0, 0x00FFFFFF);
-            state.color = static_cast<uint32_t>(nextColor);
+        if (actionCaps.empty()) {
+            if (session.actionTicks == 0) session.idleTicks = idleLenDist(rng);
+            continue;
         }
 
-        if (hasCap(t, CORE_CAP_TEMPERATURE))
-            state.temperature = quantizeHalfStep(
-                clampFloat(state.temperature + tempStep(rng), 16.f, 30.f)
-            );
+        std::uniform_int_distribution<size_t> capDist(0, actionCaps.size() - 1);
+        auto selected = actionCaps[capDist(rng)];
 
-        if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE))
-            state.temperatureFridge = quantizeHalfStep(clampFloat(
-                state.temperatureFridge + tempStep(rng),
-                1.f,
-                8.f
-            ));
+        bool changed = false;
+        bool applied = true;
 
-        if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER))
-            state.temperatureFreezer = quantizeHalfStep(clampFloat(
-                state.temperatureFreezer + tempStep(rng),
-                -24.f,
-                -14.f
-            ));
+        switch (selected) {
+            case CORE_CAP_POWER:
+                state.power = !state.power;
+                applied = t.driver->setPower(t.uuid, state.power);
+                changed = true;
+                break;
 
-        if (hasCap(t, CORE_CAP_TIMESTAMP))
-            state.timestamp += 60;
+            case CORE_CAP_BRIGHTNESS:
+                state.brightness = clampInt(static_cast<int>(state.brightness) + brightStep(rng), 0, 100);
+                applied = t.driver->setBrightness(t.uuid, state.brightness);
+                changed = true;
+                break;
 
-        if (hasCap(t, CORE_CAP_COLOR_TEMP)) {
-            auto nextTemp = static_cast<int>(state.colorTemperature) + ctempStep(rng);
-            nextTemp = clampInt(nextTemp, 2000, 9000);
-            state.colorTemperature = static_cast<uint32_t>(nextTemp);
+            case CORE_CAP_COLOR: {
+                auto nextColor = static_cast<int64_t>(state.color) + colorStep(rng);
+                nextColor = clampInt64(nextColor, 0, 0x00FFFFFF);
+                state.color = static_cast<uint32_t>(nextColor);
+                applied = t.driver->setColor(t.uuid, state.color);
+                changed = true;
+                break;
+            }
+
+            case CORE_CAP_TEMPERATURE: {
+                float jump = static_cast<float>(tempJumpMag(rng)) * (tempDir(rng) == 0 ? -1.f : 1.f);
+                state.temperature = quantizeHalfStep(clampFloat(state.temperature + jump, 16.f, 30.f));
+                applied = t.driver->setTemperature(t.uuid, state.temperature);
+                changed = true;
+                break;
+            }
+
+            case CORE_CAP_TEMPERATURE_FRIDGE: {
+                float jump = static_cast<float>(tempJumpMag(rng)) * (tempDir(rng) == 0 ? -1.f : 1.f);
+                state.temperatureFridge = quantizeHalfStep(clampFloat(state.temperatureFridge + jump, 1.f, 8.f));
+                applied = t.driver->setTemperatureFridge(t.uuid, state.temperatureFridge);
+                changed = true;
+                break;
+            }
+
+            case CORE_CAP_TEMPERATURE_FREEZER: {
+                float jump = static_cast<float>(tempJumpMag(rng)) * (tempDir(rng) == 0 ? -1.f : 1.f);
+                state.temperatureFreezer = quantizeHalfStep(clampFloat(state.temperatureFreezer + jump, -24.f, -14.f));
+                applied = t.driver->setTemperatureFreezer(t.uuid, state.temperatureFreezer);
+                changed = true;
+                break;
+            }
+
+            case CORE_CAP_TIMESTAMP:
+                state.timestamp += 60;
+                applied = t.driver->setTime(t.uuid, state.timestamp);
+                changed = true;
+                break;
+
+            case CORE_CAP_COLOR_TEMP: {
+                auto nextTemp = static_cast<int>(state.colorTemperature) + ctempStep(rng);
+                nextTemp = clampInt(nextTemp, 2000, 9000);
+                state.colorTemperature = static_cast<uint32_t>(nextTemp);
+                applied = t.driver->setColorTemperature(t.uuid, state.colorTemperature);
+                changed = true;
+                break;
+            }
+
+            case CORE_CAP_LOCK:
+                state.lock = !state.lock;
+                applied = t.driver->setLock(t.uuid, state.lock);
+                changed = true;
+                break;
+
+            case CORE_CAP_MODE:
+                state.mode = modeDist(rng);
+                applied = t.driver->setMode(t.uuid, state.mode);
+                changed = true;
+                break;
+
+            case CORE_CAP_POSITION:
+                state.position = clampFloat(state.position + posStep(rng), 0.f, 100.f);
+                applied = t.driver->setPosition(t.uuid, state.position);
+                changed = true;
+                break;
+
+            default:
+                break;
         }
-
-        if (hasCap(t, CORE_CAP_LOCK) && flipChance(rng) < 8)
-            state.lock = !state.lock;
-
-        if (hasCap(t, CORE_CAP_MODE) && flipChance(rng) < 10)
-            state.mode = modeDist(rng);
-
-        if (hasCap(t, CORE_CAP_POSITION))
-            state.position = clampFloat(state.position + posStep(rng), 0.f, 100.f);
 
         if (session.actionTicks == 0) {
             session.idleTicks = idleLenDist(rng);
         }
 
-        // apply via driver setters to keep driver state consistent
-        if (hasCap(t, CORE_CAP_POWER)) t.driver->setPower(t.uuid, state.power);
-        if (hasCap(t, CORE_CAP_BRIGHTNESS)) t.driver->setBrightness(t.uuid, state.brightness);
-        if (hasCap(t, CORE_CAP_COLOR)) t.driver->setColor(t.uuid, state.color);
-        if (hasCap(t, CORE_CAP_TEMPERATURE)) t.driver->setTemperature(t.uuid, state.temperature);
-        if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE)) t.driver->setTemperatureFridge(t.uuid, state.temperatureFridge);
-        if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER)) t.driver->setTemperatureFreezer(t.uuid, state.temperatureFreezer);
-        if (hasCap(t, CORE_CAP_TIMESTAMP)) t.driver->setTime(t.uuid, state.timestamp);
-        if (hasCap(t, CORE_CAP_COLOR_TEMP)) t.driver->setColorTemperature(t.uuid, state.colorTemperature);
-        if (hasCap(t, CORE_CAP_LOCK)) t.driver->setLock(t.uuid, state.lock);
-        if (hasCap(t, CORE_CAP_MODE)) t.driver->setMode(t.uuid, state.mode);
-        if (hasCap(t, CORE_CAP_POSITION)) t.driver->setPosition(t.uuid, state.position);
+        if (!changed || !applied)
+            continue;
 
         CoreDeviceState refreshed{};
         if (!t.driver->getState(t.uuid, refreshed))

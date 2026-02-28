@@ -22,7 +22,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   StreamSubscription<CoreEventData>? _eventSub;
   final PageStorageBucket _bucket = PageStorageBucket();
 
-  double _snapHalf(double value) => (value * 2).round() / 2;
+  double _snapStep(double value, double step) {
+    if (step <= 0) return value;
+    return (value / step).round() * step;
+  }
+
+  int _divisions(double min, double max, double step) {
+    if (step <= 0) return 1;
+    final raw = ((max - min) / step).round();
+    return raw.clamp(1, 400);
+  }
 
   @override
   void initState() {
@@ -380,13 +389,65 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   Future<void> _openDeviceControl(DeviceInfo device) async {
     final state = Bridge.getState(device.uuid);
+
+    final tempMin = Bridge.constraintMin(device.uuid, 'temperature', 16.0);
+    final tempMax = Bridge.constraintMax(device.uuid, 'temperature', 30.0);
+    final tempStep = Bridge.constraintStep(device.uuid, 'temperature', 0.5);
+
+    final fridgeMin = Bridge.constraintMin(
+      device.uuid,
+      'temperature_fridge',
+      1.0,
+    );
+    final fridgeMax = Bridge.constraintMax(
+      device.uuid,
+      'temperature_fridge',
+      8.0,
+    );
+    final fridgeStep = Bridge.constraintStep(
+      device.uuid,
+      'temperature_fridge',
+      0.5,
+    );
+
+    final freezerMin = Bridge.constraintMin(
+      device.uuid,
+      'temperature_freezer',
+      -24.0,
+    );
+    final freezerMax = Bridge.constraintMax(
+      device.uuid,
+      'temperature_freezer',
+      -14.0,
+    );
+    final freezerStep = Bridge.constraintStep(
+      device.uuid,
+      'temperature_freezer',
+      0.5,
+    );
+
+    final colorTempMin = Bridge.constraintMin(
+      device.uuid,
+      'colorTemperature',
+      1500.0,
+    );
+    final colorTempMax = Bridge.constraintMax(
+      device.uuid,
+      'colorTemperature',
+      9000.0,
+    );
+
     int brightness = state.brightness;
-    double temperature = state.temperature;
+    double temperature = state.temperature.clamp(tempMin, tempMax);
     int color = state.color;
     bool power = state.power;
-    double temperatureFridge = state.temperatureFridge;
-    double temperatureFreezer = state.temperatureFreezer;
-    int colorTemperature = state.colorTemperature;
+    double temperatureFridge = state.temperatureFridge.clamp(fridgeMin, fridgeMax);
+    double temperatureFreezer = state.temperatureFreezer.clamp(
+      freezerMin,
+      freezerMax,
+    );
+    int colorTemperature = state.colorTemperature
+        .clamp(colorTempMin.toInt(), colorTempMax.toInt());
     bool lock = state.lock;
     int mode = state.mode;
     double position = state.position;
@@ -636,14 +697,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
 
                           Slider(
-                            min: -10,
-                            max: 36,
-                            divisions: (10 + 36) * 2,
+                            min: tempMin,
+                            max: tempMax,
+                            divisions: _divisions(tempMin, tempMax, tempStep),
                             value: temperature,
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              final snapped = _snapHalf(v);
+                              final snapped = _snapStep(v, tempStep)
+                                  .clamp(tempMin, tempMax);
                               setInnerState(() => temperature = snapped);
                               Bridge.setTemperature(device.uuid, snapped);
                               setState(() {});
@@ -685,14 +747,19 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
 
                           Slider(
-                            min: -5,
-                            max: 12,
-                            divisions: 34,
+                            min: fridgeMin,
+                            max: fridgeMax,
+                            divisions: _divisions(
+                              fridgeMin,
+                              fridgeMax,
+                              fridgeStep,
+                            ),
                             value: temperatureFridge,
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              final snapped = _snapHalf(v);
+                              final snapped = _snapStep(v, fridgeStep)
+                                  .clamp(fridgeMin, fridgeMax);
                               setInnerState(() => temperatureFridge = snapped);
                               Bridge.setTemperatureFridge(device.uuid, snapped);
                               setState(() {});
@@ -733,14 +800,19 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
 
                           Slider(
-                            min: -32,
-                            max: 0,
-                            divisions: 64,
+                            min: freezerMin,
+                            max: freezerMax,
+                            divisions: _divisions(
+                              freezerMin,
+                              freezerMax,
+                              freezerStep,
+                            ),
                             value: temperatureFreezer,
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              final snapped = _snapHalf(v);
+                              final snapped = _snapStep(v, freezerStep)
+                                  .clamp(freezerMin, freezerMax);
                               setInnerState(() => temperatureFreezer = snapped);
                               Bridge.setTemperatureFreezer(device.uuid, snapped);
                               setState(() {});
@@ -784,11 +856,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
 
                           Slider(
-                            min: 1500,
-                            max: 9000,
-                            divisions: 75,
+                            min: colorTempMin,
+                            max: colorTempMax,
+                            divisions: _divisions(
+                              colorTempMin,
+                              colorTempMax,
+                              100,
+                            ),
                             value: colorTemperature
-                                .clamp(1500, 9000)
+                                .clamp(colorTempMin.toInt(), colorTempMax.toInt())
                                 .toDouble(),
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),

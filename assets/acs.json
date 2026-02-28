@@ -3,75 +3,96 @@
     {
       "brand": "Daikin",
       "model": "FTXM35R",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
-        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+        "power": { "topic": "daikin/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "daikin/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "daikin/{uuid}/set", "template": { "mode": "{value}" } }
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 16, "max": 30 },
+        "temperature": { "min": 16, "max": 30, "step": 0.5 },
         "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     },
     {
       "brand": "LG",
       "model": "Dual Inverter V",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
-        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+        "power": { "topic": "lg/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "lg/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "lg/{uuid}/set", "template": { "mode": "{value}" } }
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 16, "max": 30 },
+        "temperature": { "min": 16, "max": 30, "step": 0.5 },
         "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     },
     {
-      "brand": "Mitsubishi",
+      "brand": "Mitsubishi Electric",
       "model": "MSZ-AP25VG",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
-        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+        "power": { "topic": "mitsubishi/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "mitsubishi/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "mitsubishi/{uuid}/set", "template": { "mode": "{value}" } }
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 16, "max": 31 },
+        "temperature": { "min": 16, "max": 31, "step": 0.5 },
         "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     },
     {
       "brand": "Gree",
       "model": "Fairy GWH12ACC",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
-        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+        "power": { "topic": "gree/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "gree/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "gree/{uuid}/set", "template": { "mode": "{value}" } }
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 16, "max": 30 },
+        "temperature": { "min": 16, "max": 30, "step": 0.5 },
         "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     },
     {
       "brand": "Panasonic",
       "model": "CS-Z25VKEW",
+      "protocol": "wifi",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
-        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
-        "temperature": { "topic": "device/{uuid}/set", "template": { "temperature": "{value}" } },
-        "mode": { "topic": "device/{uuid}/set", "template": { "mode": "{value}" } }
+        "power": { "topic": "panasonic/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "panasonic/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "panasonic/{uuid}/set", "template": { "mode": "{value}" } }
       },
       "constrains": {
         "power": true,
-        "temperature": { "min": 16, "max": 30 },
+        "temperature": { "min": 16, "max": 30, "step": 0.5 },
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
+      }
+    },
+    {
+      "brand": "Midea",
+      "model": "Xtreme Save",
+      "protocol": "wifi",
+      "capabilities": ["power", "temperature", "mode"],
+      "payloads": {
+        "power": { "topic": "midea/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "midea/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "midea/{uuid}/set", "template": { "mode": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 17, "max": 30, "step": 0.5 },
         "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     }

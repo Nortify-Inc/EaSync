@@ -3,6 +3,7 @@
     {
       "brand": "Philips",
       "model": "Hue White and Color Ambiance E27",
+      "protocol": "zigbee",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -20,6 +21,7 @@
     {
       "brand": "LIFX",
       "model": "A19",
+      "protocol": "wifi",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -37,6 +39,7 @@
     {
       "brand": "TP-Link",
       "model": "Tapo L530E",
+      "protocol": "wifi",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -54,6 +57,7 @@
     {
       "brand": "Yeelight",
       "model": "YLDP06YL",
+      "protocol": "wifi",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -71,6 +75,7 @@
     {
       "brand": "IKEA",
       "model": "TRADFRI E27 1000lm",
+      "protocol": "zigbee",
       "capabilities": ["power", "brightness", "colorTemperature"],
       "payloads": {
         "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
@@ -81,6 +86,24 @@
         "power": true,
         "brightness": { "min": 1, "max": 254 },
         "colorTemperature": { "min": 250, "max": 454 }
+      }
+    },
+    {
+      "brand": "Nanoleaf",
+      "model": "Essentials A19",
+      "protocol": "zigbee",
+      "capabilities": ["power", "brightness", "color", "colorTemperature"],
+      "payloads": {
+        "power": { "topic": "device/{uuid}/set", "template": { "power": "{value}" } },
+        "brightness": { "topic": "device/{uuid}/set", "template": { "brightness": "{value}" } },
+        "color": { "topic": "device/{uuid}/set", "template": { "color": "{value}" } },
+        "colorTemperature": { "topic": "device/{uuid}/set", "template": { "colorTemperature": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "brightness": { "min": 1, "max": 100 },
+        "color": { "type": "rgb" },
+        "colorTemperature": { "min": 2700, "max": 6500 }
       }
     }
   ]
