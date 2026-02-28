@@ -253,8 +253,8 @@ class _ManageState extends State<Manage> {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _chip(d.brand),
-                      _chip(d.model),
+                      if (d.brand.trim().isNotEmpty) _chip(d.brand),
+                      if (d.model.trim().isNotEmpty) _chip(d.model),
                       ...d.capabilities.map((c) => _chip(_capLabel(c))),
                     ],
                   ),
@@ -400,6 +400,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     final uuid = _generateUuid();
 
     try {
+      final rawModes = selectedTemplate!.constrains["mode"];
+      final modeLabels = rawModes is List
+          ? rawModes.map((e) => e.toString()).toList()
+          : null;
+
       Bridge.registerDevice(
         uuid: uuid,
         name: name,
@@ -407,12 +412,29 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         capabilities: selectedTemplate!.capabilities
             .map(_mapCapability)
             .toList(),
+        modeLabels: modeLabels,
       );
 
       widget.onSaved();
     } catch (e) {
       _showError(e.toString());
     }
+  }
+
+  String _prettyCategory(String raw) {
+    const names = {
+      'acs': 'Air Conditioners',
+      'lamps': 'Lamps',
+      'fridges': 'Refrigerators',
+      'locks': 'Smart Locks',
+      'curtains': 'Curtains',
+      'heated_floors': 'Heated Floors',
+    };
+    return names[raw] ??
+        raw
+            .split('_')
+            .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
   }
 
   int _mapCapability(String cap) {
@@ -549,7 +571,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                                           style: EaText.primary,
                                         ),
                                         Text(
-                                          t.category,
+                                          _prettyCategory(t.category),
                                           style: EaText.secondary,
                                         ),
                                         const SizedBox(height: 6),

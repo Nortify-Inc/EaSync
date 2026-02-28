@@ -396,6 +396,7 @@ class Bridge {
   static Pointer<Void>? _ctx;
 
   static final Map<String, DeviceState> _stateCache = {};
+  static final Map<String, List<String>> _modeLabelsByDevice = {};
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -493,6 +494,8 @@ class Bridge {
   static void destroy() {
     _simulateTimer?.cancel();
     _simulateTimer = null;
+    _stateCache.clear();
+    _modeLabelsByDevice.clear();
 
     if (_ctx != null) {
       _coreDestroy(_ctx!);
@@ -506,6 +509,7 @@ class Bridge {
     required String name,
     required int protocol,
     required List<int> capabilities,
+    List<String>? modeLabels,
   }) {
     _ensureReady();
 
@@ -534,6 +538,26 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+
+    if (modeLabels != null && modeLabels.isNotEmpty) {
+      _modeLabelsByDevice[uuid] = modeLabels;
+    }
+  }
+
+  static String modeName(String uuid, int modeIndex) {
+    final labels = _modeLabelsByDevice[uuid];
+    if (labels == null || labels.isEmpty) {
+      return "Mode $modeIndex";
+    }
+
+    final idx = modeIndex.clamp(0, labels.length - 1);
+    return labels[idx];
+  }
+
+  static int modeCount(String uuid) {
+    final labels = _modeLabelsByDevice[uuid];
+    if (labels == null || labels.isEmpty) return 6;
+    return labels.length;
   }
 
   static List<DeviceInfo> listDevices() {
@@ -847,6 +871,7 @@ class Bridge {
         _stateController.add(uuid);
       } else if (e.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
         _invalidateState(uuid);
+        _modeLabelsByDevice.remove(uuid);
       }
     } catch (_) {
       // swallow errors to avoid crashing native callback

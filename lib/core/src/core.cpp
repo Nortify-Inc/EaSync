@@ -33,6 +33,7 @@
 #include <sstream>
 #include <random>
 #include <algorithm>
+#include <cmath>
 
 extern "C" {
 
@@ -118,6 +119,10 @@ static bool hasCapability(const InternalDevice& dev, CoreCapability cap) {
     }
 
     return false;
+}
+
+static float quantizeHalfStep(float value) {
+    return std::round(value * 2.0f) / 2.0f;
 }
 
 static void driverEventForwarder(const std::string& uuid,
@@ -700,6 +705,8 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
 
+    value = quantizeHalfStep(value);
+
     std::shared_ptr<drivers::Driver> driver;
 
     {
@@ -736,6 +743,8 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
 CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, float value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
+
+    value = quantizeHalfStep(value);
 
     std::shared_ptr<drivers::Driver> driver;
 
@@ -774,6 +783,8 @@ CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, floa
 CoreResult core_set_temperature_freezer(CoreContext* core, const char* uuid, float value){
     if (!core || !uuid)
         return CORE_INVALID_ARGUMENT;
+
+    value = quantizeHalfStep(value);
 
     std::shared_ptr<drivers::Driver> driver;
 
@@ -991,6 +1002,11 @@ struct SimTarget {
     std::shared_ptr<drivers::Driver> driver;
 };
 
+struct SimSession {
+    int idleTicks = 0;
+    int actionTicks = 0;
+};
+
 static bool hasCap(const SimTarget& t, CoreCapability cap) {
     return std::find(t.caps.begin(), t.caps.end(), cap) != t.caps.end();
 }
@@ -1034,13 +1050,18 @@ CoreResult core_simulate(CoreContext* core)
 
     static thread_local std::mt19937 rng{std::random_device{}()};
 
+    std::uniform_int_distribution<int> startActionChance(0, 99);
+    std::uniform_int_distribution<int> actionLenDist(2, 8);
+    std::uniform_int_distribution<int> idleLenDist(2, 14);
     std::uniform_int_distribution<int> flipChance(0, 99);
-    std::uniform_int_distribution<int> brightStep(-8, 8);
-    std::uniform_int_distribution<int> colorStep(-0x00030303, 0x00030303);
-    std::uniform_real_distribution<float> tempStep(-0.3f, 0.3f);
+    std::uniform_int_distribution<int> brightStep(-7, 7);
+    std::uniform_int_distribution<int> colorStep(-0x00020202, 0x00020202);
+    std::uniform_real_distribution<float> tempStep(-0.5f, 0.5f);
     std::uniform_int_distribution<uint32_t> modeDist(0, 5);
-    std::uniform_real_distribution<float> posStep(-4.f, 4.f);
-    std::uniform_int_distribution<int> ctempStep(-220, 220);
+    std::uniform_real_distribution<float> posStep(-3.5f, 3.5f);
+    std::uniform_int_distribution<int> ctempStep(-180, 180);
+
+    static thread_local std::unordered_map<std::string, SimSession> sessions;
 
     for (auto& t : targets) {
         if (!t.driver)
@@ -1049,6 +1070,24 @@ CoreResult core_simulate(CoreContext* core)
         CoreDeviceState state{};
         if (!t.driver->getState(t.uuid, state))
             continue;
+
+        auto& session = sessions[t.uuid];
+
+        if (session.idleTicks > 0) {
+            session.idleTicks--;
+            continue;
+        }
+
+        if (session.actionTicks == 0) {
+            if (startActionChance(rng) >= 35) {
+                session.idleTicks = idleLenDist(rng);
+                continue;
+            }
+
+            session.actionTicks = actionLenDist(rng);
+        }
+
+        session.actionTicks--;
 
         // build a new state with some randomness
         if (hasCap(t, CORE_CAP_POWER) && flipChance(rng) < 12)
@@ -1068,21 +1107,23 @@ CoreResult core_simulate(CoreContext* core)
         }
 
         if (hasCap(t, CORE_CAP_TEMPERATURE))
-            state.temperature = clampFloat(state.temperature + tempStep(rng), 16.f, 30.f);
+            state.temperature = quantizeHalfStep(
+                clampFloat(state.temperature + tempStep(rng), 16.f, 30.f)
+            );
 
         if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE))
-            state.temperatureFridge = clampFloat(
+            state.temperatureFridge = quantizeHalfStep(clampFloat(
                 state.temperatureFridge + tempStep(rng),
                 1.f,
                 8.f
-            );
+            ));
 
         if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER))
-            state.temperatureFreezer = clampFloat(
+            state.temperatureFreezer = quantizeHalfStep(clampFloat(
                 state.temperatureFreezer + tempStep(rng),
                 -24.f,
                 -14.f
-            );
+            ));
 
         if (hasCap(t, CORE_CAP_TIMESTAMP))
             state.timestamp += 60;
@@ -1101,6 +1142,10 @@ CoreResult core_simulate(CoreContext* core)
 
         if (hasCap(t, CORE_CAP_POSITION))
             state.position = clampFloat(state.position + posStep(rng), 0.f, 100.f);
+
+        if (session.actionTicks == 0) {
+            session.idleTicks = idleLenDist(rng);
+        }
 
         // apply via driver setters to keep driver state consistent
         if (hasCap(t, CORE_CAP_POWER)) t.driver->setPower(t.uuid, state.power);

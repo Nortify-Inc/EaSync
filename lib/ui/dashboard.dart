@@ -22,6 +22,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   StreamSubscription<CoreEventData>? _eventSub;
   final PageStorageBucket _bucket = PageStorageBucket();
 
+  double _snapHalf(double value) => (value * 2).round() / 2;
+
   @override
   void initState() {
     super.initState();
@@ -323,7 +325,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return s.lock ? "Locked" : "Unlocked";
 
       case CoreCapability.CORE_CAP_MODE:
-        return "Mode ${s.mode}";
+        return Bridge.modeName(device.uuid, s.mode);
 
       case CoreCapability.CORE_CAP_POSITION:
         return "${s.position.toStringAsFixed(0)}%";
@@ -641,8 +643,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              setInnerState(() => temperature = v);
-                              Bridge.setTemperature(device.uuid, v);
+                              final snapped = _snapHalf(v);
+                              setInnerState(() => temperature = snapped);
+                              Bridge.setTemperature(device.uuid, snapped);
                               setState(() {});
                             },
                             onChangeEnd: (_) {},
@@ -689,8 +692,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              setInnerState(() => temperatureFridge = v);
-                              Bridge.setTemperatureFridge(device.uuid, v);
+                              final snapped = _snapHalf(v);
+                              setInnerState(() => temperatureFridge = snapped);
+                              Bridge.setTemperatureFridge(device.uuid, snapped);
                               setState(() {});
                             },
                           ),
@@ -731,13 +735,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           Slider(
                             min: -32,
                             max: 0,
-                            divisions: 32,
+                            divisions: 64,
                             value: temperatureFreezer,
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              setInnerState(() => temperatureFreezer = v);
-                              Bridge.setTemperatureFreezer(device.uuid, v);
+                              final snapped = _snapHalf(v);
+                              setInnerState(() => temperatureFreezer = snapped);
+                              Bridge.setTemperatureFreezer(device.uuid, snapped);
                               setState(() {});
                             },
                           ),
@@ -849,7 +854,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                               const Spacer(),
 
                               Text(
-                                "$mode",
+                                Bridge.modeName(device.uuid, mode),
                                 style: EaText.secondary.copyWith(
                                   color: EaColor.fore,
                                 ),
@@ -860,9 +865,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                           Slider(
                             min: 0,
-                            max: 5,
-                            divisions: 5,
-                            value: mode.toDouble().clamp(0, 5),
+                            max: (Bridge.modeCount(device.uuid) - 1).toDouble(),
+                            divisions: (Bridge.modeCount(device.uuid) - 1)
+                                .clamp(1, 20),
+                            value: mode
+                                .toDouble()
+                                .clamp(0, (Bridge.modeCount(device.uuid) - 1).toDouble()),
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
