@@ -17,6 +17,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   static const double _capRowGap = 12;
+  static const double _dotFadeOutThreshold = 0.035;
   static const List<String> _templateCategories = [
     'acs',
     'lamps',
@@ -1451,9 +1452,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     final begin = previousProgress[device.uuid] ?? target;
 
-    final ringColorTarget = ringColorByDevice[device.uuid] ?? _capColor(device, cap);
-    final ringColorBegin =
-      previousRingColorByDevice[device.uuid] ?? ringColorTarget;
+    final ringColorTarget = _capColor(device, cap);
 
     double dragStartX = 0;
     double dragDelta = 0;
@@ -1465,11 +1464,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         children: [
           TweenAnimationBuilder<double>(
             tween: Tween(begin: begin, end: target),
-            duration: const Duration(milliseconds: 1440),
+            duration: const Duration(milliseconds: 720),
             curve: Curves.easeOutSine,
             builder: (_, animated, _) {
               return TweenAnimationBuilder<Color?>(
-                tween: ColorTween(begin: ringColorBegin, end: ringColorTarget),
+                tween: ColorTween(end: ringColorTarget),
                 duration: const Duration(milliseconds: 360),
                 curve: Curves.easeOutCubic,
                 builder: (_, animatedColor, child) {
@@ -1479,13 +1478,23 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        CustomPaint(
-                          size: Size(size + 30, size + 30),
-                          painter: _RingPainter(
-                            ringColor: effectiveRingColor,
-                            progress: animated,
-                            showDot: animated > 0.0001,
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(
+                            end: animated > _dotFadeOutThreshold ? 1.0 : 0.0,
                           ),
+                          duration: const Duration(milliseconds: 360),
+                          curve: Curves.easeOutCubic,
+                          builder: (_, dotOpacity, _) {
+                            return CustomPaint(
+                              size: Size(size + 30, size + 30),
+                              painter: _RingPainter(
+                                ringColor: effectiveRingColor,
+                                progress: animated,
+                                showDot: true,
+                                dotOpacity: dotOpacity,
+                              ),
+                            );
+                          },
                         ),
                         GestureDetector(
                     onTap: () {
@@ -1614,12 +1623,14 @@ class _RingPainter extends CustomPainter {
   final Color ringColor;
   final double progress;
   final bool showDot;
+  final double dotOpacity;
   double ringWidth = 6;
 
   _RingPainter({
     required this.ringColor,
     required this.progress,
     required this.showDot,
+    this.dotOpacity = 1.0,
   });
 
   @override
@@ -1640,7 +1651,7 @@ class _RingPainter extends CustomPainter {
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = EaColor.back;
+      ..color = EaColor.background;
 
     canvas.drawCircle(center, radius, baseRing);
 
@@ -1668,7 +1679,7 @@ class _RingPainter extends CustomPainter {
           ..strokeWidth = ringWidth
           ..strokeCap = StrokeCap.butt
           ..isAntiAlias = true
-          ..color = Color.lerp(EaColor.back, ringColor, t) ?? ringColor;
+          ..color = Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
 
         canvas.drawArc(
           localRect,
@@ -1682,7 +1693,9 @@ class _RingPainter extends CustomPainter {
       canvas.restore();
     }
 
-    if (!showDot || normalized <= 0.0001) {
+    final effectiveDotOpacity = dotOpacity.clamp(0.0, 1.0);
+
+    if (!showDot || normalized <= 0.0001 || effectiveDotOpacity <= 0.001) {
       return;
     }
 
@@ -1693,7 +1706,8 @@ class _RingPainter extends CustomPainter {
       center.dy + sin(angle) * radius,
     );
 
-    final dotPaint = Paint()..color = ringColor;
+    final dotPaint = Paint()
+      ..color = ringColor.withValues(alpha: effectiveDotOpacity);
 
     canvas.drawCircle(dotOffset, ringWidth * 1.4, dotPaint);
   }
@@ -1702,6 +1716,7 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(covariant _RingPainter old) {
     return old.progress != progress ||
         old.ringColor != ringColor ||
-        old.showDot != showDot;
+        old.showDot != showDot ||
+        old.dotOpacity != dotOpacity;
   }
 }
