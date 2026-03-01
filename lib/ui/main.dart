@@ -11,6 +11,23 @@ class EaSync extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: Splash());
+    return MaterialApp(
+      theme: ThemeData(
+        scaffoldBackgroundColor: EaColor.background,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: EaColor.fore,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: EaColor.fore,
+          secondary: EaColor.fore,
+        ),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: EaColor.fore,
+          selectionColor: EaColor.border,
+          selectionHandleColor: EaColor.fore,
+        ),
+      ),
+      home: const Splash(),
+    );
   }
 }
