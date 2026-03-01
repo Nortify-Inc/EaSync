@@ -17,6 +17,15 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   static const double _capRowGap = 12;
+  static const List<String> _templateCategories = [
+    'acs',
+    'lamps',
+    'fridges',
+    'locks',
+    'curtains',
+    'heated_floors',
+    'mocks',
+  ];
 
   bool loading = true;
   String? error;
@@ -27,6 +36,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   final Map<String, double> animatedProgress = {};
   final Map<String, double> previousProgress = {};
   final Set<String> initializedDevices = {};
+  final Map<String, String> _assetByBrandModel = {};
+  final Map<String, String> _assetByModel = {};
+  bool _templateAssetsLoaded = false;
 
   StreamSubscription<String>? _stateSub;
   StreamSubscription<CoreEventData>? _eventSub;
@@ -68,11 +80,83 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> _ensureTemplateAssetsLoaded() async {
+    if (_templateAssetsLoaded) return;
+
+    try {
+      final loaded = await Future.wait(
+        _templateCategories.map((c) => TemplateRepository.loadCategory(c)),
+      );
+
+      for (final templates in loaded) {
+        for (final t in templates) {
+          final asset = t.asset;
+          if (asset == null || asset.trim().isEmpty) continue;
+
+          final brand = t.brand.trim().toLowerCase();
+          final model = t.model.trim().toLowerCase();
+          if (model.isEmpty) continue;
+
+          _assetByModel.putIfAbsent(model, () => asset);
+
+          if (brand.isNotEmpty) {
+            _assetByBrandModel.putIfAbsent('$brand|$model', () => asset);
+          }
+        }
+      }
+    } catch (_) {
+      // keep icon fallback if template assets cannot be loaded
+    } finally {
+      _templateAssetsLoaded = true;
+    }
+  }
+
+  String? _resolveAssetForDevice(DeviceInfo d) {
+    final existing = Bridge.deviceAsset(d.uuid);
+    if (existing != null && existing.trim().isNotEmpty) {
+      final normalized = existing.trim();
+      if (normalized.toLowerCase().endsWith('.jpg')) {
+        return '${normalized.substring(0, normalized.length - 4)}.png';
+      }
+      return normalized;
+    }
+
+    final brand = d.brand.trim().toLowerCase();
+    final model = d.model.trim().toLowerCase();
+
+    if (brand.isNotEmpty && model.isNotEmpty) {
+      final byPair = _assetByBrandModel['$brand|$model'];
+      if (byPair != null) return byPair;
+    }
+
+    if (model.isNotEmpty) {
+      final byModel = _assetByModel[model];
+      if (byModel != null) return byModel;
+    }
+
+    final lowerName = d.name.toLowerCase();
+    for (final entry in _assetByModel.entries) {
+      if (lowerName.contains(entry.key)) return entry.value;
+    }
+
+    return null;
+  }
+
   Future<void> _loadDevices() async {
     setState(() => loading = true);
 
     try {
+      await _ensureTemplateAssetsLoaded();
+
       devices = Bridge.listDevices();
+
+      for (final d in devices) {
+        final resolved = _resolveAssetForDevice(d);
+        if (resolved != null) {
+          Bridge.setDeviceAsset(d.uuid, resolved);
+        }
+      }
+
       for (var d in devices) {
         if (d.capabilities.isEmpty) continue;
 
@@ -286,34 +370,38 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     switch (cap) {
       case CoreCapability.CORE_CAP_POWER:
-        return s.power ? Colors.green : Colors.red;
+        return s.power
+            ? const Color.fromARGB(255, 0, 255, 90)
+            : const Color.fromARGB(255, 255, 36, 36);
 
       case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return Colors.deepOrangeAccent;
+        return const Color.fromARGB(255, 255, 128, 0);
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
-        return Colors.deepPurple;
+        return const Color.fromARGB(255, 140, 0, 255);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-        return Colors.lightBlue;
+        return const Color.fromARGB(255, 0, 204, 255);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        return Colors.blueGrey;
+        return const Color.fromARGB(255, 0, 153, 255);
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
-        return Colors.blue;
+        return const Color.fromARGB(255, 50, 120, 255);
 
       case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-        return Colors.amber;
+        return const Color.fromARGB(255, 255, 191, 0);
 
       case CoreCapability.CORE_CAP_LOCK:
-        return s.lock ? Colors.redAccent : Colors.green;
+        return s.lock
+            ? const Color.fromARGB(255, 255, 40, 40)
+            : const Color.fromARGB(255, 64, 255, 128);
 
       case CoreCapability.CORE_CAP_MODE:
-        return Colors.indigo;
+        return const Color.fromARGB(255, 90, 80, 255);
 
       case CoreCapability.CORE_CAP_POSITION:
-        return Colors.teal;
+        return const Color.fromARGB(255, 0, 220, 180);
 
       case CoreCapability.CORE_CAP_COLOR:
         return Color(0xFF000000 | s.color);
@@ -367,7 +455,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           0,
           100,
         );
-        return "${b.round()}";
+        return "${b.round()}%";
 
       case CoreCapability.CORE_CAP_COLOR:
         return s.color;
@@ -1337,6 +1425,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     final caps = device.capabilities;
     final index = capIndexByDevice[device.uuid] ?? 0;
     final cap = caps[index];
+    final deviceAssetPath = Bridge.deviceAsset(device.uuid);
 
     final target = animatedProgress[device.uuid] ?? _capProgress(device, cap);
 
@@ -1349,7 +1438,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     return SizedBox(
       width: size + 40,
-      height: size + 78,
+      height: size + 80,
       child: Column(
         children: [
           TweenAnimationBuilder<double>(
@@ -1393,6 +1482,28 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
+                          SizedBox(height: 10),
+                          deviceAssetPath != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: Image.asset(
+                                    'assets/$deviceAssetPath',
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => Icon(
+                                      _capIcon(cap),
+                                      size: 28,
+                                      color: EaColor.fore,
+                                    ),
+                                  ),
+                                )
+                              : Icon(
+                                  _capIcon(cap),
+                                  size: 28,
+                                  color: EaColor.fore,
+                                ),
+                          Spacer(),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [

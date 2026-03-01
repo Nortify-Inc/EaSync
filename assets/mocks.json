@@ -3,6 +3,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Lamp QA",
+      "asset": "mocks/lamp.png",
       "protocol": "mock",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
@@ -20,6 +21,7 @@
     {
       "brand": "EaSync",
       "model": "Mock AC QA",
+      "asset": "mocks/ac.png",
       "protocol": "mock",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
@@ -36,10 +38,10 @@
     {
       "brand": "EaSync",
       "model": "Mock Fridge QA",
+      "asset": "mocks/fridge.png",
       "protocol": "mock",
-      "capabilities": ["power", "temperature_fridge", "temperature_freezer", "mode"],
+      "capabilities": ["temperature_fridge", "temperature_freezer", "mode"],
       "payloads": {
-        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
         "temperature_fridge": { "topic": "mock/{uuid}/set", "template": { "temperature_fridge": "{value}" } },
         "temperature_freezer": { "topic": "mock/{uuid}/set", "template": { "temperature_freezer": "{value}" } },
         "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } }
@@ -54,6 +56,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Lock QA",
+      "asset": "mocks/lock.png",
       "protocol": "mock",
       "capabilities": ["lock"],
       "payloads": {
@@ -66,6 +69,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Curtain QA",
+      "asset": "mocks/curtains.png",
       "protocol": "mock",
       "capabilities": ["position"],
       "payloads": {
@@ -78,6 +82,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Heated Floor QA",
+      "asset": "mocks/heatedFloor.png",
       "protocol": "mock",
       "capabilities": ["power", "temperature", "mode", "time"],
       "payloads": {
@@ -95,6 +100,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Schedule Outlet QA",
+      "asset": "mocks/lamp.png",
       "protocol": "mock",
       "capabilities": ["power", "time"],
       "payloads": {
@@ -108,6 +114,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Color Strip QA",
+      "asset": "mocks/colorStrip.png",
       "protocol": "mock",
       "capabilities": ["power", "brightness", "color"],
       "payloads": {
@@ -119,22 +126,6 @@
         "power": true,
         "brightness": { "min": 1, "max": 100 },
         "color": { "type": "rgb" }
-      }
-    },
-    {
-      "brand": "EaSync",
-      "model": "Mock Smart Vent QA",
-      "protocol": "mock",
-      "capabilities": ["power", "mode", "position"],
-      "payloads": {
-        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
-        "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } },
-        "position": { "topic": "mock/{uuid}/set", "template": { "position": "{value}" } }
-      },
-      "constrains": {
-        "power": true,
-        "mode": ["closed", "diffuse", "focused"],
-        "position": { "min": 0, "max": 100 }
       }
     }
   ]
