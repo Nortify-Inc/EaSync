@@ -23,6 +23,7 @@
 #include "mqtt.hpp"
 #include "wifi.hpp"
 #include "zigbee.hpp"
+#include "payload_service.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -49,6 +50,8 @@ extern "C" {
 struct InternalDevice {
     std::string uuid;                           /**< Device UUID */
     std::string name;                           /**< Device display name */
+    std::string brand;                          /**< Device brand */
+    std::string model;                          /**< Device model */
     CoreProtocol protocol;                      /**< Communication protocol */
     std::vector<CoreCapability> capabilities;   /**< Declared capabilities */
     std::shared_ptr<drivers::Driver> driver;    /**< Associated driver */
@@ -287,6 +290,10 @@ void core_destroy(CoreContext* core) {
         return;
     }
 
+    for (const auto& pair : core->devices) {
+        core::PayloadService::instance().unbindDevice(pair.first);
+    }
+
     core->devices.clear();
     core->drivers.clear();
 
@@ -345,12 +352,14 @@ CoreResult core_init(CoreContext* core) {
  * @return CORE_NOT_SUPPORTED if protocol is not supported.
  * @return CORE_ERROR if driver connection fails.
  */
-CoreResult core_register_device(CoreContext* core,
-                                const char* uuid,
-                                const char* name,
-                                CoreProtocol protocol,
-                                const CoreCapability* caps,
-                                uint8_t capCount)
+CoreResult core_register_device_ex(CoreContext* core,
+                                   const char* uuid,
+                                   const char* name,
+                                   const char* brand,
+                                   const char* model,
+                                   CoreProtocol protocol,
+                                   const CoreCapability* caps,
+                                   uint8_t capCount)
 {
     if (!core || !uuid || !name || !caps)
         return CORE_INVALID_ARGUMENT;
@@ -375,6 +384,8 @@ CoreResult core_register_device(CoreContext* core,
         InternalDevice dev;
         dev.uuid = uuid;
         dev.name = name;
+        dev.brand = brand ? brand : "";
+        dev.model = model ? model : "";
         dev.protocol = protocol;
         dev.capabilities.assign(caps, caps + capCount);
         dev.driver = driverIt->second;
@@ -388,6 +399,7 @@ CoreResult core_register_device(CoreContext* core,
             return CORE_ERROR;
 
         core->devices[uuid] = dev;
+        core::PayloadService::instance().bindDevice(dev.uuid, dev.brand, dev.model);
 
         ev.type = CORE_EVENT_DEVICE_ADDED;
         std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
@@ -401,6 +413,26 @@ CoreResult core_register_device(CoreContext* core,
         cb(&ev, cbUserdata);
 
     return CORE_OK;
+}
+
+
+CoreResult core_register_device(CoreContext* core,
+                                const char* uuid,
+                                const char* name,
+                                CoreProtocol protocol,
+                                const CoreCapability* caps,
+                                uint8_t capCount)
+{
+    return core_register_device_ex(
+        core,
+        uuid,
+        name,
+        "",
+        "",
+        protocol,
+        caps,
+        capCount
+    );
 }
 
 
@@ -446,6 +478,8 @@ CoreResult core_remove_device(CoreContext* core, const char* uuid)
         if (it->second.driver) {
             (void)it->second.driver->disconnect(uuid);
         }
+
+        core::PayloadService::instance().unbindDevice(uuid);
 
         core->devices.erase(it);
 
@@ -500,6 +534,8 @@ CoreResult core_get_device(CoreContext* core, const char* uuid, CoreDeviceInfo* 
     std::memset(outInfo, 0, sizeof(CoreDeviceInfo));
     std::strncpy(outInfo->uuid, dev.uuid.c_str(), CORE_MAX_UUID - 1);
     std::strncpy(outInfo->name, dev.name.c_str(), CORE_MAX_NAME - 1);
+    std::strncpy(outInfo->band, dev.brand.c_str(), CORE_MAX_BRAND - 1);
+    std::strncpy(outInfo->model, dev.model.c_str(), CORE_MAX_MODEL - 1);
 
     outInfo->protocol = dev.protocol;
     outInfo->capabilityCount = dev.capabilities.size();
@@ -549,6 +585,8 @@ CoreResult core_list_devices(CoreContext* core,
 
             std::strncpy(info.uuid, dev.uuid.c_str(), CORE_MAX_UUID - 1);
             std::strncpy(info.name, dev.name.c_str(), CORE_MAX_NAME - 1);
+            std::strncpy(info.band, dev.brand.c_str(), CORE_MAX_BRAND - 1);
+            std::strncpy(info.model, dev.model.c_str(), CORE_MAX_MODEL - 1);
 
             info.protocol = dev.protocol;
             info.capabilityCount = dev.capabilities.size();

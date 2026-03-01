@@ -7,12 +7,31 @@
  */
 
 #include "wifi.hpp"
+#include "payload_service.hpp"
 
 #include <curl/curl.h>
 #include <sstream>
 #include <functional>
 
 namespace drivers {
+
+static std::string buildPayloadFromTemplate(
+    const std::string& uuid,
+    const std::string& capability,
+    const std::string& valueJson,
+    const std::string& fallbackJson
+) {
+    std::string fromTemplate = core::PayloadService::instance().createPayload(
+        uuid,
+        capability,
+        valueJson
+    );
+
+    if (!fromTemplate.empty())
+        return fromTemplate;
+
+    return fallbackJson;
+}
 
 static size_t writeCallback(
     void* contents,
@@ -87,7 +106,14 @@ bool WifiDriver::setPower(const std::string& uuid, bool value) {
     std::stringstream ss;
     ss << "{ \"value\": " << (value ? 1 : 0) << " }";
 
-    return httpPost("http://" + ip + "/power", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "power",
+        value ? "1" : "0",
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/power", payload);
 }
 
 bool WifiDriver::setBrightness(const std::string& uuid, uint32_t value) {
@@ -104,7 +130,14 @@ bool WifiDriver::setBrightness(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/brightness", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "brightness",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/brightness", payload);
 }
 
 bool WifiDriver::setColor(const std::string& uuid, uint32_t rgb) {
@@ -121,7 +154,14 @@ bool WifiDriver::setColor(const std::string& uuid, uint32_t rgb) {
     std::stringstream ss;
     ss << "{ \"value\": " << rgb << " }";
 
-    return httpPost("http://" + ip + "/color", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "color",
+        std::to_string(rgb),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/color", payload);
 }
 
 bool WifiDriver::setTemperature(const std::string& uuid, float value) {
@@ -138,7 +178,14 @@ bool WifiDriver::setTemperature(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/temperature", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "temperature",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/temperature", payload);
 }
 
 bool WifiDriver::setTemperatureFridge(const std::string& uuid, float value) {
@@ -155,7 +202,14 @@ bool WifiDriver::setTemperatureFridge(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/temperatureFridge", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "temperature_fridge",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/temperatureFridge", payload);
 }
 
 bool WifiDriver::setTemperatureFreezer(const std::string& uuid, float value) {
@@ -172,7 +226,14 @@ bool WifiDriver::setTemperatureFreezer(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/temperatureFreezer", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "temperature_freezer",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/temperatureFreezer", payload);
 }
 
 bool WifiDriver::setTime(const std::string& uuid, uint64_t value) {
@@ -189,7 +250,14 @@ bool WifiDriver::setTime(const std::string& uuid, uint64_t value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/timestamp", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "time",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/timestamp", payload);
 }
 
 bool WifiDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
@@ -206,7 +274,14 @@ bool WifiDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/colorTemperature", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "colorTemperature",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/colorTemperature", payload);
 }
 
 bool WifiDriver::setLock(const std::string& uuid, bool value) {
@@ -223,7 +298,14 @@ bool WifiDriver::setLock(const std::string& uuid, bool value) {
     std::stringstream ss;
     ss << "{ \"value\": " << (value ? 1 : 0) << " }";
 
-    return httpPost("http://" + ip + "/lock", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "lock",
+        value ? "1" : "0",
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/lock", payload);
 }
 
 bool WifiDriver::setMode(const std::string& uuid, uint32_t value) {
@@ -240,7 +322,14 @@ bool WifiDriver::setMode(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/mode", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "mode",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/mode", payload);
 }
 
 bool WifiDriver::setPosition(const std::string& uuid, float value) {
@@ -257,7 +346,14 @@ bool WifiDriver::setPosition(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"value\": " << value << " }";
 
-    return httpPost("http://" + ip + "/position", ss.str());
+    const std::string payload = buildPayloadFromTemplate(
+        uuid,
+        "position",
+        std::to_string(value),
+        ss.str()
+    );
+
+    return httpPost("http://" + ip + "/position", payload);
 }
 
 bool WifiDriver::getState(

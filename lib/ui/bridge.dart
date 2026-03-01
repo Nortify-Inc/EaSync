@@ -210,6 +210,30 @@ typedef _coreRegisterDeviceDart =
       int,
     );
 
+typedef _coreRegisterDeviceExC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Int32,
+      Pointer<Int32>,
+      Uint8,
+    );
+
+typedef _coreRegisterDeviceExDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      Pointer<Utf8>,
+      int,
+      Pointer<Int32>,
+      int,
+    );
+
 typedef _coreRemoveDeviceC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreRemoveDeviceDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
@@ -304,6 +328,17 @@ final _coreRegisterDeviceDart _coreRegisterDevice = coreLib
     .lookupFunction<_coreRegisterDeviceC, _coreRegisterDeviceDart>(
       'core_register_device',
     );
+
+final _coreRegisterDeviceExDart? _coreRegisterDeviceEx = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreRegisterDeviceExC, _coreRegisterDeviceExDart>(
+          'core_register_device_ex',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
 
 final _coreRemoveDeviceDart _coreRemoveDevice = coreLib
     .lookupFunction<_coreRemoveDeviceC, _coreRemoveDeviceDart>(
@@ -552,6 +587,8 @@ class Bridge {
     required String name,
     required int protocol,
     required List<int> capabilities,
+    String? brand,
+    String? model,
     List<String>? modeLabels,
     Map<String, dynamic>? constraints,
     String? assetPath,
@@ -560,6 +597,8 @@ class Bridge {
 
     final uuidPtr = uuid.toNativeUtf8();
     final namePtr = name.toNativeUtf8();
+    final brandPtr = (brand ?? '').toNativeUtf8();
+    final modelPtr = (model ?? '').toNativeUtf8();
 
     final capsPtr = calloc<Int32>(capabilities.length);
 
@@ -567,17 +606,30 @@ class Bridge {
       capsPtr[i] = capabilities[i];
     }
 
-    final res = _coreRegisterDevice(
-      _ctx!,
-      uuidPtr,
-      namePtr,
-      protocol,
-      capsPtr,
-      capabilities.length,
-    );
+    final res = _coreRegisterDeviceEx != null
+        ? _coreRegisterDeviceEx!(
+            _ctx!,
+            uuidPtr,
+            namePtr,
+            brandPtr,
+            modelPtr,
+            protocol,
+            capsPtr,
+            capabilities.length,
+          )
+        : _coreRegisterDevice(
+            _ctx!,
+            uuidPtr,
+            namePtr,
+            protocol,
+            capsPtr,
+            capabilities.length,
+          );
 
     calloc.free(uuidPtr);
     calloc.free(namePtr);
+    calloc.free(brandPtr);
+    calloc.free(modelPtr);
     calloc.free(capsPtr);
 
     if (res != 0) {

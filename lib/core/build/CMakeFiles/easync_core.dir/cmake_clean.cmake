@@ -11,6 +11,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/easync_core.dir/src/core.cpp.o.d"
   "CMakeFiles/easync_core.dir/src/driver.cpp.o"
   "CMakeFiles/easync_core.dir/src/driver.cpp.o.d"
+  "CMakeFiles/easync_core.dir/src/payload_service.cpp.o"
+  "CMakeFiles/easync_core.dir/src/payload_service.cpp.o.d"
   "libeasync_core.pdb"
   "libeasync_core.so"
 )
