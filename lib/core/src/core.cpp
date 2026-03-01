@@ -1117,7 +1117,8 @@ CoreResult core_simulate(CoreContext* core)
         if (hasCap(t, CORE_CAP_TEMPERATURE)) actionCaps.push_back(CORE_CAP_TEMPERATURE);
         if (hasCap(t, CORE_CAP_TEMPERATURE_FRIDGE)) actionCaps.push_back(CORE_CAP_TEMPERATURE_FRIDGE);
         if (hasCap(t, CORE_CAP_TEMPERATURE_FREEZER)) actionCaps.push_back(CORE_CAP_TEMPERATURE_FREEZER);
-        if (hasCap(t, CORE_CAP_TIMESTAMP)) actionCaps.push_back(CORE_CAP_TIMESTAMP);
+        if (hasCap(t, CORE_CAP_TIMESTAMP) && flipChance(rng) < 8)
+            actionCaps.push_back(CORE_CAP_TIMESTAMP);
         if (hasCap(t, CORE_CAP_COLOR_TEMP)) actionCaps.push_back(CORE_CAP_COLOR_TEMP);
         if (hasCap(t, CORE_CAP_LOCK)) actionCaps.push_back(CORE_CAP_LOCK);
         if (hasCap(t, CORE_CAP_POSITION)) actionCaps.push_back(CORE_CAP_POSITION);

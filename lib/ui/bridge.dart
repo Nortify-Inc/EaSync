@@ -565,7 +565,14 @@ class Bridge {
     }
 
     final idx = modeIndex.clamp(0, labels.length - 1);
-    return labels[idx];
+    final raw = labels[idx];
+    return raw
+        .replaceAll('_', ' ')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
   }
 
   static int modeCount(String uuid) {

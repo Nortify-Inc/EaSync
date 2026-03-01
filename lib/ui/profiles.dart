@@ -118,46 +118,59 @@ class _ProfilesState extends State<Profiles>
         );
         return;
       }
-      for (final a in profile.actions) {
-        if (a.power != null) Bridge.setPower(a.deviceId, a.power!);
 
-        if (a.brightness != null) {
+      final byId = {for (final d in devices) d.uuid: d};
+
+      for (final a in profile.actions) {
+        final d = byId[a.deviceId];
+        if (d == null) continue;
+
+        bool has(int cap) => d.capabilities.contains(cap);
+
+        if (a.power != null && has(CoreCapability.CORE_CAP_POWER)) {
+          Bridge.setPower(a.deviceId, a.power!);
+        }
+
+        if (a.brightness != null && has(CoreCapability.CORE_CAP_BRIGHTNESS)) {
           Bridge.setBrightness(a.deviceId, a.brightness!);
         }
 
-        if (a.temperature != null) {
+        if (a.temperature != null && has(CoreCapability.CORE_CAP_TEMPERATURE)) {
           Bridge.setTemperature(a.deviceId, a.temperature!);
         }
 
-        if (a.temperatureFridge != null) {
+        if (a.temperatureFridge != null &&
+            has(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
           Bridge.setTemperatureFridge(a.deviceId, a.temperatureFridge!);
         }
 
-        if (a.temperatureFreezer != null) {
+        if (a.temperatureFreezer != null &&
+            has(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
           Bridge.setTemperatureFreezer(a.deviceId, a.temperatureFreezer!);
         }
 
-        if (a.color != null) {
+        if (a.color != null && has(CoreCapability.CORE_CAP_COLOR)) {
           Bridge.setColor(a.deviceId, a.color!);
         }
 
-        if (a.colorTemperature != null) {
+        if (a.colorTemperature != null &&
+            has(CoreCapability.CORE_CAP_COLOR_TEMPERATURE)) {
           Bridge.setColorTemperature(a.deviceId, a.colorTemperature!);
         }
 
-        if (a.time != null) {
+        if (a.time != null && has(CoreCapability.CORE_CAP_TIMESTAMP)) {
           Bridge.setTime(a.deviceId, a.time!);
         }
 
-        if (a.lock != null) {
+        if (a.lock != null && has(CoreCapability.CORE_CAP_LOCK)) {
           Bridge.setLock(a.deviceId, a.lock!);
         }
 
-        if (a.mode != null) {
+        if (a.mode != null && has(CoreCapability.CORE_CAP_MODE)) {
           Bridge.setMode(a.deviceId, a.mode!);
         }
 
-        if (a.position != null) {
+        if (a.position != null && has(CoreCapability.CORE_CAP_POSITION)) {
           Bridge.setPosition(a.deviceId, a.position!);
         }
       }
@@ -315,6 +328,8 @@ class _ProfileEditor extends StatefulWidget {
 }
 
 class _ProfileEditorState extends State<_ProfileEditor> {
+  static const double _capRowGap = 12;
+
   late TextEditingController nameController;
   late IconData selectedIcon;
 
@@ -334,6 +349,25 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     Icons.spa,
     Icons.security,
   ];
+
+  double _snapStep(double value, double step) {
+    if (step <= 0) return value;
+    return (value / step).round() * step;
+  }
+
+  int _divisions(double min, double max, double step) {
+    if (step <= 0) return 1;
+    final raw = ((max - min) / step).round();
+    return raw.clamp(1, 400);
+  }
+
+  String _capitalizeWords(String text) {
+    return text
+        .split(RegExp(r'[\s_\-]+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+  }
 
   @override
   void initState() {
@@ -356,17 +390,45 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     actions.add(
       DeviceAction(
         deviceId: d.uuid,
-        power: state.power,
-        brightness: state.brightness,
-        temperature: state.temperature,
-        temperatureFridge: state.temperatureFridge,
-        temperatureFreezer: state.temperatureFreezer,
-        color: state.color,
-        colorTemperature: state.colorTemperature,
-        time: state.timestamp,
-        lock: state.lock,
-        mode: state.mode,
-        position: state.position,
+      power: d.capabilities.contains(CoreCapability.CORE_CAP_POWER)
+        ? state.power
+        : null,
+      brightness: d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
+        ? state.brightness
+        : null,
+      temperature: d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)
+        ? state.temperature
+        : null,
+      temperatureFridge: d.capabilities.contains(
+          CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+        )
+        ? state.temperatureFridge
+        : null,
+      temperatureFreezer: d.capabilities.contains(
+          CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+        )
+        ? state.temperatureFreezer
+        : null,
+      color: d.capabilities.contains(CoreCapability.CORE_CAP_COLOR)
+        ? state.color
+        : null,
+      colorTemperature: d.capabilities.contains(
+          CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
+        )
+        ? state.colorTemperature
+        : null,
+      time: d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP)
+        ? state.timestamp
+        : null,
+      lock: d.capabilities.contains(CoreCapability.CORE_CAP_LOCK)
+        ? state.lock
+        : null,
+      mode: d.capabilities.contains(CoreCapability.CORE_CAP_MODE)
+        ? state.mode
+        : null,
+      position: d.capabilities.contains(CoreCapability.CORE_CAP_POSITION)
+        ? state.position
+        : null,
       ),
     );
 
@@ -398,10 +460,15 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           color: EaColor.back,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        child: SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            tickMarkShape: SliderTickMarkShape.noTickMark,
+            showValueIndicator: ShowValueIndicator.never,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               _title(),
 
               const SizedBox(height: 18),
@@ -423,7 +490,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               const SizedBox(height: 19),
 
               _saveButton(),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -557,21 +625,21 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
           if (hasPower) _powerRow(a),
 
-          if (hasBrightness) _brightnessRow(a),
+          if (hasBrightness) _brightnessRow(a, d),
 
           if (hasColor) _colorRow(a),
 
-          if (hasTemperature) _temperatureRow(a),
+          if (hasTemperature) _temperatureRow(a, d),
 
-          if (hasTemperatureFridge) _temperatureFridgeRow(a),
+          if (hasTemperatureFridge) _temperatureFridgeRow(a, d),
 
-          if (hasTemperatureFreezer) _temperatureFreezerRow(a),
+          if (hasTemperatureFreezer) _temperatureFreezerRow(a, d),
 
-          if (hasColorTemperature) _colorTemperatureRow(a),
+          if (hasColorTemperature) _colorTemperatureRow(a, d),
 
           if (hasLock) _lockRow(a),
 
-          if (hasMode) _modeRow(a),
+          if (hasMode) _modeRow(a, d),
 
           if (hasPosition) _positionRow(a),
 
@@ -605,11 +673,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  Widget _brightnessRow(DeviceAction a) {
+  Widget _brightnessRow(DeviceAction a, DeviceInfo d) {
+    final min = Bridge.constraintMin(d.uuid, 'brightness', 0.0);
+    final max = Bridge.constraintMax(d.uuid, 'brightness', 100.0);
+    final step = Bridge.constraintStep(d.uuid, 'brightness', 1.0);
+    final current = (a.brightness ?? min.toInt()).clamp(min.toInt(), max.toInt());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -620,7 +693,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.brightness ?? 0} %",
+              "$current",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -628,13 +701,15 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: 0.0,
-          max: 100.0,
-          value: (a.brightness ?? 0).toDouble(),
+          min: min,
+          max: max,
+          divisions: _divisions(min, max, step),
+          value: current.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.brightness = v.toInt());
+            final snapped = _snapStep(v, step).clamp(min, max).round();
+            setState(() => a.brightness = snapped);
           },
         ),
       ],
@@ -648,7 +723,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -741,11 +816,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  Widget _temperatureRow(DeviceAction a) {
+  Widget _temperatureRow(DeviceAction a, DeviceInfo d) {
+    final min = Bridge.constraintMin(d.uuid, 'temperature', 16.0);
+    final max = Bridge.constraintMax(d.uuid, 'temperature', 30.0);
+    final step = Bridge.constraintStep(d.uuid, 'temperature', 0.5);
+    final current = (a.temperature ?? min).clamp(min, max);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -756,7 +836,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.temperature?.toStringAsFixed(1)} °C",
+              "${current.toStringAsFixed(1)} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -764,25 +844,31 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: -10.0,
-          max: 36.0,
-          divisions: (36 + 10) * 2,
-          value: (a.temperature ?? 0).toDouble(),
+          min: min,
+          max: max,
+          divisions: _divisions(min, max, step),
+          value: current,
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.temperature = v);
+            final snapped = _snapStep(v, step).clamp(min, max);
+            setState(() => a.temperature = snapped);
           },
         ),
       ],
     );
   }
 
-  Widget _temperatureFridgeRow(DeviceAction a) {
+  Widget _temperatureFridgeRow(DeviceAction a, DeviceInfo d) {
+    final min = Bridge.constraintMin(d.uuid, 'temperature_fridge', 1.0);
+    final max = Bridge.constraintMax(d.uuid, 'temperature_fridge', 8.0);
+    final step = Bridge.constraintStep(d.uuid, 'temperature_fridge', 0.5);
+    final current = (a.temperatureFridge ?? min).clamp(min, max);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -793,7 +879,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${(a.temperatureFridge ?? 0).toStringAsFixed(1)} °C",
+              "${current.toStringAsFixed(1)} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -801,24 +887,31 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: -5.0,
-          max: 12.0,
-          value: (a.temperatureFridge ?? 4.0),
+          min: min,
+          max: max,
+          divisions: _divisions(min, max, step),
+          value: current,
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.temperatureFridge = v);
+            final snapped = _snapStep(v, step).clamp(min, max);
+            setState(() => a.temperatureFridge = snapped);
           },
         ),
       ],
     );
   }
 
-  Widget _temperatureFreezerRow(DeviceAction a) {
+  Widget _temperatureFreezerRow(DeviceAction a, DeviceInfo d) {
+    final min = Bridge.constraintMin(d.uuid, 'temperature_freezer', -24.0);
+    final max = Bridge.constraintMax(d.uuid, 'temperature_freezer', -14.0);
+    final step = Bridge.constraintStep(d.uuid, 'temperature_freezer', 0.5);
+    final current = (a.temperatureFreezer ?? -18.0).clamp(min, max);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -829,7 +922,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${(a.temperatureFreezer ?? -18).toStringAsFixed(1)} °C",
+              "${current.toStringAsFixed(1)} °C",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -837,24 +930,33 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: -32.0,
-          max: 0.0,
-          value: (a.temperatureFreezer ?? -18.0),
+          min: min,
+          max: max,
+          divisions: _divisions(min, max, step),
+          value: current,
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.temperatureFreezer = v);
+            final snapped = _snapStep(v, step).clamp(min, max);
+            setState(() => a.temperatureFreezer = snapped);
           },
         ),
       ],
     );
   }
 
-  Widget _colorTemperatureRow(DeviceAction a) {
+  Widget _colorTemperatureRow(DeviceAction a, DeviceInfo d) {
+    final min = Bridge.constraintMin(d.uuid, 'colorTemperature', 1500.0);
+    final max = Bridge.constraintMax(d.uuid, 'colorTemperature', 9000.0);
+    final current = ((a.colorTemperature ?? min.toInt()) <= 0
+            ? min.toInt()
+            : (a.colorTemperature ?? min.toInt()))
+        .clamp(min.toInt(), max.toInt());
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -865,7 +967,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.colorTemperature ?? 2700} K",
+              "$current K",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -873,13 +975,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: 1500.0,
-          max: 9000.0,
-          value: (a.colorTemperature ?? 2700).toDouble(),
+          min: min,
+          max: max,
+          divisions: _divisions(min, max, 100),
+          value: current.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.colorTemperature = v.round());
+            setState(
+              () => a.colorTemperature = v.round().clamp(min.toInt(), max.toInt()),
+            );
           },
         ),
       ],
@@ -907,11 +1012,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  Widget _modeRow(DeviceAction a) {
+  Widget _modeRow(DeviceAction a, DeviceInfo d) {
+    final count = Bridge.modeCount(d.uuid);
+    final min = 0.0;
+    final max = (count - 1).toDouble();
+    final current = (a.mode ?? 0).clamp(0, count - 1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -922,7 +1032,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "${a.mode ?? 0}",
+              _capitalizeWords(Bridge.modeName(d.uuid, current)),
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
             SizedBox(width: 10),
@@ -930,14 +1040,14 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
 
         Slider(
-          min: 0,
-          max: 5,
-          divisions: 5,
-          value: (a.mode ?? 0).toDouble(),
+          min: min,
+          max: max,
+          divisions: (count - 1).clamp(1, 20),
+          value: current.toDouble(),
           activeColor: EaColor.fore,
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
-            setState(() => a.mode = v.round());
+            setState(() => a.mode = v.round().clamp(0, count - 1));
           },
         ),
       ],
@@ -948,7 +1058,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -1000,7 +1110,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [

@@ -294,9 +294,9 @@ String _capLabel(int cap) {
     case CoreCapability.CORE_CAP_TEMPERATURE:
       return "temperature";
     case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-      return "temp fridge";
+      return "fridge";
     case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-      return "temp freezer";
+      return "freezer";
     case CoreCapability.CORE_CAP_TIMESTAMP:
       return "schedule";
     case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
@@ -528,7 +528,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                   prefixIcon: const Icon(Icons.search, color: EaColor.border),
                   hintText: "Search brand, model or capability",
                   filled: true,
-                  fillColor: EaColor.back,
+                  fillColor: Colors.white,
+                  hintStyle: EaText.secondary.copyWith(color: Colors.black45),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
                     borderSide: const BorderSide(color: EaColor.border),
@@ -624,7 +625,24 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: "Device Name"),
+                decoration: InputDecoration(
+                  labelText: "Device Name",
+                  labelStyle: EaText.secondary.copyWith(color: EaColor.fore),
+                  filled: true,
+                  fillColor: EaColor.back,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: EaColor.fore),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: EaColor.fore),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: const BorderSide(color: EaColor.fore, width: 2),
+                  ),
+                ),
               ),
 
               const SizedBox(height: 20),
