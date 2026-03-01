@@ -53,7 +53,8 @@ public:
 private:
     void publishCommand(
         const std::string& uuid,
-        const std::string& json
+        const std::string& json,
+        const std::string& topicOverride = ""
     );
 
     void parseState(
