@@ -206,8 +206,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         final oldProgress = animatedProgress[uuid] ?? newProgress;
         final newRingColor = _capColor(device, cap);
         final oldRingColor = ringColorByDevice[uuid] ?? newRingColor;
+        final hitEdge = newProgress <= 0.000001 || newProgress >= 0.999999;
 
-        if ((newProgress - oldProgress).abs() > 0.001) {
+        if ((newProgress - oldProgress).abs() > 0.001 || hitEdge) {
           previousProgress[uuid] = oldProgress;
           animatedProgress[uuid] = newProgress;
         }
@@ -1449,6 +1450,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     final deviceAssetPath = Bridge.deviceAsset(device.uuid);
 
     final target = animatedProgress[device.uuid] ?? _capProgress(device, cap);
+    final syncDotToGradient = _capProgress(device, cap) <= 0.000001;
 
     final begin = previousProgress[device.uuid] ?? target;
 
@@ -1470,7 +1472,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               return TweenAnimationBuilder<Color?>(
                 tween: ColorTween(end: ringColorTarget),
                 duration: const Duration(milliseconds: 360),
-                curve: Curves.easeOutCubic,
+                curve: Curves.easeOutSine,
                 builder: (_, animatedColor, child) {
                   final effectiveRingColor = animatedColor ?? ringColorTarget;
 
@@ -1482,7 +1484,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           tween: Tween(
                             end: animated > _dotFadeOutThreshold ? 1.0 : 0.0,
                           ),
-                          duration: const Duration(milliseconds: 360),
+                          duration: const Duration(milliseconds: 180),
                           curve: Curves.easeOutSine,
                           builder: (_, dotOpacity, _) {
                             return CustomPaint(
@@ -1492,6 +1494,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 progress: animated,
                                 showDot: true,
                                 dotOpacity: dotOpacity,
+                                syncDotToGradient: syncDotToGradient,
                               ),
                             );
                           },
@@ -1624,6 +1627,7 @@ class _RingPainter extends CustomPainter {
   final double progress;
   final bool showDot;
   final double dotOpacity;
+  final bool syncDotToGradient;
   double ringWidth = 6;
 
   _RingPainter({
@@ -1631,6 +1635,7 @@ class _RingPainter extends CustomPainter {
     required this.progress,
     required this.showDot,
     this.dotOpacity = 1.0,
+    this.syncDotToGradient = false,
   });
 
   @override
@@ -1659,6 +1664,7 @@ class _RingPainter extends CustomPainter {
     final end = (6 * pi) / 4;
 
     final sweep = end * normalized;
+    Color dotBaseColor = ringColor;
 
     if (normalized > 0.0001) {
       final localRect = Rect.fromCircle(center: Offset.zero, radius: radius);
@@ -1676,20 +1682,35 @@ class _RingPainter extends CustomPainter {
           ..color = EaColor.background;
 
         canvas.drawArc(localRect, 0, sweep, false, solidPaint);
+        if (syncDotToGradient) {
+          dotBaseColor = EaColor.background;
+        }
+
       } else {
         const totalSegments = 720;
         final visibleSegments = max(1, (totalSegments * normalized).round());
         final segmentSweep = sweep / visibleSegments;
-        const overlap = 0.00035;
+        const overlap = 0.00020 * 2 * pi;
+
+        if (syncDotToGradient) {
+          final dotT = (sweep / end).clamp(0.0, 1.0);
+          dotBaseColor = Color.lerp(EaColor.background, ringColor, dotT) ?? ringColor;
+        }
 
         for (int i = 0; i < visibleSegments; i++) {
-          final t = visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1);
+          final t = syncDotToGradient
+              ? ((segmentSweep * (i + 1)) / end).clamp(0.0, 1.0)
+              : (visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1));
+          
+          final segmentColor =
+              Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
+          
           final segmentPaint = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = ringWidth
             ..strokeCap = StrokeCap.butt
             ..isAntiAlias = true
-            ..color = Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
+            ..color = segmentColor;
 
           canvas.drawArc(
             localRect,
@@ -1698,6 +1719,10 @@ class _RingPainter extends CustomPainter {
             false,
             segmentPaint,
           );
+
+          if (syncDotToGradient && i == visibleSegments - 1) {
+            dotBaseColor = segmentColor;
+          }
         }
       }
 
@@ -1718,7 +1743,7 @@ class _RingPainter extends CustomPainter {
     );
 
     final dotPaint = Paint()
-      ..color = ringColor.withValues(alpha: effectiveDotOpacity);
+      ..color = dotBaseColor.withValues(alpha: effectiveDotOpacity);
 
     canvas.drawCircle(dotOffset, ringWidth * 1.4, dotPaint);
   }
@@ -1728,6 +1753,7 @@ class _RingPainter extends CustomPainter {
     return old.progress != progress ||
         old.ringColor != ringColor ||
         old.showDot != showDot ||
-        old.dotOpacity != dotOpacity;
+        old.dotOpacity != dotOpacity ||
+        old.syncDotToGradient != syncDotToGradient;
   }
 }
