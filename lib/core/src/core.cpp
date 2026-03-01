@@ -362,8 +362,10 @@ CoreResult core_register_device(CoreContext* core,
  */
 CoreResult core_remove_device(CoreContext* core, const char* uuid)
 {
-    if (!core || !uuid)
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_remove_device");
         return CORE_INVALID_ARGUMENT;
+    }
 
     CoreEvent ev{};
     CoreEventCallback cb = nullptr;
@@ -372,12 +374,23 @@ CoreResult core_remove_device(CoreContext* core, const char* uuid)
     {
         std::lock_guard<std::mutex> lock(core->mutex);
 
-        auto it = core->devices.find(uuid);
-        if (it == core->devices.end())
-            return CORE_NOT_FOUND;
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
 
-        if (!it->second.driver->disconnect(uuid))
-            return CORE_ERROR;
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+
+        // Removal from registry is authoritative for backend state.
+        // Driver disconnection is best-effort to avoid leaving stale entries
+        // when transport is down/unavailable.
+        if (it->second.driver) {
+            (void)it->second.driver->disconnect(uuid);
+        }
 
         core->devices.erase(it);
 

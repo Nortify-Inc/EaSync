@@ -176,6 +176,11 @@ typedef _coreRegisterDeviceDart =
       int,
     );
 
+typedef _coreRemoveDeviceC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreRemoveDeviceDart =
+  int Function(Pointer<Void>, Pointer<Utf8>);
+
 typedef _coreSetPowerC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
 typedef _coreSetPowerDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
 
@@ -266,6 +271,11 @@ final _coreSetPowerDart _coreSetPower = coreLib
 final _coreRegisterDeviceDart _coreRegisterDevice = coreLib
     .lookupFunction<_coreRegisterDeviceC, _coreRegisterDeviceDart>(
       'core_register_device',
+    );
+
+final _coreRemoveDeviceDart _coreRemoveDevice = coreLib
+    .lookupFunction<_coreRemoveDeviceC, _coreRemoveDeviceDart>(
+      'core_remove_device',
     );
 
 final _coreSetBrightnessDart _coreSetBrightness = coreLib
@@ -556,6 +566,23 @@ class Bridge {
             .toList();
       }
     }
+  }
+
+  static void removeDevice(String uuid) {
+    _ensureReady();
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final res = _coreRemoveDevice(_ctx!, uuidPtr);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+
+    _invalidateState(uuid);
+    _modeLabelsByDevice.remove(uuid);
+    _constraintsByDevice.remove(uuid);
   }
 
   static String modeName(String uuid, int modeIndex) {
