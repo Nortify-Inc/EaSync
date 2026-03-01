@@ -1,3 +1,11 @@
+/**
+ * @file mqtt.cpp
+ * @brief Implementation of the MQTT driver for command publishing and state reading.
+ * @param uuid Device identifier represented in MQTT topics.
+ * @return Methods return true when the operation is accepted by the driver.
+ * @author Erick Radmann
+ */
+
 #include "mqtt.hpp"
 
 #include <iostream>

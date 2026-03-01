@@ -1,3 +1,11 @@
+/**
+ * @file flutter_window.cpp
+ * @brief Implements the Flutter host window in the Windows runner.
+ * @param message Win32 messages dispatched to the main window.
+ * @return `true`/`false` in lifecycle methods and `LRESULT` in message handling.
+ * @author Erick Radmann
+ */
+
 #include "flutter_window.h"
 
 #include <optional>

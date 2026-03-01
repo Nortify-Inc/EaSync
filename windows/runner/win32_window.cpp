@@ -1,3 +1,11 @@
+/**
+ * @file win32_window.cpp
+ * @brief Base Win32 window implementation used by the Flutter runner.
+ * @param hwnd Target window handle for creation, theming, and messages.
+ * @return `bool` for lifecycle calls and `LRESULT` for system messages.
+ * @author Erick Radmann
+ */
+
 #include "win32_window.h"
 
 #include <dwmapi.h>

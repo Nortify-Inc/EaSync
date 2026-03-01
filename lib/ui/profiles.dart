@@ -1,3 +1,11 @@
+/*!
+ * @file profiles.dart
+ * @brief Profiles screen to apply multiple batched actions to devices.
+ * @param profile Selected profile for editing or execution.
+ * @return Widgets and actions for profile creation and execution.
+ * @author Erick Radmann
+ */
+
 import 'handler.dart';
 
 class DeviceAction {
@@ -390,45 +398,43 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     actions.add(
       DeviceAction(
         deviceId: d.uuid,
-      power: d.capabilities.contains(CoreCapability.CORE_CAP_POWER)
-        ? state.power
-        : null,
-      brightness: d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
-        ? state.brightness
-        : null,
-      temperature: d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)
-        ? state.temperature
-        : null,
-      temperatureFridge: d.capabilities.contains(
-          CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
-        )
-        ? state.temperatureFridge
-        : null,
-      temperatureFreezer: d.capabilities.contains(
-          CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
-        )
-        ? state.temperatureFreezer
-        : null,
-      color: d.capabilities.contains(CoreCapability.CORE_CAP_COLOR)
-        ? state.color
-        : null,
-      colorTemperature: d.capabilities.contains(
-          CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
-        )
-        ? state.colorTemperature
-        : null,
-      time: d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP)
-        ? state.timestamp
-        : null,
-      lock: d.capabilities.contains(CoreCapability.CORE_CAP_LOCK)
-        ? state.lock
-        : null,
-      mode: d.capabilities.contains(CoreCapability.CORE_CAP_MODE)
-        ? state.mode
-        : null,
-      position: d.capabilities.contains(CoreCapability.CORE_CAP_POSITION)
-        ? state.position
-        : null,
+        power: d.capabilities.contains(CoreCapability.CORE_CAP_POWER)
+            ? state.power
+            : null,
+        brightness: d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
+            ? state.brightness
+            : null,
+        temperature:
+            d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)
+            ? state.temperature
+            : null,
+        temperatureFridge:
+            d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)
+            ? state.temperatureFridge
+            : null,
+        temperatureFreezer:
+            d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)
+            ? state.temperatureFreezer
+            : null,
+        color: d.capabilities.contains(CoreCapability.CORE_CAP_COLOR)
+            ? state.color
+            : null,
+        colorTemperature:
+            d.capabilities.contains(CoreCapability.CORE_CAP_COLOR_TEMPERATURE)
+            ? state.colorTemperature
+            : null,
+        time: d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP)
+            ? state.timestamp
+            : null,
+        lock: d.capabilities.contains(CoreCapability.CORE_CAP_LOCK)
+            ? state.lock
+            : null,
+        mode: d.capabilities.contains(CoreCapability.CORE_CAP_MODE)
+            ? state.mode
+            : null,
+        position: d.capabilities.contains(CoreCapability.CORE_CAP_POSITION)
+            ? state.position
+            : null,
       ),
     );
 
@@ -469,27 +475,27 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-              _title(),
+                _title(),
 
-              const SizedBox(height: 18),
+                const SizedBox(height: 18),
 
-              _iconPicker(),
+                _iconPicker(),
 
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              _nameField(),
+                _nameField(),
 
-              const SizedBox(height: 18),
+                const SizedBox(height: 18),
 
-              _actions(),
+                _actions(),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              _devicePicker(),
+                _devicePicker(),
 
-              const SizedBox(height: 19),
+                const SizedBox(height: 19),
 
-              _saveButton(),
+                _saveButton(),
               ],
             ),
           ),
@@ -677,7 +683,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     final min = Bridge.constraintMin(d.uuid, 'brightness', 0.0);
     final max = Bridge.constraintMax(d.uuid, 'brightness', 100.0);
     final step = Bridge.constraintStep(d.uuid, 'brightness', 1.0);
-    final current = (a.brightness ?? min.toInt()).clamp(min.toInt(), max.toInt());
+    final current = (a.brightness ?? min.toInt()).clamp(
+      min.toInt(),
+      max.toInt(),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -948,10 +957,11 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   Widget _colorTemperatureRow(DeviceAction a, DeviceInfo d) {
     final min = Bridge.constraintMin(d.uuid, 'colorTemperature', 1500.0);
     final max = Bridge.constraintMax(d.uuid, 'colorTemperature', 9000.0);
-    final current = ((a.colorTemperature ?? min.toInt()) <= 0
-            ? min.toInt()
-            : (a.colorTemperature ?? min.toInt()))
-        .clamp(min.toInt(), max.toInt());
+    final current =
+        ((a.colorTemperature ?? min.toInt()) <= 0
+                ? min.toInt()
+                : (a.colorTemperature ?? min.toInt()))
+            .clamp(min.toInt(), max.toInt());
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -983,7 +993,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           inactiveColor: EaColor.secondaryBack,
           onChanged: (v) {
             setState(
-              () => a.colorTemperature = v.round().clamp(min.toInt(), max.toInt()),
+              () => a.colorTemperature = v.round().clamp(
+                min.toInt(),
+                max.toInt(),
+              ),
             );
           },
         ),

@@ -1,3 +1,11 @@
+/**
+ * @file zigbee.cpp
+ * @brief Implementation of the ZigBee driver for zigbee2mqtt integration.
+ * @param uuid Device identifier used in broker topics.
+ * @return Methods return true when the command is published successfully.
+ * @author Erick Radmann
+ */
+
 #include "zigbee.hpp"
 
 #include <sstream>

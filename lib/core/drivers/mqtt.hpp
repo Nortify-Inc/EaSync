@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file mqtt.hpp
+ * @brief Declaration of the MQTT driver for EaSync state publishing and consumption.
+ * @param uuid Device identifier used for MQTT topic routing.
+ * @return Methods return true when the operation is accepted by the driver.
+ * @author Erick Radmann
+ */
+
 #include "driver.hpp"
 
 #include <unordered_map>

@@ -1,3 +1,11 @@
+/*!
+ * @file manage.dart
+ * @brief Management screen for device creation, search, and removal.
+ * @param device Optional device used during edit operations.
+ * @return Listing widgets, forms, and management actions.
+ * @author Erick Radmann
+ */
+
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -157,39 +165,59 @@ class _ManageState extends State<Manage> {
             children: [
               Row(
                 children: [
-                  Expanded(
-                    child: Text(device.name, style: EaText.primary),
-                  ),
+                  Expanded(child: Text(device.name, style: EaText.primary)),
                   IconButton(
                     onPressed: () => _confirmRemoveDevice(device),
                     icon: const Icon(Icons.delete_outline),
                     color: Colors.redAccent,
                     tooltip: 'Remove device',
-                    
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              Text('UUID', style: EaText.secondary.copyWith(color: EaColor.fore, fontSize: 15)),
+              Text(
+                'UUID',
+                style: EaText.secondary.copyWith(
+                  color: EaColor.fore,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 4),
               SelectableText(
                 device.uuid,
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary, fontSize: 12),
+                style: EaText.secondary.copyWith(
+                  color: EaColor.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
-              Text('Protocol', style: EaText.secondary.copyWith(color: EaColor.fore, fontSize: 15)),
+              Text(
+                'Protocol',
+                style: EaText.secondary.copyWith(
+                  color: EaColor.fore,
+                  fontSize: 15,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 _protocolLabel(device.protocol),
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary, fontSize: 12),
+                style: EaText.secondary.copyWith(
+                  color: EaColor.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
-              Text('Capabilities', style: EaText.secondary.copyWith(color: EaColor.fore)),
+              Text(
+                'Capabilities',
+                style: EaText.secondary.copyWith(color: EaColor.fore),
+              ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
-                children: device.capabilities.map((c) => _chip(_capLabel(c))).toList(),
+                children: device.capabilities
+                    .map((c) => _chip(_capLabel(c)))
+                    .toList(),
               ),
               const SizedBox(height: 8),
             ],
@@ -217,7 +245,10 @@ class _ManageState extends State<Manage> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+              child: const Text(
+                'Remove',
+                style: TextStyle(color: Colors.redAccent),
+              ),
             ),
           ],
         );
@@ -230,16 +261,16 @@ class _ManageState extends State<Manage> {
       Bridge.removeDevice(device.uuid);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Device removed')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Device removed')));
       }
       _loadDevices();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
   }
@@ -356,7 +387,13 @@ class _ManageState extends State<Manage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.name, style: EaText.secondary.copyWith(fontSize: 16, color: EaColor.textPrimary)),
+                  Text(
+                    d.name,
+                    style: EaText.secondary.copyWith(
+                      fontSize: 16,
+                      color: EaColor.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Wrap(
                     spacing: 6,
@@ -557,7 +594,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     return names[raw] ??
         raw
             .split('_')
-            .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+            .map(
+              (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}',
+            )
             .join(' ');
   }
 
@@ -748,7 +787,6 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                 cursorColor: EaColor.fore,
                 style: EaText.secondary.copyWith(color: EaColor.textSecondary),
                 decoration: InputDecoration(
-                  
                   labelText: "Device Name",
                   labelStyle: EaText.secondary,
                   filled: true,
@@ -784,7 +822,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                   onPressed: _save,
                   child: Text(
                     "Save",
-                    style: EaText.primaryBack.copyWith(fontWeight: FontWeight.w700),
+                    style: EaText.primaryBack.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

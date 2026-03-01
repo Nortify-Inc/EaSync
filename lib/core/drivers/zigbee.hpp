@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file zigbee.hpp
+ * @brief Declaration of the ZigBee driver integrated through an MQTT broker.
+ * @param uuid ZigBee device identifier mapped on the broker.
+ * @return Methods return true when the command is sent/processed.
+ * @author Erick Radmann
+ */
+
 #include "driver.hpp"
 
 #include <mqtt/async_client.h>

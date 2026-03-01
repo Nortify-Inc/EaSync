@@ -1,3 +1,11 @@
+/*!
+ * @file dashboard.dart
+ * @brief Dashboard screen with visualization and quick control of devices.
+ * @param uuid Identifier of the selected device for interaction.
+ * @return Widgets and handlers for state updates.
+ * @author Erick Radmann
+ */
+
 import 'handler.dart';
 
 class Dashboard extends StatefulWidget {
@@ -235,8 +243,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return normalize(s.temperatureFridge, min, max);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        final min = Bridge.constraintMin(device.uuid, 'temperature_freezer', -24);
-        final max = Bridge.constraintMax(device.uuid, 'temperature_freezer', -14);
+        final min = Bridge.constraintMin(
+          device.uuid,
+          'temperature_freezer',
+          -24,
+        );
+        final max = Bridge.constraintMax(
+          device.uuid,
+          'temperature_freezer',
+          -14,
+        );
         return normalize(s.temperatureFreezer, min, max);
 
       case CoreCapability.CORE_CAP_COLOR:
@@ -515,17 +531,25 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       9000.0,
     );
 
-    int brightness = state.brightness.clamp(brightMin.toInt(), brightMax.toInt());
+    int brightness = state.brightness.clamp(
+      brightMin.toInt(),
+      brightMax.toInt(),
+    );
     double temperature = state.temperature.clamp(tempMin, tempMax);
     int color = state.color;
     bool power = state.power;
-    double temperatureFridge = state.temperatureFridge.clamp(fridgeMin, fridgeMax);
+    double temperatureFridge = state.temperatureFridge.clamp(
+      fridgeMin,
+      fridgeMax,
+    );
     double temperatureFreezer = state.temperatureFreezer.clamp(
       freezerMin,
       freezerMax,
     );
-    int colorTemperature = state.colorTemperature
-        .clamp(colorTempMin.toInt(), colorTempMax.toInt());
+    int colorTemperature = state.colorTemperature.clamp(
+      colorTempMin.toInt(),
+      colorTempMax.toInt(),
+    );
     bool lock = state.lock;
     int mode = state.mode;
     double position = state.position;
@@ -557,542 +581,592 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                    Text(device.name, style: EaText.primary),
-                    const SizedBox(height: 16),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_POWER,
-                    ))
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.power_settings_new,
-                            size: 18,
-                            color: EaColor.fore,
-                          ),
+                      Text(device.name, style: EaText.primary),
+                      const SizedBox(height: 16),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_POWER,
+                      ))
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.power_settings_new,
+                              size: 18,
+                              color: EaColor.fore,
+                            ),
 
-                          const SizedBox(width: 8),
+                            const SizedBox(width: 8),
 
-                          Text("Power", style: EaText.secondary),
+                            Text("Power", style: EaText.secondary),
 
-                          const Spacer(),
+                            const Spacer(),
 
-                          Switch(
-                            value: power,
+                            Switch(
+                              value: power,
 
-                            activeThumbColor: EaColor.fore,
-                            inactiveTrackColor: EaColor.back,
+                              activeThumbColor: EaColor.fore,
+                              inactiveTrackColor: EaColor.back,
 
-                            onChanged: (v) {
-                              setInnerState(() => power = v);
-                              Bridge.setPower(device.uuid, v);
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_BRIGHTNESS,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.brightness_6_outlined,
-                                size: 18,
-                                color: EaColor.fore,
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              Text("Brightness", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                "${brightness.round()}%",
-                                style: EaText.secondary.copyWith(
+                              onChanged: (v) {
+                                setInnerState(() => power = v);
+                                Bridge.setPower(device.uuid, v);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_BRIGHTNESS,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.brightness_6_outlined,
+                                  size: 18,
                                   color: EaColor.fore,
                                 ),
-                              ),
 
-                              SizedBox(width: 10),
-                            ],
-                          ),
+                                const SizedBox(width: 8),
 
-                          Slider(
-                            min: brightMin,
-                            max: brightMax,
-                            divisions: _divisions(brightMin, brightMax, brightStep),
-                            value: brightness.toDouble().clamp(brightMin, brightMax),
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              final snapped = _snapStep(v, brightStep)
-                                  .clamp(brightMin, brightMax)
-                                  .round();
-                              setInnerState(() => brightness = snapped);
-                              Bridge.setBrightness(device.uuid, snapped);
-                              setState(() {});
-                            },
-                          ),
+                                Text("Brightness", style: EaText.secondary),
 
-                          SizedBox(height: 8),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_COLOR,
-                    ))
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 12),
-                          Icon(Icons.color_lens, size: 18, color: EaColor.fore),
-                          const SizedBox(width: 8),
-                          Text("Color", style: EaText.secondary),
-                          Spacer(),
-                          GestureDetector(
-                            onTap: () async {
-                              Color pickedColor = Color(0xFF000000 | color);
-                              Color selected = pickedColor;
+                                const Spacer(),
 
-                              await showModalBottomSheet(
-                                context: context,
-                                backgroundColor: EaColor.back,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(20),
+                                Text(
+                                  "${brightness.round()}%",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
                                   ),
                                 ),
-                                builder: (_) {
-                                  return StatefulBuilder(
-                                    builder: (context, setModalState) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 40,
-                                              height: 40,
-                                              margin: const EdgeInsets.only(
-                                                bottom: 16,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: selected,
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: EaColor.fore,
-                                                  width: 2,
+
+                                SizedBox(width: 10),
+                              ],
+                            ),
+
+                            Slider(
+                              min: brightMin,
+                              max: brightMax,
+                              divisions: _divisions(
+                                brightMin,
+                                brightMax,
+                                brightStep,
+                              ),
+                              value: brightness.toDouble().clamp(
+                                brightMin,
+                                brightMax,
+                              ),
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
+                              ),
+                              onChanged: (v) {
+                                final snapped = _snapStep(
+                                  v,
+                                  brightStep,
+                                ).clamp(brightMin, brightMax).round();
+                                setInnerState(() => brightness = snapped);
+                                Bridge.setBrightness(device.uuid, snapped);
+                                setState(() {});
+                              },
+                            ),
+
+                            SizedBox(height: 8),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_COLOR,
+                      ))
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 12),
+                            Icon(
+                              Icons.color_lens,
+                              size: 18,
+                              color: EaColor.fore,
+                            ),
+                            const SizedBox(width: 8),
+                            Text("Color", style: EaText.secondary),
+                            Spacer(),
+                            GestureDetector(
+                              onTap: () async {
+                                Color pickedColor = Color(0xFF000000 | color);
+                                Color selected = pickedColor;
+
+                                await showModalBottomSheet(
+                                  context: context,
+                                  backgroundColor: EaColor.back,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(20),
+                                    ),
+                                  ),
+                                  builder: (_) {
+                                    return StatefulBuilder(
+                                      builder: (context, setModalState) {
+                                        return Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 40,
+                                                height: 40,
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: selected,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: EaColor.fore,
+                                                    width: 2,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
 
-                                            RgbColorWheel(
-                                              color: selected,
-                                              onChanged: (c) {
-                                                setModalState(
-                                                  () => selected = c,
-                                                );
-                                              },
-                                            ),
-
-                                            const SizedBox(height: 16),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                final rgb =
-                                                    selected.toARGB32() &
-                                                    0xFFFFFFFF;
-                                                Bridge.setColor(
-                                                  device.uuid,
-                                                  rgb,
-                                                );
-                                                setState(() {});
-                                                Navigator.pop(context);
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: EaColor.fore,
+                                              RgbColorWheel(
+                                                color: selected,
+                                                onChanged: (c) {
+                                                  setModalState(
+                                                    () => selected = c,
+                                                  );
+                                                },
                                               ),
-                                              child: Text(
-                                                "Apply",
-                                                style: EaText.secondary,
+
+                                              const SizedBox(height: 16),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  final rgb =
+                                                      selected.toARGB32() &
+                                                      0xFFFFFFFF;
+                                                  Bridge.setColor(
+                                                    device.uuid,
+                                                    rgb,
+                                                  );
+                                                  setState(() {});
+                                                  Navigator.pop(context);
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: EaColor.fore,
+                                                ),
+                                                child: Text(
+                                                  "Apply",
+                                                  style: EaText.secondary,
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                              );
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
 
-                              setInnerState(
-                                () => color = selected.toARGB32() & 0xFFFFFFFF,
-                              );
-                              setState(() {});
-                            },
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: Color(0xFF000000 | color),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: EaColor.fore,
-                                  width: 2,
+                                setInnerState(
+                                  () =>
+                                      color = selected.toARGB32() & 0xFFFFFFFF,
+                                );
+                                setState(() {});
+                              },
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: Color(0xFF000000 | color),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: EaColor.fore,
+                                    width: 2,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
 
-                          const SizedBox(width: 10),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_TEMPERATURE,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.thermostat,
-                                size: 18,
-                                color: EaColor.fore,
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              Text("Temperature", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                "${temperature.toStringAsFixed(1)}°C",
-                                style: EaText.secondary.copyWith(
+                            const SizedBox(width: 10),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_TEMPERATURE,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.thermostat,
+                                  size: 18,
                                   color: EaColor.fore,
                                 ),
-                              ),
 
-                              SizedBox(width: 10),
-                            ],
-                          ),
+                                const SizedBox(width: 8),
 
-                          Slider(
-                            min: tempMin,
-                            max: tempMax,
-                            divisions: _divisions(tempMin, tempMax, tempStep),
-                            value: temperature,
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              final snapped = _snapStep(v, tempStep)
-                                  .clamp(tempMin, tempMax);
-                              setInnerState(() => temperature = snapped);
-                              Bridge.setTemperature(device.uuid, snapped);
-                              setState(() {});
-                            },
-                            onChangeEnd: (_) {},
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.kitchen_outlined,
-                                size: 18,
-                                color: EaColor.fore,
-                              ),
+                                Text("Temperature", style: EaText.secondary),
 
-                              const SizedBox(width: 8),
+                                const Spacer(),
 
-                              Text("Fridge", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                "${temperatureFridge.toStringAsFixed(1)}°C",
-                                style: EaText.secondary.copyWith(
-                                  color: EaColor.fore,
+                                Text(
+                                  "${temperature.toStringAsFixed(1)}°C",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
                                 ),
-                              ),
 
-                              SizedBox(width: 10),
-                            ],
-                          ),
-
-                          Slider(
-                            min: fridgeMin,
-                            max: fridgeMax,
-                            divisions: _divisions(
-                              fridgeMin,
-                              fridgeMax,
-                              fridgeStep,
+                                SizedBox(width: 10),
+                              ],
                             ),
-                            value: temperatureFridge,
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              final snapped = _snapStep(v, fridgeStep)
-                                  .clamp(fridgeMin, fridgeMax);
-                              setInnerState(() => temperatureFridge = snapped);
-                              Bridge.setTemperatureFridge(device.uuid, snapped);
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.ac_unit,
-                                size: 18,
-                                color: EaColor.fore,
+
+                            Slider(
+                              min: tempMin,
+                              max: tempMax,
+                              divisions: _divisions(tempMin, tempMax, tempStep),
+                              value: temperature,
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
                               ),
-
-                              const SizedBox(width: 8),
-
-                              Text("Freezer", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                "${temperatureFreezer.toStringAsFixed(1)}°C",
-                                style: EaText.secondary.copyWith(
-                                  color: EaColor.fore,
-                                ),
-                              ),
-
-                              SizedBox(width: 10),
-                            ],
-                          ),
-
-                          Slider(
-                            min: freezerMin,
-                            max: freezerMax,
-                            divisions: _divisions(
-                              freezerMin,
-                              freezerMax,
-                              freezerStep,
+                              onChanged: (v) {
+                                final snapped = _snapStep(
+                                  v,
+                                  tempStep,
+                                ).clamp(tempMin, tempMax);
+                                setInnerState(() => temperature = snapped);
+                                Bridge.setTemperature(device.uuid, snapped);
+                                setState(() {});
+                              },
+                              onChangeEnd: (_) {},
                             ),
-                            value: temperatureFreezer,
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              final snapped = _snapStep(v, freezerStep)
-                                  .clamp(freezerMin, freezerMax);
-                              setInnerState(() => temperatureFreezer = snapped);
-                              Bridge.setTemperatureFreezer(device.uuid, snapped);
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.tonality,
-                                size: 18,
-                                color: EaColor.fore,
-                              ),
-
-                              const SizedBox(width: 8),
-
-                              Text(
-                                "Color temperature",
-                                style: EaText.secondary,
-                              ),
-
-                              const Spacer(),
-
-                              Text(
-                                "${colorTemperature.round()}K",
-                                style: EaText.secondary.copyWith(
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.kitchen_outlined,
+                                  size: 18,
                                   color: EaColor.fore,
                                 ),
-                              ),
 
-                              SizedBox(width: 10),
-                            ],
-                          ),
+                                const SizedBox(width: 8),
 
-                          Slider(
-                            min: colorTempMin,
-                            max: colorTempMax,
-                            divisions: _divisions(
-                              colorTempMin,
-                              colorTempMax,
-                              100,
+                                Text("Fridge", style: EaText.secondary),
+
+                                const Spacer(),
+
+                                Text(
+                                  "${temperatureFridge.toStringAsFixed(1)}°C",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
+                                ),
+
+                                SizedBox(width: 10),
+                              ],
                             ),
-                            value: colorTemperature
-                                .clamp(colorTempMin.toInt(), colorTempMax.toInt())
-                                .toDouble(),
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              setInnerState(() => colorTemperature = v.round());
-                              Bridge.setColorTemperature(
-                                device.uuid,
-                                v.round(),
-                              );
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_LOCK,
-                    ))
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.lock_outline,
-                            size: 18,
-                            color: EaColor.fore,
-                          ),
 
-                          const SizedBox(width: 8),
-
-                          Text("Lock", style: EaText.secondary),
-
-                          const Spacer(),
-
-                          Switch(
-                            value: lock,
-                            activeThumbColor: EaColor.fore,
-                            inactiveTrackColor: EaColor.back,
-                            onChanged: (v) {
-                              setInnerState(() => lock = v);
-                              Bridge.setLock(device.uuid, v);
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_MODE,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: _capRowGap),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.tune,
-                                size: 18,
-                                color: EaColor.fore,
+                            Slider(
+                              min: fridgeMin,
+                              max: fridgeMax,
+                              divisions: _divisions(
+                                fridgeMin,
+                                fridgeMax,
+                                fridgeStep,
                               ),
-
-                              const SizedBox(width: 8),
-
-                              Text("Mode", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                Bridge.modeName(device.uuid, mode),
-                                style: EaText.secondary.copyWith(
+                              value: temperatureFridge,
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
+                              ),
+                              onChanged: (v) {
+                                final snapped = _snapStep(
+                                  v,
+                                  fridgeStep,
+                                ).clamp(fridgeMin, fridgeMax);
+                                setInnerState(
+                                  () => temperatureFridge = snapped,
+                                );
+                                Bridge.setTemperatureFridge(
+                                  device.uuid,
+                                  snapped,
+                                );
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.ac_unit,
+                                  size: 18,
                                   color: EaColor.fore,
                                 ),
+
+                                const SizedBox(width: 8),
+
+                                Text("Freezer", style: EaText.secondary),
+
+                                const Spacer(),
+
+                                Text(
+                                  "${temperatureFreezer.toStringAsFixed(1)}°C",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
+                                ),
+
+                                SizedBox(width: 10),
+                              ],
+                            ),
+
+                            Slider(
+                              min: freezerMin,
+                              max: freezerMax,
+                              divisions: _divisions(
+                                freezerMin,
+                                freezerMax,
+                                freezerStep,
                               ),
-                              SizedBox(width: 10),
-                            ],
-                          ),
-
-                          Slider(
-                            min: 0,
-                            max: (Bridge.modeCount(device.uuid) - 1).toDouble(),
-                            divisions: (Bridge.modeCount(device.uuid) - 1)
-                                .clamp(1, 20),
-                            value: mode
-                                .toDouble()
-                                .clamp(0, (Bridge.modeCount(device.uuid) - 1).toDouble()),
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              setInnerState(() => mode = v.round());
-                              Bridge.setMode(device.uuid, v.round());
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_POSITION,
-                    ))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.straighten,
-                                size: 18,
-                                color: EaColor.fore,
+                              value: temperatureFreezer,
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
                               ),
-
-                              const SizedBox(width: 8),
-
-                              Text("Position", style: EaText.secondary),
-
-                              const Spacer(),
-
-                              Text(
-                                "${position.round()}%",
-                                style: EaText.secondary.copyWith(
+                              onChanged: (v) {
+                                final snapped = _snapStep(
+                                  v,
+                                  freezerStep,
+                                ).clamp(freezerMin, freezerMax);
+                                setInnerState(
+                                  () => temperatureFreezer = snapped,
+                                );
+                                Bridge.setTemperatureFreezer(
+                                  device.uuid,
+                                  snapped,
+                                );
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.tonality,
+                                  size: 18,
                                   color: EaColor.fore,
                                 ),
-                              ),
-                              SizedBox(width: 10),
-                            ],
-                          ),
 
-                          Slider(
-                            min: 0,
-                            max: 100,
-                            divisions: 100,
-                            value: position.clamp(0, 100),
-                            activeColor: EaColor.fore,
-                            inactiveColor: EaColor.fore.withValues(alpha: .25),
-                            onChanged: (v) {
-                              setInnerState(() => position = v);
-                              Bridge.setPosition(device.uuid, v);
-                              setState(() {});
-                            },
-                          ),
-                        ],
-                      ),
-                    if (device.capabilities.contains(
-                      CoreCapability.CORE_CAP_TIMESTAMP,
-                    ))
-                      _buildScheduleControl(device, setInnerState),
+                                const SizedBox(width: 8),
+
+                                Text(
+                                  "Color temperature",
+                                  style: EaText.secondary,
+                                ),
+
+                                const Spacer(),
+
+                                Text(
+                                  "${colorTemperature.round()}K",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
+                                ),
+
+                                SizedBox(width: 10),
+                              ],
+                            ),
+
+                            Slider(
+                              min: colorTempMin,
+                              max: colorTempMax,
+                              divisions: _divisions(
+                                colorTempMin,
+                                colorTempMax,
+                                100,
+                              ),
+                              value: colorTemperature
+                                  .clamp(
+                                    colorTempMin.toInt(),
+                                    colorTempMax.toInt(),
+                                  )
+                                  .toDouble(),
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
+                              ),
+                              onChanged: (v) {
+                                setInnerState(
+                                  () => colorTemperature = v.round(),
+                                );
+                                Bridge.setColorTemperature(
+                                  device.uuid,
+                                  v.round(),
+                                );
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_LOCK,
+                      ))
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.lock_outline,
+                              size: 18,
+                              color: EaColor.fore,
+                            ),
+
+                            const SizedBox(width: 8),
+
+                            Text("Lock", style: EaText.secondary),
+
+                            const Spacer(),
+
+                            Switch(
+                              value: lock,
+                              activeThumbColor: EaColor.fore,
+                              inactiveTrackColor: EaColor.back,
+                              onChanged: (v) {
+                                setInnerState(() => lock = v);
+                                Bridge.setLock(device.uuid, v);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_MODE,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: _capRowGap),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.tune,
+                                  size: 18,
+                                  color: EaColor.fore,
+                                ),
+
+                                const SizedBox(width: 8),
+
+                                Text("Mode", style: EaText.secondary),
+
+                                const Spacer(),
+
+                                Text(
+                                  Bridge.modeName(device.uuid, mode),
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                              ],
+                            ),
+
+                            Slider(
+                              min: 0,
+                              max: (Bridge.modeCount(device.uuid) - 1)
+                                  .toDouble(),
+                              divisions: (Bridge.modeCount(device.uuid) - 1)
+                                  .clamp(1, 20),
+                              value: mode.toDouble().clamp(
+                                0,
+                                (Bridge.modeCount(device.uuid) - 1).toDouble(),
+                              ),
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
+                              ),
+                              onChanged: (v) {
+                                setInnerState(() => mode = v.round());
+                                Bridge.setMode(device.uuid, v.round());
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_POSITION,
+                      ))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.straighten,
+                                  size: 18,
+                                  color: EaColor.fore,
+                                ),
+
+                                const SizedBox(width: 8),
+
+                                Text("Position", style: EaText.secondary),
+
+                                const Spacer(),
+
+                                Text(
+                                  "${position.round()}%",
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.fore,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                              ],
+                            ),
+
+                            Slider(
+                              min: 0,
+                              max: 100,
+                              divisions: 100,
+                              value: position.clamp(0, 100),
+                              activeColor: EaColor.fore,
+                              inactiveColor: EaColor.fore.withValues(
+                                alpha: .25,
+                              ),
+                              onChanged: (v) {
+                                setInnerState(() => position = v);
+                                Bridge.setPosition(device.uuid, v);
+                                setState(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                      if (device.capabilities.contains(
+                        CoreCapability.CORE_CAP_TIMESTAMP,
+                      ))
+                        _buildScheduleControl(device, setInnerState),
                     ],
                   ),
                 ),

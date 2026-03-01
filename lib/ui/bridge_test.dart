@@ -1,3 +1,11 @@
+/*!
+ * @file bridge_test.dart
+ * @brief Quick test script for FFI bridge operations.
+ * @param No external parameters.
+ * @return `void`.
+ * @author Erick Radmann
+ */
+
 import 'bridge.dart';
 
 void main() {
@@ -38,7 +46,9 @@ void main() {
 
     // Subscribe to events
     Bridge.onEvents.listen((e) {
-      print('[EVENT] type=${e.type} uuid=${e.uuid} power=${e.state.power} br=${e.state.brightness} color=${e.state.color} temp=${e.state.temperature} ts=${e.state.timestamp} mode=${e.state.mode} pos=${e.state.position}');
+      print(
+        '[EVENT] type=${e.type} uuid=${e.uuid} power=${e.state.power} br=${e.state.brightness} color=${e.state.color} temp=${e.state.temperature} ts=${e.state.timestamp} mode=${e.state.mode} pos=${e.state.position}',
+      );
     });
 
     // Kick a first simulate to start flow

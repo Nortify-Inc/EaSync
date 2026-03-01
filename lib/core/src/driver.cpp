@@ -1,6 +1,9 @@
 /**
  * @file driver.cpp
  * @brief Driver registry and dispatcher.
+ * @param protocol Communication protocol used as the registration key.
+ * @return Returns the found driver pointer or a boolean registration status.
+ * @author Erick Radmann
  */
 
 #include "driver.hpp"

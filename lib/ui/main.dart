@@ -1,3 +1,11 @@
+/*!
+ * @file main.dart
+ * @brief Entry point of the EaSync Flutter application.
+ * @param args Unused in the Flutter entrypoint.
+ * @return `void`.
+ * @author Erick Radmann
+ */
+
 import 'handler.dart';
 
 void main() async {
@@ -17,10 +25,7 @@ class EaSync extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: EaColor.fore,
           brightness: Brightness.dark,
-        ).copyWith(
-          primary: EaColor.fore,
-          secondary: EaColor.fore,
-        ),
+        ).copyWith(primary: EaColor.fore, secondary: EaColor.fore),
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: EaColor.fore,
           selectionColor: EaColor.border,
