@@ -140,6 +140,110 @@ class _ManageState extends State<Manage> {
     );
   }
 
+  void _openDeviceDetails(DeviceInfo device) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: EaColor.back,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(device.name, style: EaText.primary),
+                  ),
+                  IconButton(
+                    onPressed: () => _confirmRemoveDevice(device),
+                    icon: const Icon(Icons.delete_outline),
+                    color: Colors.redAccent,
+                    tooltip: 'Remove device',
+                    
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('UUID', style: EaText.secondary.copyWith(color: EaColor.fore, fontSize: 15)),
+              const SizedBox(height: 4),
+              SelectableText(
+                device.uuid,
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Text('Protocol', style: EaText.secondary.copyWith(color: EaColor.fore, fontSize: 15)),
+              const SizedBox(height: 4),
+              Text(
+                _protocolLabel(device.protocol),
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              Text('Capabilities', style: EaText.secondary.copyWith(color: EaColor.fore)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: device.capabilities.map((c) => _chip(_capLabel(c))).toList(),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmRemoveDevice(DeviceInfo device) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: EaColor.back,
+          title: Text('Remove device', style: EaText.primary),
+          content: Text(
+            'Do you want to remove "${device.name}"?',
+            style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: EaText.secondary),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Remove', style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      Bridge.removeDevice(device.uuid);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Device removed')),
+        );
+      }
+      _loadDevices();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -235,7 +339,7 @@ class _ManageState extends State<Manage> {
 
   Widget _row(DeviceInfo d) {
     return GestureDetector(
-      onTap: () => _openEditor(device: d),
+      onTap: () => _openDeviceDetails(d),
       child: Container(
         margin: const EdgeInsets.only(bottom: 14),
         padding: const EdgeInsets.all(16),
@@ -253,9 +357,7 @@ class _ManageState extends State<Manage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(d.name, style: EaText.secondary.copyWith(fontSize: 16, color: EaColor.textPrimary)),
-                  const SizedBox(height: 2),
-                  Text(d.uuid, style: EaText.secondary.copyWith(fontSize: 11, color: EaColor.textSecondary)),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
@@ -272,6 +374,22 @@ class _ManageState extends State<Manage> {
         ),
       ),
     );
+  }
+}
+
+String _protocolLabel(int protocol) {
+  switch (protocol) {
+    case CoreProtocol.CORE_PROTOCOL_MQTT:
+      return 'MQTT';
+    case CoreProtocol.CORE_PROTOCOL_WIFI:
+      return 'Wi-Fi';
+    case CoreProtocol.CORE_PROTOCOL_ZIGBEE:
+      return 'Zigbee';
+    case CoreProtocol.CORE_PROTOCOL_BLE:
+      return 'BLE';
+    case CoreProtocol.CORE_PROTOCOL_MOCK:
+    default:
+      return 'Mock';
   }
 }
 
