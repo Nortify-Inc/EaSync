@@ -1483,7 +1483,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             end: animated > _dotFadeOutThreshold ? 1.0 : 0.0,
                           ),
                           duration: const Duration(milliseconds: 360),
-                          curve: Curves.easeOutCubic,
+                          curve: Curves.easeOutSine,
                           builder: (_, dotOpacity, _) {
                             return CustomPaint(
                               size: Size(size + 30, size + 30),
@@ -1661,33 +1661,44 @@ class _RingPainter extends CustomPainter {
     final sweep = end * normalized;
 
     if (normalized > 0.0001) {
-      const totalSegments = 720;
-      final visibleSegments = max(1, (totalSegments * normalized).round());
-      final segmentSweep = sweep / visibleSegments;
-      const overlap = 0.00035;
-
       final localRect = Rect.fromCircle(center: Offset.zero, radius: radius);
 
       canvas.save();
       canvas.translate(center.dx, center.dy);
       canvas.rotate(-start);
 
-      for (int i = 0; i < visibleSegments; i++) {
-        final t = visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1);
-        final segmentPaint = Paint()
+      if (normalized < 0.02) {
+        final solidPaint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = ringWidth
           ..strokeCap = StrokeCap.butt
           ..isAntiAlias = true
-          ..color = Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
+          ..color = EaColor.background;
 
-        canvas.drawArc(
-          localRect,
-          segmentSweep * i,
-          segmentSweep + overlap,
-          false,
-          segmentPaint,
-        );
+        canvas.drawArc(localRect, 0, sweep, false, solidPaint);
+      } else {
+        const totalSegments = 720;
+        final visibleSegments = max(1, (totalSegments * normalized).round());
+        final segmentSweep = sweep / visibleSegments;
+        const overlap = 0.00035;
+
+        for (int i = 0; i < visibleSegments; i++) {
+          final t = visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1);
+          final segmentPaint = Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = ringWidth
+            ..strokeCap = StrokeCap.butt
+            ..isAntiAlias = true
+            ..color = Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
+
+          canvas.drawArc(
+            localRect,
+            segmentSweep * i,
+            segmentSweep + overlap,
+            false,
+            segmentPaint,
+          );
+        }
       }
 
       canvas.restore();
