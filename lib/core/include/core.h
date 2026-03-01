@@ -215,6 +215,32 @@ CoreResult core_register_device(
 
 
 /**
+ * @brief Register a new device with explicit brand and model.
+ *
+ * @param core     Core context.
+ * @param uuid     Unique device identifier.
+ * @param name     Display name.
+ * @param brand    Device brand.
+ * @param model    Device model.
+ * @param protocol Communication protocol.
+ * @param caps     Capability list.
+ * @param capCount Number of capabilities.
+ *
+ * @return Result code.
+ */
+CoreResult core_register_device_ex(
+    CoreContext* core,
+    const char* uuid,
+    const char* name,
+    const char* brand,
+    const char* model,
+    CoreProtocol protocol,
+    const CoreCapability* caps,
+    uint8_t capCount
+);
+
+
+/**
  * @brief Remove a device.
  *
  * @param core Core context.

@@ -97,10 +97,24 @@ CMakeFiles/easync_core.dir/src/driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/driver.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/core/src/driver.cpp -o CMakeFiles/easync_core.dir/src/driver.cpp.s
 
+CMakeFiles/easync_core.dir/src/payload_service.cpp.o: CMakeFiles/easync_core.dir/flags.make
+CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/core/src/payload_service.cpp
+CMakeFiles/easync_core.dir/src/payload_service.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/src/payload_service.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/payload_service.cpp.o -MF CMakeFiles/easync_core.dir/src/payload_service.cpp.o.d -o CMakeFiles/easync_core.dir/src/payload_service.cpp.o -c /home/radmann/easync/lib/core/src/payload_service.cpp
+
+CMakeFiles/easync_core.dir/src/payload_service.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/payload_service.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/core/src/payload_service.cpp > CMakeFiles/easync_core.dir/src/payload_service.cpp.i
+
+CMakeFiles/easync_core.dir/src/payload_service.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/payload_service.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/core/src/payload_service.cpp -o CMakeFiles/easync_core.dir/src/payload_service.cpp.s
+
 CMakeFiles/easync_core.dir/drivers/mock.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/mock.cpp.o: /home/radmann/easync/lib/core/drivers/mock.cpp
 CMakeFiles/easync_core.dir/drivers/mock.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/drivers/mock.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/easync_core.dir/drivers/mock.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/drivers/mock.cpp.o -MF CMakeFiles/easync_core.dir/drivers/mock.cpp.o.d -o CMakeFiles/easync_core.dir/drivers/mock.cpp.o -c /home/radmann/easync/lib/core/drivers/mock.cpp
 
 CMakeFiles/easync_core.dir/drivers/mock.cpp.i: cmake_force
@@ -114,7 +128,7 @@ CMakeFiles/easync_core.dir/drivers/mock.cpp.s: cmake_force
 CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/easync/lib/core/drivers/mqtt.cpp
 CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o -MF CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o.d -o CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o -c /home/radmann/easync/lib/core/drivers/mqtt.cpp
 
 CMakeFiles/easync_core.dir/drivers/mqtt.cpp.i: cmake_force
@@ -128,7 +142,7 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.s: cmake_force
 CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/easync/lib/core/drivers/wifi.cpp
 CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/easync_core.dir/drivers/wifi.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/easync_core.dir/drivers/wifi.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/drivers/wifi.cpp.o -MF CMakeFiles/easync_core.dir/drivers/wifi.cpp.o.d -o CMakeFiles/easync_core.dir/drivers/wifi.cpp.o -c /home/radmann/easync/lib/core/drivers/wifi.cpp
 
 CMakeFiles/easync_core.dir/drivers/wifi.cpp.i: cmake_force
@@ -142,7 +156,7 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.s: cmake_force
 CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/easync/lib/core/drivers/zigbee.cpp
 CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o -MF CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o.d -o CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o -c /home/radmann/easync/lib/core/drivers/zigbee.cpp
 
 CMakeFiles/easync_core.dir/drivers/zigbee.cpp.i: cmake_force
@@ -157,6 +171,7 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s: cmake_force
 easync_core_OBJECTS = \
 "CMakeFiles/easync_core.dir/src/core.cpp.o" \
 "CMakeFiles/easync_core.dir/src/driver.cpp.o" \
+"CMakeFiles/easync_core.dir/src/payload_service.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mock.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/wifi.cpp.o" \
@@ -167,13 +182,14 @@ easync_core_EXTERNAL_OBJECTS =
 
 libeasync_core.so: CMakeFiles/easync_core.dir/src/core.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/src/driver.cpp.o
+libeasync_core.so: CMakeFiles/easync_core.dir/src/payload_service.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mock.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/wifi.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/build.make
 libeasync_core.so: CMakeFiles/easync_core.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX shared library libeasync_core.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX shared library libeasync_core.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/easync_core.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

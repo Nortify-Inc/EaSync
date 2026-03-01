@@ -606,6 +606,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         capabilities: selectedTemplate!.capabilities
             .map(_mapCapability)
             .toList(),
+        brand: selectedTemplate!.brand,
+        model: selectedTemplate!.model,
         modeLabels: modeLabels,
         constraints: selectedTemplate!.constrains,
         assetPath: selectedTemplate!.asset,

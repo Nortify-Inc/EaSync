@@ -7,10 +7,29 @@
  */
 
 #include "zigbee.hpp"
+#include "payload_service.hpp"
 
 #include <sstream>
 
 namespace drivers {
+
+static std::string buildPayloadFromTemplate(
+    const std::string& uuid,
+    const std::string& capability,
+    const std::string& valueJson,
+    const std::string& fallbackJson
+) {
+    std::string fromTemplate = core::PayloadService::instance().createPayload(
+        uuid,
+        capability,
+        valueJson
+    );
+
+    if (!fromTemplate.empty())
+        return fromTemplate;
+
+    return fallbackJson;
+}
 
 ZigBeeDriver::ZigBeeDriver(){
     brokerUrl = "tcp://localhost:1883";
@@ -102,7 +121,10 @@ bool ZigBeeDriver::setPower(
        << (value ? "ON" : "OFF")
        << "\" }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "power", value ? "1" : "0", ss.str())
+    );
     return true;
 }
 
@@ -115,7 +137,10 @@ bool ZigBeeDriver::setBrightness(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "brightness", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -134,7 +159,10 @@ bool ZigBeeDriver::setColor(
        << "\"b\": " << b
        << " } }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "color", std::to_string(rgb), ss.str())
+    );
     return true;
 }
 
@@ -147,7 +175,10 @@ bool ZigBeeDriver::setTemperature(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -160,7 +191,10 @@ bool ZigBeeDriver::setTemperatureFridge(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature_fridge", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -173,7 +207,10 @@ bool ZigBeeDriver::setTemperatureFreezer(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature_freezer", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -186,7 +223,10 @@ bool ZigBeeDriver::setTime(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "time", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -199,7 +239,10 @@ bool ZigBeeDriver::setColorTemperature(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "colorTemperature", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -212,7 +255,10 @@ bool ZigBeeDriver::setLock(
        << (value ? 1 : 0)
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "lock", value ? "1" : "0", ss.str())
+    );
     return true;
 }
 
@@ -225,7 +271,10 @@ bool ZigBeeDriver::setMode(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "mode", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -238,7 +287,10 @@ bool ZigBeeDriver::setPosition(
        << value
        << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "position", std::to_string(value), ss.str())
+    );
     return true;
 }
 

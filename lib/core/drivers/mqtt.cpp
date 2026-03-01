@@ -7,11 +7,30 @@
  */
 
 #include "mqtt.hpp"
+#include "payload_service.hpp"
 
 #include <iostream>
 #include <sstream>
 
 namespace drivers {
+
+static std::string buildPayloadFromTemplate(
+    const std::string& uuid,
+    const std::string& capability,
+    const std::string& valueJson,
+    const std::string& fallbackJson
+) {
+    std::string fromTemplate = core::PayloadService::instance().createPayload(
+        uuid,
+        capability,
+        valueJson
+    );
+
+    if (!fromTemplate.empty())
+        return fromTemplate;
+
+    return fallbackJson;
+}
 
 MqttDriver::MqttDriver() {
     client = std::make_unique<mqtt::async_client>(brokerUrl, clientId);
@@ -71,7 +90,10 @@ bool MqttDriver::setPower(const std::string& uuid, bool value) {
     std::stringstream ss;
     ss << "{ \"power\": " << (value ? 1 : 0) << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "power", value ? "1" : "0", ss.str())
+    );
     return true;
 }
 
@@ -83,7 +105,10 @@ bool MqttDriver::setBrightness(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"brightness\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "brightness", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -95,7 +120,10 @@ bool MqttDriver::setColor(const std::string& uuid, uint32_t rgb) {
     std::stringstream ss;
     ss << "{ \"color\": " << rgb << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "color", std::to_string(rgb), ss.str())
+    );
     return true;
 }
 
@@ -107,7 +135,10 @@ bool MqttDriver::setTemperature(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"temperature\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -119,7 +150,10 @@ bool MqttDriver::setTemperatureFridge(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"temperature_fridge\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature_fridge", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -131,7 +165,10 @@ bool MqttDriver::setTemperatureFreezer(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"temperature_freezer\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "temperature_freezer", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -143,7 +180,10 @@ bool MqttDriver::setTime(const std::string& uuid, uint64_t value) {
     std::stringstream ss;
     ss << "{ \"timestamp\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "time", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -155,7 +195,10 @@ bool MqttDriver::setColorTemperature(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"colorTemperature\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "colorTemperature", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -167,7 +210,10 @@ bool MqttDriver::setLock(const std::string& uuid, bool value) {
     std::stringstream ss;
     ss << "{ \"lock\": " << (value ? 1 : 0) << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "lock", value ? "1" : "0", ss.str())
+    );
     return true;
 }
 
@@ -179,7 +225,10 @@ bool MqttDriver::setMode(const std::string& uuid, uint32_t value) {
     std::stringstream ss;
     ss << "{ \"mode\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "mode", std::to_string(value), ss.str())
+    );
     return true;
 }
 
@@ -191,7 +240,10 @@ bool MqttDriver::setPosition(const std::string& uuid, float value) {
     std::stringstream ss;
     ss << "{ \"position\": " << value << " }";
 
-    publishCommand(uuid, ss.str());
+    publishCommand(
+        uuid,
+        buildPayloadFromTemplate(uuid, "position", std::to_string(value), ss.str())
+    );
     return true;
 }
 
