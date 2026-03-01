@@ -13,7 +13,7 @@
       },
       "constrains": {
         "power": true,
-        "brightness": { "min": 0, "max": 100 },
+        "brightness": { "min": 1, "max": 100 },
         "colorTemperature": { "min": 2200, "max": 6500 }
       }
     },
@@ -30,7 +30,7 @@
       "constrains": {
         "power": true,
         "temperature": { "min": 16, "max": 30, "step": 0.5 },
-        "mode": ["Cool", "Heat", "Dry", "Fan", "Auto"]
+        "mode": ["cool", "heat", "dry", "fan", "auto"]
       }
     },
     {
@@ -47,8 +47,94 @@
       "constrains": {
         "power": true,
         "temperature_fridge": { "min": 1, "max": 8, "step": 0.5 },
-        "temperature_freezer": { "min": -24, "max": -14, "step": 0.5 },
+        "temperature_freezer": { "min": -12, "max": -2, "step": 0.5 },
         "mode": ["normal", "eco", "super_freeze"]
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Lock QA",
+      "protocol": "mock",
+      "capabilities": ["lock"],
+      "payloads": {
+        "lock": { "topic": "mock/{uuid}/set", "template": { "lock": "{value}" } }
+      },
+      "constrains": {
+        "lock": ["lock", "unlock"]
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Curtain QA",
+      "protocol": "mock",
+      "capabilities": ["position"],
+      "payloads": {
+        "position": { "topic": "mock/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "position": { "min": 0, "max": 100 }
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Heated Floor QA",
+      "protocol": "mock",
+      "capabilities": ["power", "temperature", "mode", "time"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "temperature": { "topic": "mock/{uuid}/set", "template": { "temperature": "{value}" } },
+        "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } },
+        "time": { "topic": "mock/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "temperature": { "min": 5, "max": 35, "step": 0.5 },
+        "mode": ["manual", "auto", "eco"]
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Schedule Outlet QA",
+      "protocol": "mock",
+      "capabilities": ["power", "time"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "time": { "topic": "mock/{uuid}/set", "template": { "schedule": "{value}" } }
+      },
+      "constrains": {
+        "power": true
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Color Strip QA",
+      "protocol": "mock",
+      "capabilities": ["power", "brightness", "color"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "brightness": { "topic": "mock/{uuid}/set", "template": { "brightness": "{value}" } },
+        "color": { "topic": "mock/{uuid}/set", "template": { "color": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "brightness": { "min": 1, "max": 100 },
+        "color": { "type": "rgb" }
+      }
+    },
+    {
+      "brand": "EaSync",
+      "model": "Mock Smart Vent QA",
+      "protocol": "mock",
+      "capabilities": ["power", "mode", "position"],
+      "payloads": {
+        "power": { "topic": "mock/{uuid}/set", "template": { "power": "{value}" } },
+        "mode": { "topic": "mock/{uuid}/set", "template": { "mode": "{value}" } },
+        "position": { "topic": "mock/{uuid}/set", "template": { "position": "{value}" } }
+      },
+      "constrains": {
+        "power": true,
+        "mode": ["closed", "diffuse", "focused"],
+        "position": { "min": 0, "max": 100 }
       }
     }
   ]

@@ -8,6 +8,8 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
+  static const double _capRowGap = 12;
+
   bool loading = true;
   String? error;
 
@@ -31,6 +33,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     if (step <= 0) return 1;
     final raw = ((max - min) / step).round();
     return raw.clamp(1, 400);
+  }
+
+  double _clampByConstraint(
+    String uuid,
+    String key,
+    double value,
+    double fallbackMin,
+    double fallbackMax,
+  ) {
+    final min = Bridge.constraintMin(uuid, key, fallbackMin);
+    final max = Bridge.constraintMax(uuid, key, fallbackMax);
+    return value.clamp(min, max);
   }
 
   @override
@@ -195,33 +209,50 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   double _capProgress(DeviceInfo device, int cap) {
     final s = Bridge.getState(device.uuid);
 
+    double normalize(double value, double min, double max) {
+      final span = (max - min).abs();
+      if (span < 0.000001) return 0;
+      return ((value - min) / (max - min)).clamp(0.0, 1.0);
+    }
+
     switch (cap) {
       case CoreCapability.CORE_CAP_POWER:
         return s.power ? 1 : 0;
 
       case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return (s.brightness / 100).clamp(0.0, 1.0);
+        final min = Bridge.constraintMin(device.uuid, 'brightness', 0);
+        final max = Bridge.constraintMax(device.uuid, 'brightness', 100);
+        return normalize(s.brightness.toDouble(), min, max);
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
-        return ((s.temperature + 10) / 46).clamp(0.0, 1.0);
+        final min = Bridge.constraintMin(device.uuid, 'temperature', 16);
+        final max = Bridge.constraintMax(device.uuid, 'temperature', 30);
+        return normalize(s.temperature, min, max);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-        return ((s.temperatureFridge + 30) / 45).clamp(0.0, 1.0);
+        final min = Bridge.constraintMin(device.uuid, 'temperature_fridge', 1);
+        final max = Bridge.constraintMax(device.uuid, 'temperature_fridge', 8);
+        return normalize(s.temperatureFridge, min, max);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        return ((-s.temperatureFreezer + 40) / 50).clamp(0.0, 1.0);
+        final min = Bridge.constraintMin(device.uuid, 'temperature_freezer', -24);
+        final max = Bridge.constraintMax(device.uuid, 'temperature_freezer', -14);
+        return normalize(s.temperatureFreezer, min, max);
 
       case CoreCapability.CORE_CAP_COLOR:
         return HSVColor.fromColor(Color(0xFF000000 | s.color)).value;
 
       case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-        return (s.colorTemperature / 9000).clamp(0.0, 1.0);
+        final min = Bridge.constraintMin(device.uuid, 'colorTemperature', 1500);
+        final max = Bridge.constraintMax(device.uuid, 'colorTemperature', 9000);
+        return normalize(s.colorTemperature.toDouble(), min, max);
 
       case CoreCapability.CORE_CAP_LOCK:
         return s.lock ? 1 : 0;
 
       case CoreCapability.CORE_CAP_MODE:
-        return (s.mode % 6) / 5;
+        final maxIndex = (Bridge.modeCount(device.uuid) - 1).clamp(1, 20);
+        return (s.mode.clamp(0, maxIndex) / maxIndex).clamp(0.0, 1.0);
 
       case CoreCapability.CORE_CAP_POSITION:
         return (s.position / 100).clamp(0.0, 1.0);
@@ -313,31 +344,74 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return s.power ? "On" : "Off";
 
       case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return "${s.brightness}%";
+        final b = _clampByConstraint(
+          device.uuid,
+          'brightness',
+          s.brightness.toDouble(),
+          0,
+          100,
+        );
+        return "${b.round()}";
 
       case CoreCapability.CORE_CAP_COLOR:
         return s.color;
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
-        return "${s.temperature.toStringAsFixed(1)}°C";
+        final t = _clampByConstraint(
+          device.uuid,
+          'temperature',
+          s.temperature,
+          16,
+          30,
+        );
+        return "${t.toStringAsFixed(1)}°C";
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-        return "${s.temperatureFridge.toStringAsFixed(1)}°C";
+        final t = _clampByConstraint(
+          device.uuid,
+          'temperature_fridge',
+          s.temperatureFridge,
+          1,
+          8,
+        );
+        return "${t.toStringAsFixed(1)}°C";
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        return "${s.temperatureFreezer.toStringAsFixed(1)}°C";
+        final t = _clampByConstraint(
+          device.uuid,
+          'temperature_freezer',
+          s.temperatureFreezer,
+          -24,
+          -14,
+        );
+        return "${t.toStringAsFixed(1)}°C";
 
       case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-        return "${s.colorTemperature}K";
+        final c = _clampByConstraint(
+          device.uuid,
+          'colorTemperature',
+          s.colorTemperature.toDouble(),
+          1500,
+          9000,
+        );
+        return "${c.round()}K";
 
       case CoreCapability.CORE_CAP_LOCK:
         return s.lock ? "Locked" : "Unlocked";
 
       case CoreCapability.CORE_CAP_MODE:
-        return Bridge.modeName(device.uuid, s.mode);
+        final idx = s.mode.clamp(0, Bridge.modeCount(device.uuid) - 1);
+        return Bridge.modeName(device.uuid, idx);
 
       case CoreCapability.CORE_CAP_POSITION:
-        return "${s.position.toStringAsFixed(0)}%";
+        final p = _clampByConstraint(
+          device.uuid,
+          'position',
+          s.position,
+          0,
+          100,
+        );
+        return "${p.toStringAsFixed(0)}%";
 
       case CoreCapability.CORE_CAP_TIMESTAMP:
         final h = (s.timestamp ~/ 60).toString().padLeft(2, '0');
@@ -390,6 +464,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   Future<void> _openDeviceControl(DeviceInfo device) async {
     final state = Bridge.getState(device.uuid);
 
+    final brightMin = Bridge.constraintMin(device.uuid, 'brightness', 0.0);
+    final brightMax = Bridge.constraintMax(device.uuid, 'brightness', 100.0);
+    final brightStep = Bridge.constraintStep(device.uuid, 'brightness', 1.0);
+
     final tempMin = Bridge.constraintMin(device.uuid, 'temperature', 16.0);
     final tempMax = Bridge.constraintMax(device.uuid, 'temperature', 30.0);
     final tempStep = Bridge.constraintStep(device.uuid, 'temperature', 0.5);
@@ -437,7 +515,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       9000.0,
     );
 
-    int brightness = state.brightness;
+    int brightness = state.brightness.clamp(brightMin.toInt(), brightMax.toInt());
     double temperature = state.temperature.clamp(tempMin, tempMax);
     int color = state.color;
     bool power = state.power;
@@ -471,9 +549,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     top: Radius.circular(28),
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    tickMarkShape: SliderTickMarkShape.noTickMark,
+                    showValueIndicator: ShowValueIndicator.never,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                     Text(device.name, style: EaText.primary),
                     const SizedBox(height: 16),
                     if (device.capabilities.contains(
@@ -513,7 +596,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -540,15 +623,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
 
                           Slider(
-                            min: 0,
-                            max: 100,
-                            divisions: 100,
-                            value: brightness.toDouble(),
+                            min: brightMin,
+                            max: brightMax,
+                            divisions: _divisions(brightMin, brightMax, brightStep),
+                            value: brightness.toDouble().clamp(brightMin, brightMax),
                             activeColor: EaColor.fore,
                             inactiveColor: EaColor.fore.withValues(alpha: .25),
                             onChanged: (v) {
-                              setInnerState(() => brightness = v.round());
-                              Bridge.setBrightness(device.uuid, v.round());
+                              final snapped = _snapStep(v, brightStep)
+                                  .clamp(brightMin, brightMax)
+                                  .round();
+                              setInnerState(() => brightness = snapped);
+                              Bridge.setBrightness(device.uuid, snapped);
                               setState(() {});
                             },
                           ),
@@ -670,7 +756,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -720,7 +806,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -731,7 +817,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                               const SizedBox(width: 8),
 
-                              Text("Fridge temp", style: EaText.secondary),
+                              Text("Fridge", style: EaText.secondary),
 
                               const Spacer(),
 
@@ -773,7 +859,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -784,7 +870,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                               const SizedBox(width: 8),
 
-                              Text("Freezer temp", style: EaText.secondary),
+                              Text("Freezer", style: EaText.secondary),
 
                               const Spacer(),
 
@@ -826,7 +912,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -914,7 +1000,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 14),
+                          const SizedBox(height: _capRowGap),
                           Row(
                             children: [
                               const Icon(
@@ -1007,7 +1093,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       CoreCapability.CORE_CAP_TIMESTAMP,
                     ))
                       _buildScheduleControl(device, setInnerState),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1023,6 +1110,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     void Function(void Function()) setInnerState,
   ) {
     final state = Bridge.getState(device.uuid);
+    int selectedMinutes = state.timestamp;
 
     TimeOfDay? toTime(int? m) {
       if (m == null || m < 0) return null;
@@ -1037,12 +1125,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       return t.hour * 60 + t.minute;
     }
 
-    final time = toTime(state.timestamp);
+    final time = toTime(selectedMinutes);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: _capRowGap),
 
         Row(
           children: [
@@ -1155,7 +1243,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   );
                   if (picked != null) {
                     final minutes = toMinutes(picked);
-                    setState(() => state.timestamp = minutes);
+                    setInnerState(() {
+                      selectedMinutes = minutes;
+                    });
+                    setState(() {});
                     Bridge.setTime(device.uuid, minutes);
                   }
                 },
