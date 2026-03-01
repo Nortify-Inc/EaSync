@@ -1275,7 +1275,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     return SizedBox(
       width: size + 40,
-      height: size + 60,
+      height: size + 78,
       child: Column(
         children: [
           TweenAnimationBuilder<double>(
@@ -1291,6 +1291,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     painter: _RingPainter(
                       ringColor: ringColor,
                       progress: animated,
+                      showDot: target > 0.0001,
                     ),
                   ),
                   GestureDetector(
@@ -1375,10 +1376,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               );
             },
           ),
-          Text(
-            device.name,
-            textAlign: TextAlign.center,
-            style: EaText.secondary.copyWith(fontSize: 12),
+          SizedBox(
+            height: 34,
+            child: Text(
+              device.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: EaText.secondary.copyWith(fontSize: 12, height: 1.2),
+            ),
           ),
         ],
       ),
@@ -1389,12 +1395,19 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 class _RingPainter extends CustomPainter {
   final Color ringColor;
   final double progress;
+  final bool showDot;
   double ringWidth = 6;
 
-  _RingPainter({required this.ringColor, required this.progress});
+  _RingPainter({
+    required this.ringColor,
+    required this.progress,
+    required this.showDot,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
+    final normalized = progress.clamp(0.0, 1.0);
+
     final center = Offset(size.width / 2, size.height / 2);
     final maxR = min(size.width, size.height) / 2;
     final radius = maxR - ringWidth / 2 - 4;
@@ -1416,7 +1429,7 @@ class _RingPainter extends CustomPainter {
     final start = (5 * pi) / 4;
     final end = (6 * pi) / 4;
 
-    final sweep = end * progress.clamp(0.0, 1.0);
+    final sweep = end * normalized;
 
     final progressPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -1426,7 +1439,13 @@ class _RingPainter extends CustomPainter {
 
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    canvas.drawArc(rect, -start, sweep, false, progressPaint);
+    if (normalized > 0.0001) {
+      canvas.drawArc(rect, -start, sweep, false, progressPaint);
+    }
+
+    if (!showDot || normalized <= 0.0001) {
+      return;
+    }
 
     final angle = -start + sweep;
 
@@ -1442,6 +1461,8 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RingPainter old) {
-    return old.progress != progress || old.ringColor != ringColor;
+    return old.progress != progress ||
+        old.ringColor != ringColor ||
+        old.showDot != showDot;
   }
 }

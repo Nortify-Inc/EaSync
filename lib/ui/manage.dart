@@ -200,9 +200,12 @@ class _ManageState extends State<Manage> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: TextField(
             controller: deviceSearchController,
+            cursorColor: EaColor.fore,
+            style: EaText.secondary.copyWith(color: EaColor.textSecondary),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search, color: EaColor.border),
+              prefixIcon: const Icon(Icons.search, color: EaColor.fore),
               hintText: "Search devices...",
+              hintStyle: EaText.secondary,
               filled: true,
               fillColor: EaColor.back,
               border: OutlineInputBorder(
@@ -249,9 +252,10 @@ class _ManageState extends State<Manage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.name, style: EaText.primary),
-                  Text(d.uuid, style: EaText.secondary.copyWith(fontSize: 11)),
-                  const SizedBox(height: 4),
+                  Text(d.name, style: EaText.secondary.copyWith(fontSize: 16, color: EaColor.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(d.uuid, style: EaText.secondary.copyWith(fontSize: 11, color: EaColor.textSecondary)),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
@@ -286,35 +290,31 @@ Widget _chip(String text) {
 String _capLabel(int cap) {
   switch (cap) {
     case CoreCapability.CORE_CAP_POWER:
-      return "power";
+      return "Power";
     case CoreCapability.CORE_CAP_BRIGHTNESS:
-      return "brightness";
+      return "Brightness";
     case CoreCapability.CORE_CAP_COLOR:
-      return "color";
+      return "Color";
     case CoreCapability.CORE_CAP_TEMPERATURE:
-      return "temperature";
+      return "Temperature";
     case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-      return "fridge";
+      return "Fridge";
     case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-      return "freezer";
+      return "Freezer";
     case CoreCapability.CORE_CAP_TIMESTAMP:
-      return "schedule";
+      return "Schedule";
     case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-      return "color temp";
+      return "Color Temp";
     case CoreCapability.CORE_CAP_LOCK:
-      return "lock";
+      return "Lock";
     case CoreCapability.CORE_CAP_MODE:
-      return "mode";
+      return "Mode";
     case CoreCapability.CORE_CAP_POSITION:
-      return "position";
+      return "Position";
     default:
-      return "cap";
+      return "Unk";
   }
 }
-
-/* ============================================================
-   EDITOR
-============================================================ */
 
 class _DeviceEditor extends StatefulWidget {
   final DeviceInfo? device;
@@ -524,6 +524,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
               TextField(
                 controller: searchController,
+                cursorColor: EaColor.fore,
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search, color: EaColor.border),
                   hintText: "Search brand, model or capability",
@@ -625,9 +627,12 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
               TextField(
                 controller: nameController,
+                cursorColor: EaColor.fore,
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
                 decoration: InputDecoration(
+                  
                   labelText: "Device Name",
-                  labelStyle: EaText.secondary.copyWith(color: EaColor.fore),
+                  labelStyle: EaText.secondary,
                   filled: true,
                   fillColor: EaColor.back,
                   border: OutlineInputBorder(
