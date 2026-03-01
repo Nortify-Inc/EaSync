@@ -35,6 +35,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   final Map<String, int> capIndexByDevice = {};
   final Map<String, double> animatedProgress = {};
   final Map<String, double> previousProgress = {};
+  final Map<String, Color> ringColorByDevice = {};
+  final Map<String, Color> previousRingColorByDevice = {};
   final Set<String> initializedDevices = {};
   final Map<String, String> _assetByBrandModel = {};
   final Map<String, String> _assetByModel = {};
@@ -167,8 +169,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         final capIndex = rawCapIndex.clamp(0, d.capabilities.length - 1);
         final cap = d.capabilities[capIndex];
 
-        previousProgress[d.uuid] = 0.0;
-        animatedProgress[d.uuid] = _capProgress(d, cap);
+        final progress = _capProgress(d, cap);
+        previousProgress[d.uuid] = animatedProgress[d.uuid] ?? progress;
+        animatedProgress[d.uuid] = progress;
+
+        final color = _capColor(d, cap);
+        previousRingColorByDevice[d.uuid] =
+          ringColorByDevice[d.uuid] ?? color;
+        ringColorByDevice[d.uuid] = color;
 
         capIndexByDevice[d.uuid] = capIndex;
       }
@@ -195,10 +203,17 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
         final newProgress = _capProgress(device, cap);
         final oldProgress = animatedProgress[uuid] ?? newProgress;
+        final newRingColor = _capColor(device, cap);
+        final oldRingColor = ringColorByDevice[uuid] ?? newRingColor;
 
         if ((newProgress - oldProgress).abs() > 0.001) {
           previousProgress[uuid] = oldProgress;
           animatedProgress[uuid] = newProgress;
+        }
+
+        if (oldRingColor.toARGB32() != newRingColor.toARGB32()) {
+          previousRingColorByDevice[uuid] = oldRingColor;
+          ringColorByDevice[uuid] = newRingColor;
         }
 
         if (mounted) setState(() {});
@@ -324,7 +339,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
         final min = Bridge.constraintMin(device.uuid, 'temperature_fridge', 1);
         final max = Bridge.constraintMax(device.uuid, 'temperature_fridge', 8);
-        return normalize(s.temperatureFridge, min, max);
+        return 1 - normalize(s.temperatureFridge, min, max);
 
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
         final min = Bridge.constraintMin(
@@ -538,10 +553,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     PageStorage.of(context).writeState(context, next, identifier: device.uuid);
 
     final target = _capProgress(device, caps[next]);
+    final targetColor = _capColor(device, caps[next]);
 
     previousProgress[device.uuid] = animatedProgress[device.uuid] ?? target;
 
     animatedProgress[device.uuid] = target;
+
+    final oldColor = ringColorByDevice[device.uuid] ?? targetColor;
+    previousRingColorByDevice[device.uuid] = oldColor;
+    ringColorByDevice[device.uuid] = targetColor;
 
     setState(() {});
   }
@@ -1431,7 +1451,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     final begin = previousProgress[device.uuid] ?? target;
 
-    final ringColor = _capColor(device, cap);
+    final ringColorTarget = ringColorByDevice[device.uuid] ?? _capColor(device, cap);
+    final ringColorBegin =
+      previousRingColorByDevice[device.uuid] ?? ringColorTarget;
 
     double dragStartX = 0;
     double dragDelta = 0;
@@ -1443,21 +1465,29 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         children: [
           TweenAnimationBuilder<double>(
             tween: Tween(begin: begin, end: target),
-            duration: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 1440),
             curve: Curves.easeOutSine,
             builder: (_, animated, _) {
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  CustomPaint(
-                    size: Size(size + 30, size + 30),
-                    painter: _RingPainter(
-                      ringColor: ringColor,
-                      progress: animated,
-                      showDot: target > 0.0001,
-                    ),
-                  ),
-                  GestureDetector(
+              return TweenAnimationBuilder<Color?>(
+                tween: ColorTween(begin: ringColorBegin, end: ringColorTarget),
+                duration: const Duration(milliseconds: 360),
+                curve: Curves.easeOutCubic,
+                builder: (_, animatedColor, child) {
+                  final effectiveRingColor = animatedColor ?? ringColorTarget;
+
+                  return RepaintBoundary(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomPaint(
+                          size: Size(size + 30, size + 30),
+                          painter: _RingPainter(
+                            ringColor: effectiveRingColor,
+                            progress: animated,
+                            showDot: animated > 0.0001,
+                          ),
+                        ),
+                        GestureDetector(
                     onTap: () {
                       _openDeviceControl(device);
                     },
@@ -1477,7 +1507,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       height: size,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: ringColor, width: 1.4),
+                        border: Border.all(color: effectiveRingColor, width: 1.4),
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -1525,7 +1555,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                         borderRadius: BorderRadius.circular(20),
                                       )
                                     : BoxDecoration(
-                                        color: ringColor,
+                                        color: effectiveRingColor,
                                         border: BoxBorder.all(
                                           color: EaColor.fore,
                                         ),
@@ -1557,7 +1587,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
-                ],
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -1607,7 +1640,7 @@ class _RingPainter extends CustomPainter {
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = EaColor.background;
+      ..color = EaColor.back;
 
     canvas.drawCircle(center, radius, baseRing);
 
@@ -1616,16 +1649,37 @@ class _RingPainter extends CustomPainter {
 
     final sweep = end * normalized;
 
-    final progressPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = ringWidth
-      ..strokeCap = StrokeCap.round
-      ..color = ringColor;
-
-    final rect = Rect.fromCircle(center: center, radius: radius);
-
     if (normalized > 0.0001) {
-      canvas.drawArc(rect, -start, sweep, false, progressPaint);
+      const totalSegments = 720;
+      final visibleSegments = max(1, (totalSegments * normalized).round());
+      final segmentSweep = sweep / visibleSegments;
+      const overlap = 0.00035;
+
+      final localRect = Rect.fromCircle(center: Offset.zero, radius: radius);
+
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(-start);
+
+      for (int i = 0; i < visibleSegments; i++) {
+        final t = visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1);
+        final segmentPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = ringWidth
+          ..strokeCap = StrokeCap.butt
+          ..isAntiAlias = true
+          ..color = Color.lerp(EaColor.back, ringColor, t) ?? ringColor;
+
+        canvas.drawArc(
+          localRect,
+          segmentSweep * i,
+          segmentSweep + overlap,
+          false,
+          segmentPaint,
+        );
+      }
+
+      canvas.restore();
     }
 
     if (!showDot || normalized <= 0.0001) {
