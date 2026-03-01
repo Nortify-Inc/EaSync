@@ -7,6 +7,7 @@
  */
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ class DeviceTemplate {
   final String category;
   final String brand;
   final String model;
+  final String? asset;
   final String protocol;
   final List<String> capabilities;
   final Map<String, dynamic> payloads;
@@ -26,6 +28,7 @@ class DeviceTemplate {
     required this.category,
     required this.brand,
     required this.model,
+    this.asset,
     required this.protocol,
     required this.capabilities,
     required this.payloads,
@@ -37,6 +40,7 @@ class DeviceTemplate {
       category: category,
       brand: json["brand"],
       model: json["model"],
+      asset: json["asset"]?.toString(),
       protocol: (json["protocol"] ?? "mock").toString(),
       capabilities: List<String>.from(json["capabilities"]),
       payloads: json["payloads"],
@@ -50,13 +54,41 @@ class DeviceTemplate {
 ============================================================ */
 
 class TemplateRepository {
+  static Future<String> _loadTemplateRaw(String category) async {
+    final assetPath = "assets/$category.json";
+
+    try {
+      return await rootBundle.loadString(assetPath);
+    } catch (_) {
+      // Fallback useful during hot-reload or stale asset manifests in desktop.
+      final file = File(assetPath);
+      if (await file.exists()) {
+        return file.readAsString();
+      }
+      rethrow;
+    }
+  }
+
   static Future<List<DeviceTemplate>> loadCategory(String category) async {
-    final raw = await rootBundle.loadString("assets/$category.json");
-    final decoded = jsonDecode(raw);
+    try {
+      final raw = await _loadTemplateRaw(category);
+      final decoded = jsonDecode(raw);
 
-    final list = decoded[category] as List;
+      if (decoded is! Map<String, dynamic>) return const [];
 
-    return list.map((e) => DeviceTemplate.fromJson(category, e)).toList();
+      final dynamic listRaw = decoded[category];
+      if (listRaw is! List) return const [];
+
+      return listRaw
+          .whereType<Map>()
+          .map(
+            (e) => DeviceTemplate.fromJson(category, e.cast<String, dynamic>()),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint("Template load error for '$category': $e");
+      return const [];
+    }
   }
 }
 
@@ -523,11 +555,14 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   }
 
   Future<void> _loadTemplates() async {
-    final loaded = await Future.wait(
-      categories.map((c) => TemplateRepository.loadCategory(c)),
-    );
+    final loaded = <DeviceTemplate>[];
 
-    templates = [for (var list in loaded) ...list];
+    for (final category in categories) {
+      final list = await TemplateRepository.loadCategory(category);
+      loaded.addAll(list);
+    }
+
+    templates = loaded;
     filteredTemplates = List.from(templates);
     selectedTemplate = null;
 
@@ -573,6 +608,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
             .toList(),
         modeLabels: modeLabels,
         constraints: selectedTemplate!.constrains,
+        assetPath: selectedTemplate!.asset,
       );
 
       widget.onSaved();

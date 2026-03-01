@@ -12,9 +12,35 @@ import 'dart:async';
 
 import 'package:ffi/ffi.dart';
 
-final DynamicLibrary coreLib = Platform.isWindows
-    ? DynamicLibrary.open('core.dll')
-    : DynamicLibrary.open('libeasync_core.so');
+DynamicLibrary _openCoreLibrary() {
+  if (Platform.isWindows) {
+    return DynamicLibrary.open('core.dll');
+  }
+
+  if (Platform.isLinux) {
+    final executableDir = File(Platform.resolvedExecutable).parent.path;
+    final cwd = Directory.current.path;
+
+    final candidates = <String>[
+      '$cwd/lib/core/build/libeasync_core.so',
+      '$executableDir/lib/libeasync_core.so',
+      '$cwd/build/linux/x64/debug/bundle/lib/libeasync_core.so',
+      '$cwd/build/linux/x64/release/bundle/lib/libeasync_core.so',
+    ];
+
+    for (final path in candidates) {
+      if (!File(path).existsSync()) continue;
+
+      try {
+        return DynamicLibrary.open(path);
+      } catch (_) {}
+    }
+  }
+
+  return DynamicLibrary.open('libeasync_core.so');
+}
+
+final DynamicLibrary coreLib = _openCoreLibrary();
 
 const String CORE_API_VERSION = "0.0.1";
 
@@ -414,6 +440,7 @@ class Bridge {
   static final Map<String, DeviceState> _stateCache = {};
   static final Map<String, List<String>> _modeLabelsByDevice = {};
   static final Map<String, Map<String, dynamic>> _constraintsByDevice = {};
+  static final Map<String, String> _assetByDevice = {};
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -511,6 +538,7 @@ class Bridge {
     _stateCache.clear();
     _modeLabelsByDevice.clear();
     _constraintsByDevice.clear();
+    _assetByDevice.clear();
 
     if (_ctx != null) {
       _coreDestroy(_ctx!);
@@ -526,6 +554,7 @@ class Bridge {
     required List<int> capabilities,
     List<String>? modeLabels,
     Map<String, dynamic>? constraints,
+    String? assetPath,
   }) {
     _ensureReady();
 
@@ -569,6 +598,10 @@ class Bridge {
             .toList();
       }
     }
+
+    if (assetPath != null && assetPath.trim().isNotEmpty) {
+      _assetByDevice[uuid] = assetPath.trim();
+    }
   }
 
   static void removeDevice(String uuid) {
@@ -586,6 +619,16 @@ class Bridge {
     _invalidateState(uuid);
     _modeLabelsByDevice.remove(uuid);
     _constraintsByDevice.remove(uuid);
+    _assetByDevice.remove(uuid);
+  }
+
+  static String? deviceAsset(String uuid) {
+    return _assetByDevice[uuid];
+  }
+
+  static void setDeviceAsset(String uuid, String? assetPath) {
+    if (assetPath == null || assetPath.trim().isEmpty) return;
+    _assetByDevice[uuid] = assetPath.trim();
   }
 
   static String modeName(String uuid, int modeIndex) {
