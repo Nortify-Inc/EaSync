@@ -66,6 +66,7 @@ struct CoreContext {
     bool initialized = false;                                                      /**< Core initialization flag */
     std::unordered_map<std::string, InternalDevice> devices;                       /**< Registered devices */
     std::unordered_map<CoreProtocol, std::shared_ptr<drivers::Driver>> drivers;    /**< Protocol drivers */
+    std::unordered_set<CoreProtocol> initializedProtocols;                          /**< Protocol drivers already initialized */
     std::mutex mutex;                                                              /**< Global mutex */
     std::string lastError;                                                         /**< Last error string */
     CoreEventCallback callback = nullptr;                                          /**< Event callback */
@@ -105,6 +106,60 @@ static std::string capabilityToString(CoreCapability cap) {
         case CORE_CAP_TEMPERATURE: return "Temperature";
         default: return "UnknownCapability";
     }
+}
+
+static void driverEventForwarder(const std::string& uuid,
+                                 const CoreDeviceState& newState,
+                                 void* userData);
+
+
+/**
+ * @brief Convert a CoreProtocol to a readable string.
+ *
+ * @param protocol Protocol to convert.
+ * @return std::string Human-readable protocol name.
+ */
+static std::string protocolToString(CoreProtocol protocol) {
+    switch (protocol) {
+        case CORE_PROTOCOL_MOCK: return "MOCK";
+        case CORE_PROTOCOL_MQTT: return "MQTT";
+        case CORE_PROTOCOL_WIFI: return "WIFI";
+        case CORE_PROTOCOL_ZIGBEE: return "ZIGBEE";
+        case CORE_PROTOCOL_BLE: return "BLE";
+        default: return "UNKNOWN_PROTOCOL";
+    }
+}
+
+
+/**
+ * @brief Ensure protocol driver is initialized before use.
+ *
+ * @param core Pointer to CoreContext.
+ * @param protocol Protocol of the target driver.
+ * @param driver Driver instance for the protocol.
+ * @return true when driver is ready for use.
+ */
+static bool ensureDriverInitialized(CoreContext* core,
+                                    CoreProtocol protocol,
+                                    const std::shared_ptr<drivers::Driver>& driver)
+{
+    if (!core || !driver)
+        return false;
+
+    if (core->initializedProtocols.count(protocol))
+        return true;
+
+    if (!driver->init()) {
+        std::ostringstream oss;
+        oss << "Protocol driver unavailable: " << protocolToString(protocol);
+        setError(core, oss.str().c_str());
+        return false;
+    }
+
+    driver->setEventCallback(driverEventForwarder, core);
+    core->initializedProtocols.insert(protocol);
+
+    return true;
 }
 
 
@@ -258,19 +313,13 @@ CoreResult core_init(CoreContext* core) {
 
     std::lock_guard<std::mutex> lock(core->mutex);
 
-    for (auto& pair : core->drivers) {
-        auto& driver = pair.second;
-        if (!driver) continue;
-
-        if (!driver->init()) {
-            // log and continue; core must stay up even without optional drivers
-            setError(core, "Driver initialization failed");
-            continue;
-        }
-
-        driver->setEventCallback(driverEventForwarder, core);
+    auto mockIt = core->drivers.find(CORE_PROTOCOL_MOCK);
+    if (mockIt != core->drivers.end()) {
+        if (!ensureDriverInitialized(core, CORE_PROTOCOL_MOCK, mockIt->second))
+            return CORE_ERROR;
     }
 
+    core->lastError.clear();
     core->initialized = true;
     return CORE_OK;
 }
@@ -329,6 +378,9 @@ CoreResult core_register_device(CoreContext* core,
         dev.protocol = protocol;
         dev.capabilities.assign(caps, caps + capCount);
         dev.driver = driverIt->second;
+
+        if (!ensureDriverInitialized(core, protocol, dev.driver))
+            return CORE_PROTOCOL_UNAVAILABLE;
 
         std::memset(&dev.state, 0, sizeof(CoreDeviceState));
 
