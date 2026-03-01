@@ -1474,11 +1474,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 builder: (_, animatedColor, child) {
                   final effectiveRingColor = animatedColor ?? ringColorTarget;
                   final isTargetZero = target <= 0.000001;
+                  final fadeBase = begin <= 0.000001 ? 1.0 : begin;
+                  final normalizedToBegin = (animated / fadeBase).clamp(0.0, 1.0);
                   final dotOpacity = isTargetZero
-                      ? (animated / (_dotFadeOutThreshold * 2.0)).clamp(
-                          0.0,
-                          1.0,
-                        )
+                    ? (normalizedToBegin > 0.35
+                      ? 1.0
+                      : (normalizedToBegin / 0.35).clamp(0.0, 1.0))
                       : (animated > _dotFadeOutThreshold ? 1.0 : 0.0);
 
                   return RepaintBoundary(
