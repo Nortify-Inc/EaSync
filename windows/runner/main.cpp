@@ -1,3 +1,11 @@
+/**
+ * @file main.cpp
+ * @brief Entry point of the Flutter application on Windows.
+ * @param command_line Arguments received by the Win32 process.
+ * @return EXIT_SUCCESS on normal execution, EXIT_FAILURE if window creation fails.
+ * @author Erick Radmann
+ */
+
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
 #include <windows.h>

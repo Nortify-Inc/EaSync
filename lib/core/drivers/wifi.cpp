@@ -1,3 +1,11 @@
+/**
+ * @file wifi.cpp
+ * @brief Implementation of the Wi-Fi driver with HTTP commands for EaSync devices.
+ * @param uuid Device identifier used for IP and route resolution.
+ * @return Methods return true when the HTTP request succeeds.
+ * @author Erick Radmann
+ */
+
 #include "wifi.hpp"
 
 #include <curl/curl.h>

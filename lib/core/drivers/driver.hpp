@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file driver.hpp
+ * @brief Base interface for EaSync Core device drivers.
+ * @param uuid Unique device identifier used by driver operations.
+ * @return Driver operation methods return true on success and false on failure.
+ * @author Erick Radmann
+ */
+
 #include <string>
 #include <cstdint>
 #include <core.h>
@@ -7,14 +15,6 @@
 using DriverEventCallback = void(*)(const std::string& uuid,
                                     const CoreDeviceState& state,
                                     void* userdata);
-
-/**
- * @file driver.hpp
- * @brief Base interface for device drivers.
- * @author Erick Radmann
- * 
- * All protocol drivers must implement this interface.
- */
 
 namespace drivers {
 

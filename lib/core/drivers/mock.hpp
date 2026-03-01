@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file mock.hpp
+ * @brief Declaration of the simulated driver used for EaSync device testing.
+ * @param uuid Identifier of the device managed by the mock driver.
+ * @return Control methods return true when the operation is applied.
+ * @author Erick Radmann
+ */
+
 #include "driver.hpp"
 
 #include <unordered_map>

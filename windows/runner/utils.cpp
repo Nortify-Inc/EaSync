@@ -1,3 +1,11 @@
+/**
+ * @file utils.cpp
+ * @brief Console and UTF argument conversion utilities for Windows.
+ * @param utf16_string Input UTF-16 string used for conversion.
+ * @return UTF-8 argument vectors and converted strings, depending on the function.
+ * @author Erick Radmann
+ */
+
 #include "utils.h"
 
 #include <flutter_windows.h>

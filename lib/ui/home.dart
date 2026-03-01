@@ -1,3 +1,11 @@
+/*!
+ * @file home.dart
+ * @brief Main screen with horizontal navigation across application modules.
+ * @param index Virtual index of the current page in the `PageView`.
+ * @return Navigation widgets and visual composition for the home screen.
+ * @author Erick Radmann
+ */
+
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'handler.dart';

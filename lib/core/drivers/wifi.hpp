@@ -1,5 +1,13 @@
 #pragma once
 
+/**
+ * @file wifi.hpp
+ * @brief Declaration of the Wi-Fi driver based on HTTP requests for EaSync devices.
+ * @param uuid Device identifier used for endpoint resolution.
+ * @return Methods return true when the command/request is completed.
+ * @author Erick Radmann
+ */
+
 #include "driver.hpp"
 
 #include <unordered_map>

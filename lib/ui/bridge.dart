@@ -1,3 +1,11 @@
+/*!
+ * @file bridge.dart
+ * @brief FFI layer between Flutter and the EaSync Core native library.
+ * @param uuid Device identifier used in control calls.
+ * @return Public methods return states/lists or throw exceptions on failures.
+ * @author Erick Radmann
+ */
+
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:async';
@@ -176,10 +184,8 @@ typedef _coreRegisterDeviceDart =
       int,
     );
 
-typedef _coreRemoveDeviceC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>);
-typedef _coreRemoveDeviceDart =
-  int Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreRemoveDeviceC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreRemoveDeviceDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
 typedef _coreSetPowerC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Bool);
 typedef _coreSetPowerDart = int Function(Pointer<Void>, Pointer<Utf8>, bool);
@@ -228,22 +234,22 @@ typedef _coreSetPositionDart =
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
-typedef _coreEventTrampolineC = Void Function(
-  Pointer<CoreEventNative>,
-  Pointer<Void>,
-);
+typedef _coreEventTrampolineC =
+    Void Function(Pointer<CoreEventNative>, Pointer<Void>);
 
-typedef _coreSetEventCallbackC = Int32 Function(
-  Pointer<Void>,
-  Pointer<NativeFunction<_coreEventTrampolineC>>,
-  Pointer<Void>,
-);
+typedef _coreSetEventCallbackC =
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<NativeFunction<_coreEventTrampolineC>>,
+      Pointer<Void>,
+    );
 
-typedef _coreSetEventCallbackDart = int Function(
-  Pointer<Void>,
-  Pointer<NativeFunction<_coreEventTrampolineC>>,
-  Pointer<Void>,
-);
+typedef _coreSetEventCallbackDart =
+    int Function(
+      Pointer<Void>,
+      Pointer<NativeFunction<_coreEventTrampolineC>>,
+      Pointer<Void>,
+    );
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -415,11 +421,10 @@ class Bridge {
   static final StreamController<CoreEventData> _eventController =
       StreamController.broadcast();
 
-  static Pointer<NativeFunction<_coreEventTrampolineC>>?
-      _eventCallbackPointer;
+  static Pointer<NativeFunction<_coreEventTrampolineC>>? _eventCallbackPointer;
 
-    static Timer? _simulateTimer;
-    static bool _simulating = false;
+  static Timer? _simulateTimer;
+  static bool _simulating = false;
 
   static Stream<String> get onStateChanged => _stateController.stream;
 
@@ -445,8 +450,9 @@ class Bridge {
   }
 
   static void _startSimulationLoop() {
-    _simulateTimer ??=
-        Timer.periodic(const Duration(milliseconds: 800), (_) async {
+    _simulateTimer ??= Timer.periodic(const Duration(milliseconds: 800), (
+      _,
+    ) async {
       if (_simulating || !_ready) return;
       _simulating = true;
 
@@ -484,14 +490,11 @@ class Bridge {
       _throwLastError(res);
     }
 
-    _eventCallbackPointer ??=
-        Pointer.fromFunction<_coreEventTrampolineC>(_onCoreEvent);
-
-    final cbRes = _coreSetEventCallback(
-      _ctx!,
-      _eventCallbackPointer!,
-      nullptr,
+    _eventCallbackPointer ??= Pointer.fromFunction<_coreEventTrampolineC>(
+      _onCoreEvent,
     );
+
+    final cbRes = _coreSetEventCallback(_ctx!, _eventCallbackPointer!, nullptr);
 
     if (cbRes != 0) {
       _throwLastError(cbRes);

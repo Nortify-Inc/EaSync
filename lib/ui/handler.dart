@@ -1,3 +1,11 @@
+/*!
+ * @file handler.dart
+ * @brief Export aggregator file for UI and bridge modules.
+ * @param No external parameters.
+ * @return Symbol exposure for simplified imports.
+ * @author Erick Radmann
+ */
+
 export 'package:flutter/material.dart';
 export 'package:google_fonts/google_fonts.dart';
 

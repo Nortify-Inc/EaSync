@@ -1,3 +1,11 @@
+/*!
+ * @file splash.dart
+ * @brief Initial loading screen and transition flow to home.
+ * @param context Flutter context used for route navigation.
+ * @return Splash widget and redirection flow.
+ * @author Erick Radmann
+ */
+
 import 'handler.dart';
 
 class Splash extends StatefulWidget {
@@ -16,7 +24,7 @@ class _SplashState extends State<Splash> {
 
   void _startSplash() {
     Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted && !Bridge.isReady) return;
+      if (!mounted || !Bridge.isReady) return;
 
       Navigator.pushReplacement(
         context,

@@ -1,3 +1,11 @@
+/**
+ * @file mock.cpp
+ * @brief Implementation of the simulated driver for testing and event emulation.
+ * @param uuid Identifier of the simulated device.
+ * @return Methods return true when local state is updated.
+ * @author Erick Radmann
+ */
+
 #include "mock.hpp"
 
 #include <thread>

@@ -1,6 +1,9 @@
 /**
  * @file core.cpp
  * @brief EaSync Core Runtime Implementation (Expanded +1000 lines version)
+ * @param core Pointer to the runtime context used by C API functions.
+ * @return API functions return CoreResult values or valid pointers per operation.
+ * @author Erick Radmann
  *
  * Responsibilities:
  * - Device registry

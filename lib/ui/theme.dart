@@ -1,3 +1,11 @@
+/*!
+ * @file theme.dart
+ * @brief Centralized palette and typography definitions for the EaSync UI.
+ * @param No external parameters.
+ * @return Utility classes with reusable static styles.
+ * @author Erick Radmann
+ */
+
 import 'handler.dart';
 
 class EaColor {
