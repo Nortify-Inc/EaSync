@@ -13,22 +13,24 @@
 
 namespace drivers {
 
-static std::string buildPayloadFromTemplate(
+static core::PayloadCommand buildCommandFromTemplate(
     const std::string& uuid,
     const std::string& capability,
     const std::string& valueJson,
     const std::string& fallbackJson
 ) {
-    std::string fromTemplate = core::PayloadService::instance().createPayload(
+    core::PayloadCommand fromTemplate = core::PayloadService::instance().createCommand(
         uuid,
         capability,
         valueJson
     );
 
-    if (!fromTemplate.empty())
+    if (!fromTemplate.payload.empty() || !fromTemplate.topic.empty())
         return fromTemplate;
 
-    return fallbackJson;
+    core::PayloadCommand fallback;
+    fallback.payload = fallbackJson;
+    return fallback;
 }
 
 ZigBeeDriver::ZigBeeDriver(){
@@ -98,13 +100,15 @@ bool ZigBeeDriver::disconnect(const std::string& uuid) {
 
 void ZigBeeDriver::publishCommand(
     const std::string& uuid,
-    const std::string& json
+    const std::string& json,
+    const std::string& topicOverride
 ) {
     if (!connected)
         return;
 
-    std::string topic =
-        "zigbee2mqtt/" + uuid + "/set";
+    std::string topic = topicOverride.empty()
+        ? "zigbee2mqtt/" + uuid + "/set"
+        : topicOverride;
 
     auto msg = mqtt::make_message(topic, json);
     msg->set_qos(1);
@@ -121,10 +125,8 @@ bool ZigBeeDriver::setPower(
        << (value ? "ON" : "OFF")
        << "\" }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "power", value ? "1" : "0", ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "power", value ? "1" : "0", ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -137,10 +139,8 @@ bool ZigBeeDriver::setBrightness(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "brightness", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "brightness", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -159,10 +159,8 @@ bool ZigBeeDriver::setColor(
        << "\"b\": " << b
        << " } }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "color", std::to_string(rgb), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "color", std::to_string(rgb), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -175,10 +173,8 @@ bool ZigBeeDriver::setTemperature(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "temperature", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "temperature", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -191,10 +187,8 @@ bool ZigBeeDriver::setTemperatureFridge(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "temperature_fridge", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "temperature_fridge", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -207,10 +201,8 @@ bool ZigBeeDriver::setTemperatureFreezer(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "temperature_freezer", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "temperature_freezer", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -223,10 +215,8 @@ bool ZigBeeDriver::setTime(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "time", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "time", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -239,10 +229,8 @@ bool ZigBeeDriver::setColorTemperature(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "colorTemperature", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "colorTemperature", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -255,10 +243,8 @@ bool ZigBeeDriver::setLock(
        << (value ? 1 : 0)
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "lock", value ? "1" : "0", ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "lock", value ? "1" : "0", ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -271,10 +257,8 @@ bool ZigBeeDriver::setMode(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "mode", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "mode", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 
@@ -287,10 +271,8 @@ bool ZigBeeDriver::setPosition(
        << value
        << " }";
 
-    publishCommand(
-        uuid,
-        buildPayloadFromTemplate(uuid, "position", std::to_string(value), ss.str())
-    );
+    auto command = buildCommandFromTemplate(uuid, "position", std::to_string(value), ss.str());
+    publishCommand(uuid, command.payload, command.topic);
     return true;
 }
 

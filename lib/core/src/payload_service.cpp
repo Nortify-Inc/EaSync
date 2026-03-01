@@ -29,6 +29,7 @@ struct DeviceProfile {
 };
 
 struct PayloadTemplate {
+    std::string topic;
     std::string payloadTemplate;
 };
 
@@ -287,10 +288,12 @@ void loadTemplatesLocked() {
                     continue;
 
                 std::string tpl = extractFieldObject(capObj, "template");
-                if (tpl.empty())
+                std::string topic = extractFieldString(capObj, "topic");
+                if (tpl.empty() && topic.empty())
                     continue;
 
                 PayloadTemplate entry;
+                entry.topic = topic;
                 entry.payloadTemplate = tpl;
 
                 gTemplates[makeTemplateKey(brand, model, cap)] = entry;
@@ -301,27 +304,45 @@ void loadTemplatesLocked() {
     gLoaded = true;
 }
 
-std::string findTemplatePayload(const std::string& brand,
-                                const std::string& model,
-                                const std::string& capability) {
+PayloadTemplate findTemplateEntry(const std::string& brand,
+                                  const std::string& model,
+                                  const std::string& capability) {
     auto it = gTemplates.find(makeTemplateKey(brand, model, capability));
     if (it != gTemplates.end())
-        return it->second.payloadTemplate;
+        return it->second;
 
-    // fallback: model-only lookup (brand-agnostic)
     std::string capNorm = normalize(capability);
     std::string modelNorm = normalize(model);
 
     for (const auto& pair : gTemplates) {
-        const std::string prefix = "|" + modelNorm + "|" + capNorm;
-        if (pair.first.size() >= prefix.size() &&
-            pair.first.compare(pair.first.size() - prefix.size(), prefix.size(), prefix) == 0)
+        const std::string suffix = "|" + modelNorm + "|" + capNorm;
+        if (pair.first.size() >= suffix.size() &&
+            pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0)
         {
-            return pair.second.payloadTemplate;
+            return pair.second;
         }
     }
 
-    return "";
+    return PayloadTemplate{};
+}
+
+core::PayloadCommand resolveCommand(PayloadTemplate entry,
+                                    const std::string& uuid,
+                                    const std::string& valueJson) {
+    if (entry.topic.empty() && entry.payloadTemplate.empty())
+        return core::PayloadCommand{};
+
+    replaceAll(entry.payloadTemplate, "\"{value}\"", valueJson);
+    replaceAll(entry.payloadTemplate, "{value}", valueJson);
+
+    replaceAll(entry.topic, "{uuid}", uuid);
+    replaceAll(entry.topic, "\"{value}\"", valueJson);
+    replaceAll(entry.topic, "{value}", valueJson);
+
+    core::PayloadCommand out;
+    out.topic = entry.topic;
+    out.payload = entry.payloadTemplate;
+    return out;
 }
 
 } // namespace
@@ -351,27 +372,38 @@ void PayloadService::unbindDevice(const std::string& uuid) {
     gDeviceProfiles.erase(uuid);
 }
 
-std::string PayloadService::createPayloadByModel(const std::string& brand,
-                                                 const std::string& model,
-                                                 const std::string& capability,
-                                                 const std::string& valueJson)
+std::string PayloadService::createPayload(const std::string& brand,
+                                          const std::string& model,
+                                          const std::string& capability,
+                                          const std::string& valueJson)
 {
-    ensureLoaded();
-
-    std::lock_guard<std::mutex> lock(gMutex);
-    std::string payload = findTemplatePayload(brand, model, capability);
-    if (payload.empty())
-        return "";
-
-    replaceAll(payload, "\"{value}\"", valueJson);
-    replaceAll(payload, "{value}", valueJson);
-
-    return payload;
+    return createCommand(brand, model, "", capability, valueJson).payload;
 }
 
 std::string PayloadService::createPayload(const std::string& uuid,
                                           const std::string& capability,
                                           const std::string& valueJson)
+{
+    return createCommand(uuid, capability, valueJson).payload;
+}
+
+PayloadCommand PayloadService::createCommand(const std::string& brand,
+                                             const std::string& model,
+                                             const std::string& uuid,
+                                             const std::string& capability,
+                                             const std::string& valueJson)
+{
+    ensureLoaded();
+
+    std::lock_guard<std::mutex> lock(gMutex);
+
+    PayloadTemplate entry = findTemplateEntry(brand, model, capability);
+    return resolveCommand(entry, uuid, valueJson);
+}
+
+PayloadCommand PayloadService::createCommand(const std::string& uuid,
+                                             const std::string& capability,
+                                             const std::string& valueJson)
 {
     ensureLoaded();
 
@@ -379,21 +411,15 @@ std::string PayloadService::createPayload(const std::string& uuid,
 
     auto it = gDeviceProfiles.find(uuid);
     if (it == gDeviceProfiles.end())
-        return "";
+        return PayloadCommand{};
 
-    std::string payload = findTemplatePayload(
+    PayloadTemplate entry = findTemplateEntry(
         it->second.brand,
         it->second.model,
         capability
     );
 
-    if (payload.empty())
-        return "";
-
-    replaceAll(payload, "\"{value}\"", valueJson);
-    replaceAll(payload, "{value}", valueJson);
-
-    return payload;
+    return resolveCommand(entry, uuid, valueJson);
 }
 
 } // namespace core

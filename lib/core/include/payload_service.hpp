@@ -12,6 +12,11 @@
 
 namespace core {
 
+struct PayloadCommand {
+    std::string topic;
+    std::string payload;
+};
+
 class PayloadService {
 public:
     static PayloadService& instance();
@@ -26,10 +31,20 @@ public:
                               const std::string& capability,
                               const std::string& valueJson);
 
-    std::string createPayloadByModel(const std::string& brand,
-                                     const std::string& model,
-                                     const std::string& capability,
-                                     const std::string& valueJson);
+    std::string createPayload(const std::string& brand,
+                              const std::string& model,
+                              const std::string& capability,
+                              const std::string& valueJson);
+
+    PayloadCommand createCommand(const std::string& uuid,
+                                 const std::string& capability,
+                                 const std::string& valueJson);
+
+    PayloadCommand createCommand(const std::string& brand,
+                                 const std::string& model,
+                                 const std::string& uuid,
+                                 const std::string& capability,
+                                 const std::string& valueJson);
 
 private:
     PayloadService() = default;

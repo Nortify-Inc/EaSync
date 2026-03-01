@@ -337,7 +337,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           'temperature_freezer',
           -14,
         );
-        return normalize(s.temperatureFreezer, min, max);
+        return 1 - normalize(s.temperatureFreezer, min, max);
 
       case CoreCapability.CORE_CAP_COLOR:
         return HSVColor.fromColor(Color(0xFF000000 | s.color)).value;
@@ -1482,14 +1482,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          SizedBox(height: 10),
+                          SizedBox(height: 15),
                           deviceAssetPath != null
                               ? ClipRRect(
                                   borderRadius: BorderRadius.circular(14),
                                   child: Image.asset(
                                     'assets/$deviceAssetPath',
-                                    width: 80,
-                                    height: 80,
+                                    width: 60,
+                                    height: 60,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, _, _) => Icon(
                                       _capIcon(cap),
