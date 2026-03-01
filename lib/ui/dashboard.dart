@@ -175,8 +175,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         animatedProgress[d.uuid] = progress;
 
         final color = _capColor(d, cap);
-        previousRingColorByDevice[d.uuid] =
-          ringColorByDevice[d.uuid] ?? color;
+        previousRingColorByDevice[d.uuid] = ringColorByDevice[d.uuid] ?? color;
         ringColorByDevice[d.uuid] = color;
 
         capIndexByDevice[d.uuid] = capIndex;
@@ -206,9 +205,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         final oldProgress = animatedProgress[uuid] ?? newProgress;
         final newRingColor = _capColor(device, cap);
         final oldRingColor = ringColorByDevice[uuid] ?? newRingColor;
-        final hitEdge = newProgress <= 0.000001 || newProgress >= 0.999999;
 
-        if ((newProgress - oldProgress).abs() > 0.001 || hitEdge) {
+        if ((newProgress - oldProgress).abs() > 0.001) {
           previousProgress[uuid] = oldProgress;
           animatedProgress[uuid] = newProgress;
         }
@@ -1450,7 +1448,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     final deviceAssetPath = Bridge.deviceAsset(device.uuid);
 
     final target = animatedProgress[device.uuid] ?? _capProgress(device, cap);
-    final syncDotToGradient = _capProgress(device, cap) <= 0.000001;
+    final syncDotToGradient = target <= 0.000001;
 
     final begin = previousProgress[device.uuid] ?? target;
 
@@ -1475,130 +1473,136 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 curve: Curves.easeOutSine,
                 builder: (_, animatedColor, child) {
                   final effectiveRingColor = animatedColor ?? ringColorTarget;
+                  final isTargetZero = target <= 0.000001;
+                  final dotOpacity = isTargetZero
+                      ? (animated / (_dotFadeOutThreshold * 2.0)).clamp(
+                          0.0,
+                          1.0,
+                        )
+                      : (animated > _dotFadeOutThreshold ? 1.0 : 0.0);
 
                   return RepaintBoundary(
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        TweenAnimationBuilder<double>(
-                          tween: Tween(
-                            end: animated > _dotFadeOutThreshold ? 1.0 : 0.0,
+                        CustomPaint(
+                          size: Size(size + 30, size + 30),
+                          painter: _RingPainter(
+                            ringColor: effectiveRingColor,
+                            progress: animated,
+                            showDot: true,
+                            dotOpacity: dotOpacity,
+                            syncDotToGradient: syncDotToGradient,
                           ),
-                          duration: const Duration(milliseconds: 180),
-                          curve: Curves.easeOutSine,
-                          builder: (_, dotOpacity, _) {
-                            return CustomPaint(
-                              size: Size(size + 30, size + 30),
-                              painter: _RingPainter(
-                                ringColor: effectiveRingColor,
-                                progress: animated,
-                                showDot: true,
-                                dotOpacity: dotOpacity,
-                                syncDotToGradient: syncDotToGradient,
-                              ),
-                            );
-                          },
                         ),
                         GestureDetector(
-                    onTap: () {
-                      _openDeviceControl(device);
-                    },
-                    onHorizontalDragStart: (d) {
-                      dragStartX = d.globalPosition.dx;
-                    },
-                    onHorizontalDragUpdate: (d) {
-                      dragDelta = d.globalPosition.dx - dragStartX;
-                    },
-                    onHorizontalDragEnd: (_) {
-                      if (dragDelta.abs() > 50) {
-                        _changeCap(device, dragDelta < 0 ? 1 : -1);
-                      }
-                    },
-                    child: Container(
-                      width: size,
-                      height: size,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: effectiveRingColor, width: 1.4),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          SizedBox(height: 15),
-                          deviceAssetPath != null
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(14),
-                                  child: Image.asset(
-                                    'assets/$deviceAssetPath',
-                                    width: 60,
-                                    height: 60,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, _, _) => Icon(
-                                      _capIcon(cap),
-                                      size: 28,
-                                      color: EaColor.fore,
-                                    ),
-                                  ),
-                                )
-                              : Icon(
-                                  _capIcon(cap),
-                                  size: 28,
-                                  color: EaColor.fore,
-                                ),
-                          Spacer(),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                ),
-                                width: cap != CoreCapability.CORE_CAP_COLOR
-                                    ? null
-                                    : 30,
-                                height: 30,
-                                alignment: Alignment.center,
-                                decoration: cap != CoreCapability.CORE_CAP_COLOR
-                                    ? BoxDecoration(
-                                        color: EaColor.back,
-                                        border: BoxBorder.all(
-                                          color: EaColor.fore,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      )
-                                    : BoxDecoration(
-                                        color: effectiveRingColor,
-                                        border: BoxBorder.all(
-                                          color: EaColor.fore,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                child: cap != CoreCapability.CORE_CAP_COLOR
-                                    ? Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            _capIcon(cap),
-                                            size: 20,
-                                            color: EaColor.secondaryFore,
-                                          ),
-                                          SizedBox(width: 3),
-                                          Text(
-                                            _capValue(device, cap),
-                                            style: EaText.secondary,
-                                          ),
-                                        ],
-                                      )
-                                    : null,
+                          onTap: () {
+                            _openDeviceControl(device);
+                          },
+                          onHorizontalDragStart: (d) {
+                            dragStartX = d.globalPosition.dx;
+                          },
+                          onHorizontalDragUpdate: (d) {
+                            dragDelta = d.globalPosition.dx - dragStartX;
+                          },
+                          onHorizontalDragEnd: (_) {
+                            if (dragDelta.abs() > 50) {
+                              _changeCap(device, dragDelta < 0 ? 1 : -1);
+                            }
+                          },
+                          child: Container(
+                            width: size,
+                            height: size,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: effectiveRingColor,
+                                width: 1.4,
                               ),
-                            ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                SizedBox(height: 15),
+                                deviceAssetPath != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.asset(
+                                          'assets/$deviceAssetPath',
+                                          width: 60,
+                                          height: 60,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, _, _) => Icon(
+                                            _capIcon(cap),
+                                            size: 28,
+                                            color: EaColor.fore,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        _capIcon(cap),
+                                        size: 28,
+                                        color: EaColor.fore,
+                                      ),
+                                Spacer(),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                      ),
+                                      width:
+                                          cap != CoreCapability.CORE_CAP_COLOR
+                                          ? null
+                                          : 30,
+                                      height: 30,
+                                      alignment: Alignment.center,
+                                      decoration:
+                                          cap != CoreCapability.CORE_CAP_COLOR
+                                          ? BoxDecoration(
+                                              color: EaColor.back,
+                                              border: BoxBorder.all(
+                                                color: EaColor.fore,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            )
+                                          : BoxDecoration(
+                                              color: effectiveRingColor,
+                                              border: BoxBorder.all(
+                                                color: EaColor.fore,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                      child:
+                                          cap != CoreCapability.CORE_CAP_COLOR
+                                          ? Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  _capIcon(cap),
+                                                  size: 20,
+                                                  color: EaColor.secondaryFore,
+                                                ),
+                                                SizedBox(width: 3),
+                                                Text(
+                                                  _capValue(device, cap),
+                                                  style: EaText.secondary,
+                                                ),
+                                              ],
+                                            )
+                                          : null,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 20),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ),
                       ],
                     ),
                   );
@@ -1648,7 +1652,7 @@ class _RingPainter extends CustomPainter {
 
     final glowPaint = Paint()
       ..shader = RadialGradient(
-        colors: [EaColor.background, EaColor.background],
+        colors: [EaColor.back, EaColor.background],
       ).createShader(Rect.fromCircle(center: center, radius: radius * 1.2));
 
     canvas.drawCircle(center, radius * 1.2, glowPaint);
@@ -1685,7 +1689,6 @@ class _RingPainter extends CustomPainter {
         if (syncDotToGradient) {
           dotBaseColor = EaColor.background;
         }
-
       } else {
         const totalSegments = 720;
         final visibleSegments = max(1, (totalSegments * normalized).round());
@@ -1694,17 +1697,18 @@ class _RingPainter extends CustomPainter {
 
         if (syncDotToGradient) {
           final dotT = (sweep / end).clamp(0.0, 1.0);
-          dotBaseColor = Color.lerp(EaColor.background, ringColor, dotT) ?? ringColor;
+          dotBaseColor =
+              Color.lerp(EaColor.background, ringColor, dotT) ?? ringColor;
         }
 
         for (int i = 0; i < visibleSegments; i++) {
           final t = syncDotToGradient
               ? ((segmentSweep * (i + 1)) / end).clamp(0.0, 1.0)
               : (visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1));
-          
+
           final segmentColor =
               Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
-          
+
           final segmentPaint = Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = ringWidth
