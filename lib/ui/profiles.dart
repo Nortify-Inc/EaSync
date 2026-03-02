@@ -81,6 +81,54 @@ class _ProfilesState extends State<Profiles>
     super.dispose();
   }
 
+  void _showTopErrorSnack(String message) {
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    final entry = OverlayEntry(
+      builder: (_) {
+        return Positioned(
+          left: 12,
+          right: 12,
+          top: 30,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: EaColor.back,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaColor.fore),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: EaText.secondary.copyWith(
+                        color: EaColor.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () {
+      entry.remove();
+    });
+  }
+
   void _loadDevices() {
     try {
       devices = Bridge.listDevices();
@@ -190,9 +238,7 @@ class _ProfilesState extends State<Profiles>
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      _showTopErrorSnack(e.toString());
     }
   }
 
