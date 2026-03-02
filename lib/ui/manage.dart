@@ -1363,6 +1363,22 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     }
   }
 
+  IconData _protocolIcon(String protocol) {
+    switch (protocol.toLowerCase()) {
+      case 'mqtt':
+        return Icons.compare_arrows_rounded;
+      case 'wifi':
+        return Icons.wifi_rounded;
+      case 'zigbee':
+        return Icons.rotate_90_degrees_cw_rounded;
+      case 'ble':
+        return Icons.bluetooth_rounded;
+      case 'mock':
+      default:
+        return Icons.memory;
+    }
+  }
+
   void _showError(String msg) {
     final overlay = Overlay.of(context, rootOverlay: true);
 
@@ -1529,8 +1545,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(
-                                    Icons.memory,
+                                  Icon(
+                                    _protocolIcon(t.protocol),
                                     size: 20,
                                     color: EaColor.fore,
                                   ),
