@@ -320,6 +320,15 @@ CoreResult core_get_state(
     CoreDeviceState* outState
 );
 
+/**
+ * @brief Check whether a registered device is currently available.
+ */
+CoreResult core_is_device_available(
+    CoreContext* core,
+    const char* uuid,
+    bool* outAvailable
+);
+
 
 /**
  * @brief Set power state.
@@ -429,6 +438,16 @@ CoreResult core_set_position(
     CoreContext* core,
     const char* uuid,
     float value
+);
+
+/**
+ * @brief Send Wi-Fi credentials to a Wi-Fi device.
+ */
+CoreResult core_provision_wifi(
+    CoreContext* core,
+    const char* uuid,
+    const char* ssid,
+    const char* password
 );
 
 /**

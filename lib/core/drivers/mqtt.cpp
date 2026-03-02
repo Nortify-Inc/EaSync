@@ -11,6 +11,9 @@
 
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
 
 namespace drivers {
 
@@ -34,27 +37,43 @@ static core::PayloadCommand buildCommandFromTemplate(
     return fallback;
 }
 
-MqttDriver::MqttDriver() {
-    client = std::make_unique<mqtt::async_client>(brokerUrl, clientId);
-    client->set_callback(*this);
-}
+MqttDriver::MqttDriver() {}
 
 bool MqttDriver::init() {
+    std::vector<std::string> candidates;
+
+    if (const char* env = std::getenv("EASYNC_MQTT_BROKER")) {
+        if (std::strlen(env) > 0)
+            candidates.emplace_back(env);
+    }
+
+    candidates.push_back(brokerUrl);
+    candidates.push_back("tcp://127.0.0.1:1883");
+    candidates.push_back("tcp://mosquitto:1883");
+    candidates.push_back("tcp://homeassistant.local:1883");
+    candidates.push_back("tcp://192.168.1.1:1883");
+
     mqtt::connect_options opts;
 
-    try {
-        client->connect(opts)->wait();
-        connected = true;
+    for (const auto& candidate : candidates) {
+        try {
+            auto nextClient = std::make_unique<mqtt::async_client>(candidate, clientId);
+            nextClient->set_callback(*this);
+            nextClient->connect(opts)->wait();
+            nextClient->subscribe("easync/+/state", 1)->wait();
+            nextClient->start_consuming();
 
-        client->subscribe("easync/+/state", 1)->wait();
-        client->start_consuming();
+            brokerUrl = candidate;
+            client = std::move(nextClient);
+            connected = true;
+            return true;
+        }
+        catch (...) {
+            connected = false;
+        }
+    }
 
-        return true;
-    }
-    catch (...) {
-        connected = false;
-        return false;
-    }
+    return false;
 }
 
 void MqttDriver::setEventCallback(
@@ -240,7 +259,7 @@ bool MqttDriver::getState(const std::string& uuid, CoreDeviceState& outState) {
 
 bool MqttDriver::isAvailable(const std::string& uuid) {
     std::lock_guard<std::mutex> lock(mutex);
-    return states.count(uuid) > 0;
+    return connected && states.count(uuid) > 0;
 }
 
 void MqttDriver::publishCommand(
@@ -248,7 +267,7 @@ void MqttDriver::publishCommand(
     const std::string& json,
     const std::string& topicOverride
 ) {
-    if (!connected)
+    if (!connected || !client)
         return;
 
     std::string topic = topicOverride.empty()

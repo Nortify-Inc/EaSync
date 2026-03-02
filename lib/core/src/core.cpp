@@ -679,6 +679,40 @@ CoreResult core_get_state(CoreContext* core, const char* uuid, CoreDeviceState* 
     return CORE_OK;
 }
 
+CoreResult core_is_device_available(
+    CoreContext* core,
+    const char* uuid,
+    bool* outAvailable
+){
+    if (!core || !uuid || !outAvailable) {
+        setError(core, "Invalid parameters to core_is_device_available");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized)
+            return CORE_NOT_INITIALIZED;
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        driver = it->second.driver;
+    }
+
+    if (!driver) {
+        *outAvailable = false;
+        return CORE_ERROR;
+    }
+
+    *outAvailable = driver->isAvailable(uuid);
+    return CORE_OK;
+}
+
 /**
  * @brief Set power on/off for a device.
  *
@@ -1118,6 +1152,50 @@ CoreResult core_set_position(CoreContext* core, const char* uuid, float value){
 
     if (!driver->setPosition(uuid, value))
         return CORE_ERROR;
+
+    return CORE_OK;
+}
+
+CoreResult core_provision_wifi(
+    CoreContext* core,
+    const char* uuid,
+    const char* ssid,
+    const char* password
+){
+    if (!core || !uuid || !ssid || !password) {
+        setError(core, "Invalid parameters to core_provision_wifi");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    if (std::strlen(ssid) == 0 || std::strlen(password) < 8) {
+        setError(core, "Invalid Wi-Fi credentials");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized)
+            return CORE_NOT_INITIALIZED;
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end())
+            return CORE_NOT_FOUND;
+
+        if (it->second.protocol != CORE_PROTOCOL_WIFI) {
+            setError(core, "Wi-Fi provisioning is only supported for Wi-Fi devices");
+            return CORE_NOT_SUPPORTED;
+        }
+
+        driver = it->second.driver;
+    }
+
+    if (!driver || !driver->provisionWifi(uuid, ssid, password)) {
+        setError(core, "Failed to provision Wi-Fi credentials");
+        return CORE_ERROR;
+    }
 
     return CORE_OK;
 }

@@ -1472,6 +1472,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 duration: const Duration(milliseconds: 360),
                 curve: Curves.easeOutSine,
                 builder: (_, animatedColor, child) {
+                  
                   final effectiveRingColor = animatedColor ?? ringColorTarget;
                   final isTargetZero = target <= 0.000001;
                   final fadeBase = begin <= 0.000001 ? 1.0 : begin;

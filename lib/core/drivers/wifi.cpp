@@ -11,6 +11,7 @@
 #include <curl/curl.h>
 #include <sstream>
 #include <functional>
+#include <vector>
 
 namespace drivers {
 
@@ -71,6 +72,41 @@ bool WifiDriver::disconnect(const std::string& uuid) {
     deviceIps.erase(uuid);
 
     return true;
+}
+
+bool WifiDriver::provisionWifi(
+    const std::string& uuid,
+    const std::string& ssid,
+    const std::string& password
+) {
+    if (ssid.empty() || password.empty())
+        return false;
+
+    std::vector<std::string> ips;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (deviceIps.count(uuid))
+            ips.push_back(deviceIps[uuid]);
+    }
+
+    // Common SoftAP/default provisioning gateway addresses.
+    ips.push_back("192.168.4.1");
+    ips.push_back("192.168.0.1");
+    ips.push_back("192.168.1.1");
+
+    std::stringstream ss;
+    ss << "{ \"ssid\": \"" << ssid << "\", \"password\": \"" << password << "\" }";
+
+    for (const auto& ip : ips) {
+        if (httpPost("http://" + ip + "/provision", ss.str()))
+            return true;
+
+        if (httpPost("http://" + ip + "/wifi/provision", ss.str()))
+            return true;
+    }
+
+    return false;
 }
 
 bool WifiDriver::setPower(const std::string& uuid, bool value) {
