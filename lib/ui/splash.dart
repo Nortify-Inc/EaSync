@@ -67,8 +67,11 @@ class _SplashState extends State<Splash> {
   Widget _brand() {
     return Row(
       children: [
-        Icon(Icons.blur_on, color: EaColor.fore, size: 28),
-        Text("Powered by Nortify", style: EaText.secondaryTranslucent),
+        Text("Powered by", style: EaText.secondaryTranslucent),
+        SizedBox(width: 10),
+        Image(image: const AssetImage("assets/logo.png"), width: 32, height: 32),
+        SizedBox(width: 6),
+        Text("Nortify", style: EaText.primary),
       ],
     );
   }
