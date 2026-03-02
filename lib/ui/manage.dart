@@ -12,6 +12,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
 
@@ -700,11 +701,16 @@ class _DeviceEditor extends StatefulWidget {
 }
 
 class _DeviceEditorState extends State<_DeviceEditor> {
+  static const String _prefRememberWifi = 'setup.wifi.remember';
+  static const String _prefWifiSsid = 'setup.wifi.last.ssid';
+  static const String _prefWifiPassword = 'setup.wifi.last.password';
+
   late TextEditingController nameController;
   late TextEditingController searchController;
   late TextEditingController wifiSsidController;
   late TextEditingController wifiPasswordController;
   bool apConfirmed = false;
+  bool rememberWifiCredentials = true;
   DeviceTemplate? selectedTemplate;
 
   List<DeviceTemplate> templates = [];
@@ -735,7 +741,34 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
     searchController.addListener(_filterTemplates);
 
+    _loadRememberWifiDefaults();
     _loadTemplates();
+  }
+
+  Future<void> _loadRememberWifiDefaults() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    rememberWifiCredentials = prefs.getBool(_prefRememberWifi) ?? true;
+
+    if (rememberWifiCredentials) {
+      wifiSsidController.text = prefs.getString(_prefWifiSsid) ?? '';
+      wifiPasswordController.text = prefs.getString(_prefWifiPassword) ?? '';
+    }
+
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _persistRememberWifiSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefRememberWifi, rememberWifiCredentials);
+
+    if (rememberWifiCredentials) {
+      await prefs.setString(_prefWifiSsid, wifiSsidController.text.trim());
+      await prefs.setString(_prefWifiPassword, wifiPasswordController.text);
+    } else {
+      await prefs.remove(_prefWifiSsid);
+      await prefs.remove(_prefWifiPassword);
+    }
   }
 
   @override
@@ -830,6 +863,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
       if (isWifi) {
         Bridge.provisionWifi(uuid: uuid, ssid: ssid, password: password);
+        _persistRememberWifiSettings();
       } else {
         final connected = Bridge.establishProtocolConnection(
           uuid: uuid,
@@ -1041,8 +1075,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                               setState(() {
                                 selectedTemplate = t;
                                 if (!_isWifiTemplate(t)) {
-                                  wifiSsidController.clear();
-                                  wifiPasswordController.clear();
+                                  if (!rememberWifiCredentials) {
+                                    wifiSsidController.clear();
+                                    wifiPasswordController.clear();
+                                  }
                                   apConfirmed = false;
                                 }
                               });
@@ -1124,14 +1160,38 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         "Wi-Fi Provisioning",
                         style: EaText.primary.copyWith(fontSize: 14),
                       ),
+                      SwitchListTile(
+                        value: rememberWifiCredentials,
+                        onChanged: (value) {
+                          setState(() => rememberWifiCredentials = value);
+                        },
+                        contentPadding: EdgeInsets.zero,
+                        activeThumbColor: EaColor.fore,
+                        title: Text(
+                          "Remember Wi-Fi credentials",
+                          style: EaText.secondary.copyWith(
+                            color: EaColor.textSecondary,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       Text(
-                        "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your home Wi-Fi credentials.",
+                        "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your Wi-Fi credentials.",
                         style: EaText.secondary.copyWith(
                           color: EaColor.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _openNetworkSettings,
+                        icon: const Icon(Icons.wifi),
+                        label: const Text("Open Network Settings"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: EaColor.fore,
+                          side: const BorderSide(color: EaColor.fore),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
                       CheckboxListTile(
                         value: apConfirmed,
                         onChanged: (value) {
@@ -1198,16 +1258,6 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                             borderRadius: BorderRadius.circular(12),
                             borderSide: const BorderSide(color: EaColor.fore),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: _openNetworkSettings,
-                        icon: const Icon(Icons.wifi),
-                        label: const Text("Open Network Settings"),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: EaColor.fore,
-                          side: const BorderSide(color: EaColor.fore),
                         ),
                       ),
                     ],
