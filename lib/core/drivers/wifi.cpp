@@ -311,22 +311,30 @@ bool WifiDriver::getState(
     }
 
     std::string response;
-
-    if (httpGet("http://" + ip + "/state", response)) {
+    const bool ok = httpGet("http://" + ip + "/state", response);
+    if (ok)
         parseState(uuid, response);
-    }
 
     {
         std::lock_guard<std::mutex> lock(mutex);
         outState = states[uuid];
     }
 
-    return true;
+    return ok;
 }
 
 bool WifiDriver::isAvailable(const std::string& uuid) {
-    std::lock_guard<std::mutex> lock(mutex);
-    return states.count(uuid) > 0;
+    std::string ip;
+
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        if (!states.count(uuid))
+            return false;
+        ip = deviceIps[uuid];
+    }
+
+    std::string response;
+    return httpGet("http://" + ip + "/state", response);
 }
 
 bool WifiDriver::httpPost(

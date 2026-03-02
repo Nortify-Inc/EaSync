@@ -215,12 +215,18 @@ class _ProfilesState extends State<Profiles>
       padding: const EdgeInsets.all(16),
       child: SizedBox(
         width: double.infinity,
-        child: FloatingActionButton.extended(
-          heroTag: "profilesFab",
-          backgroundColor: EaColor.fore,
+        child: ElevatedButton.icon(
           onPressed: () => _openEditor(),
-          icon: const Icon(Icons.add, color: Colors.black),
+          icon: const Icon(Icons.add),
           label: Text("New profile", style: EaText.primaryBack),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: EaColor.fore,
+            foregroundColor: Colors.black,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
         ),
       ),
     );

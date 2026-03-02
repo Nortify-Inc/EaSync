@@ -171,12 +171,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         final cap = d.capabilities[capIndex];
 
         final progress = _capProgress(d, cap);
-        previousProgress[d.uuid] = animatedProgress[d.uuid] ?? progress;
+        final firstLoadForDevice = !initializedDevices.contains(d.uuid);
+        previousProgress[d.uuid] = firstLoadForDevice
+            ? 0.0
+            : (animatedProgress[d.uuid] ?? progress);
         animatedProgress[d.uuid] = progress;
 
         final color = _capColor(d, cap);
         previousRingColorByDevice[d.uuid] = ringColorByDevice[d.uuid] ?? color;
         ringColorByDevice[d.uuid] = color;
+        initializedDevices.add(d.uuid);
 
         capIndexByDevice[d.uuid] = capIndex;
       }
