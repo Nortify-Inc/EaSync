@@ -68,18 +68,7 @@ class _SplashState extends State<Splash> {
     return Row(
       children: [
         Icon(Icons.blur_on, color: EaColor.fore, size: 28),
-
-        const SizedBox(width: 8),
-
-        Text("EaSync", style: EaText.primary),
-
-        const SizedBox(width: 8),
-
-        Padding(
-          padding: const EdgeInsets.only(top: 18),
-
-          child: Text("Powered by Nortify", style: EaText.secondaryTranslucent),
-        ),
+        Text("Powered by Nortify", style: EaText.secondaryTranslucent),
       ],
     );
   }
@@ -112,7 +101,7 @@ class _SplashState extends State<Splash> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Smart\nControl",
+                  "EaSync",
                   style: EaText.primary.copyWith(
                     fontSize: 48,
                     height: 1.05,

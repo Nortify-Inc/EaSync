@@ -58,6 +58,23 @@ public:
 
 
     /**
+     * @brief Provision Wi-Fi credentials to a device (optional).
+     *
+     * Drivers that do not use Wi-Fi can keep the default behavior.
+     */
+    virtual bool provisionWifi(
+        const std::string& uuid,
+        const std::string& ssid,
+        const std::string& password
+    ) {
+        (void)uuid;
+        (void)ssid;
+        (void)password;
+        return false;
+    }
+
+
+    /**
      * @brief Set power.
      */
     virtual bool setPower(

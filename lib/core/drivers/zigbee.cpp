@@ -10,6 +10,9 @@
 #include "payload_service.hpp"
 
 #include <sstream>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
 
 namespace drivers {
 
@@ -45,25 +48,39 @@ ZigBeeDriver::~ZigBeeDriver() {
 }
 
 bool ZigBeeDriver::init() {
+    std::vector<std::string> candidates;
 
-    client = std::make_unique<mqtt::async_client>(
-        brokerUrl,
-        clientId
-    );
+    if (const char* env = std::getenv("EASYNC_ZIGBEE_BROKER")) {
+        if (std::strlen(env) > 0)
+            candidates.emplace_back(env);
+    }
 
-    client->set_callback(*this);
+    candidates.push_back(brokerUrl);
+    candidates.push_back("tcp://127.0.0.1:1883");
+    candidates.push_back("tcp://mosquitto:1883");
+    candidates.push_back("tcp://homeassistant.local:1883");
+    candidates.push_back("tcp://192.168.1.1:1883");
 
     mqtt::connect_options opts;
 
-    try {
-        client->connect(opts)->wait();
-        client->subscribe("zigbee2mqtt/+/state", 1)->wait();
-        connected = true;
-        return true;
+    for (const auto& candidate : candidates) {
+        try {
+            auto nextClient = std::make_unique<mqtt::async_client>(candidate, clientId);
+            nextClient->set_callback(*this);
+            nextClient->connect(opts)->wait();
+            nextClient->subscribe("zigbee2mqtt/+/state", 1)->wait();
+
+            brokerUrl = candidate;
+            client = std::move(nextClient);
+            connected = true;
+            return true;
+        }
+        catch (...) {
+            connected = false;
+        }
     }
-    catch (...) {
-        return false;
-    }
+
+    return false;
 }
 
 void ZigBeeDriver::setEventCallback(
@@ -103,7 +120,7 @@ void ZigBeeDriver::publishCommand(
     const std::string& json,
     const std::string& topicOverride
 ) {
-    if (!connected)
+    if (!connected || !client)
         return;
 
     std::string topic = topicOverride.empty()
@@ -293,7 +310,7 @@ bool ZigBeeDriver::isAvailable(
     const std::string& uuid
 ) {
     std::lock_guard<std::mutex> lock(mutex);
-    return states.count(uuid) > 0;
+    return connected && states.count(uuid) > 0;
 }
 
 void ZigBeeDriver::connection_lost(

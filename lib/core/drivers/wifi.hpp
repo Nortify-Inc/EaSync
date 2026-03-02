@@ -26,6 +26,11 @@ public:
 
     bool connect(const std::string& uuid) override;
     bool disconnect(const std::string& uuid) override;
+    bool provisionWifi(
+        const std::string& uuid,
+        const std::string& ssid,
+        const std::string& password
+    ) override;
 
     bool setPower(const std::string& uuid, bool value) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;

@@ -11,6 +11,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:app_settings/app_settings.dart';
 
 import 'handler.dart';
 
@@ -137,6 +138,10 @@ class _ManageState extends State<Manage> {
     try {
       final list = Bridge.listDevices();
 
+      for (final d in list) {
+        Bridge.establishProtocolConnection(uuid: d.uuid, protocol: d.protocol);
+      }
+
       setState(() {
         devices = list;
         filteredDevices = list;
@@ -240,6 +245,78 @@ class _ManageState extends State<Manage> {
               ),
               const SizedBox(height: 12),
               Text(
+                'Connection',
+                style: EaText.secondary.copyWith(
+                  color: EaColor.fore,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                Bridge.connectionLabel(device.uuid),
+                style: EaText.secondary.copyWith(
+                  color: EaColor.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _retryConnection(device),
+                    icon: const Icon(Icons.sync),
+                    label: const Text('Retry connection'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: EaColor.fore,
+                      side: const BorderSide(color: EaColor.fore),
+                    ),
+                  ),
+                  if (device.protocol == CoreProtocol.CORE_PROTOCOL_WIFI)
+                    OutlinedButton.icon(
+                      onPressed: () => _retryWifiProvisioning(device),
+                      icon: const Icon(Icons.wifi),
+                      label: const Text('Retry provisioning'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: EaColor.fore,
+                        side: const BorderSide(color: EaColor.fore),
+                      ),
+                    ),
+                ],
+              ),
+              if (device.protocol == CoreProtocol.CORE_PROTOCOL_WIFI) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Provisioning',
+                  style: EaText.secondary.copyWith(
+                    color: EaColor.fore,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  Bridge.wifiProvisioningLabel(device.uuid),
+                  style: EaText.secondary.copyWith(
+                    color: EaColor.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                if ((Bridge.wifiProvisioningSsid(device.uuid) ?? '')
+                    .trim()
+                    .isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'SSID: ${Bridge.wifiProvisioningSsid(device.uuid)}',
+                    style: EaText.secondary.copyWith(
+                      color: EaColor.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 12),
+              Text(
                 'Capabilities',
                 style: EaText.secondary.copyWith(color: EaColor.fore),
               ),
@@ -296,6 +373,112 @@ class _ManageState extends State<Manage> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Device removed')));
+      }
+      _loadDevices();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  void _retryConnection(DeviceInfo device) {
+    final ok = Bridge.establishProtocolConnection(
+      uuid: device.uuid,
+      protocol: device.protocol,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Connection established for ${device.name}'
+                : 'Unable to establish connection for ${device.name}',
+          ),
+        ),
+      );
+    }
+    _loadDevices();
+  }
+
+  Future<void> _retryWifiProvisioning(DeviceInfo device) async {
+    final ssidController = TextEditingController(
+      text: Bridge.wifiProvisioningSsid(device.uuid) ?? '',
+    );
+    final passwordController = TextEditingController();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: EaColor.back,
+          title: Text('Retry Wi-Fi provisioning', style: EaText.primary),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: ssidController,
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                decoration: InputDecoration(
+                  labelText: 'SSID',
+                  labelStyle: EaText.secondary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  labelStyle: EaText.secondary,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: EaText.secondary),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Provision'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      ssidController.dispose();
+      passwordController.dispose();
+      return;
+    }
+
+    final ssid = ssidController.text.trim();
+    final password = passwordController.text;
+
+    ssidController.dispose();
+    passwordController.dispose();
+
+    if (ssid.isEmpty || password.length < 8) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid SSID/password.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      Bridge.provisionWifi(uuid: device.uuid, ssid: ssid, password: password);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Wi-Fi provisioned successfully.')),
+        );
       }
       _loadDevices();
     } catch (e) {
@@ -433,6 +616,9 @@ class _ManageState extends State<Manage> {
                     children: [
                       if (d.brand.trim().isNotEmpty) _chip(d.brand),
                       if (d.model.trim().isNotEmpty) _chip(d.model),
+                      _chip(Bridge.connectionLabel(d.uuid)),
+                      if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI)
+                        _chip(Bridge.wifiProvisioningLabel(d.uuid)),
                       ...d.capabilities.map((c) => _chip(_capLabel(c))),
                     ],
                   ),
@@ -516,6 +702,9 @@ class _DeviceEditor extends StatefulWidget {
 class _DeviceEditorState extends State<_DeviceEditor> {
   late TextEditingController nameController;
   late TextEditingController searchController;
+  late TextEditingController wifiSsidController;
+  late TextEditingController wifiPasswordController;
+  bool apConfirmed = false;
   DeviceTemplate? selectedTemplate;
 
   List<DeviceTemplate> templates = [];
@@ -537,6 +726,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
     nameController = TextEditingController();
     searchController = TextEditingController();
+    wifiSsidController = TextEditingController();
+    wifiPasswordController = TextEditingController();
 
     if (widget.device != null) {
       nameController.text = widget.device!.name;
@@ -551,6 +742,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   void dispose() {
     nameController.dispose();
     searchController.dispose();
+    wifiSsidController.dispose();
+    wifiPasswordController.dispose();
     super.dispose();
   }
 
@@ -587,6 +780,27 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       return;
     }
 
+    final isWifi = _isWifiTemplate(selectedTemplate);
+    final ssid = wifiSsidController.text.trim();
+    final password = wifiPasswordController.text;
+
+    if (isWifi) {
+      if (!apConfirmed) {
+        _showError("Confirme a conexão com o Access Point do dispositivo.");
+        return;
+      }
+
+      if (ssid.isEmpty) {
+        _showError("Informe o SSID da rede doméstica.");
+        return;
+      }
+
+      if (password.trim().isEmpty || password.length < 8) {
+        _showError("Informe a senha do Wi-Fi (mínimo 8 caracteres).");
+        return;
+      }
+    }
+
     final name = nameController.text.trim().isEmpty
         ? "${selectedTemplate!.brand} ${selectedTemplate!.model}"
         : nameController.text.trim();
@@ -598,11 +812,12 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       final modeLabels = rawModes is List
           ? rawModes.map((e) => e.toString()).toList()
           : null;
+      final protocol = _mapProtocol(selectedTemplate!.protocol);
 
       Bridge.registerDevice(
         uuid: uuid,
         name: name,
-        protocol: _mapProtocol(selectedTemplate!.protocol),
+        protocol: protocol,
         capabilities: selectedTemplate!.capabilities
             .map(_mapCapability)
             .toList(),
@@ -613,9 +828,75 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         assetPath: selectedTemplate!.asset,
       );
 
+      if (isWifi) {
+        Bridge.provisionWifi(uuid: uuid, ssid: ssid, password: password);
+      } else {
+        final connected = Bridge.establishProtocolConnection(
+          uuid: uuid,
+          protocol: protocol,
+        );
+
+        if (!connected) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Device added. Connection will be retried automatically in background.',
+                ),
+              ),
+            );
+          }
+        }
+      }
+
       widget.onSaved();
     } catch (e) {
       _showError(e.toString());
+    }
+  }
+
+  bool _isWifiTemplate(DeviceTemplate? template) {
+    if (template == null) return false;
+    return _mapProtocol(template.protocol) == CoreProtocol.CORE_PROTOCOL_WIFI;
+  }
+
+  Future<void> _openNetworkSettings() async {
+    try {
+      if (Platform.isAndroid) {
+        await AppSettings.openAppSettings(type: AppSettingsType.wifi);
+        return;
+      }
+
+      if (Platform.isIOS) {
+        await AppSettings.openAppSettings(type: AppSettingsType.settings);
+        return;
+      }
+
+      if (Platform.isWindows) {
+        await Process.run("start", ["ms-settings:network"], runInShell: true);
+        return;
+      }
+
+      if (Platform.isLinux) {
+        await Process.run("nm-connection-editor", [], runInShell: true);
+        return;
+      }
+
+      if (Platform.isMacOS) {
+        await Process.run(
+          "open",
+          ["x-apple.systempreferences:com.apple.NetworkSettings"],
+          runInShell: true,
+        );
+        return;
+      }
+
+      _showError(
+        "Abertura automática das configurações de rede não é suportada neste sistema.",
+      );
+
+    } catch (_) {
+      _showError("Não foi possível abrir as configurações de rede.");
     }
   }
 
@@ -757,7 +1038,14 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
                           return InkWell(
                             onTap: () {
-                              setState(() => selectedTemplate = t);
+                              setState(() {
+                                selectedTemplate = t;
+                                if (!_isWifiTemplate(t)) {
+                                  wifiSsidController.clear();
+                                  wifiPasswordController.clear();
+                                  apConfirmed = false;
+                                }
+                              });
                             },
                             child: Container(
                               padding: const EdgeInsets.all(12),
@@ -819,6 +1107,114 @@ class _DeviceEditorState extends State<_DeviceEditor> {
               ),
 
               const SizedBox(height: 12),
+
+              if (_isWifiTemplate(selectedTemplate)) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: EaColor.fore.withAlpha(18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: EaColor.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Wi-Fi Provisioning",
+                        style: EaText.primary.copyWith(fontSize: 14),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your home Wi-Fi credentials.",
+                        style: EaText.secondary.copyWith(
+                          color: EaColor.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      CheckboxListTile(
+                        value: apConfirmed,
+                        onChanged: (value) {
+                          setState(() => apConfirmed = value ?? false);
+                        },
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        activeColor: EaColor.fore,
+                        title: Text(
+                          "I am already connected to the device's Access Point",
+                          style: EaText.secondary.copyWith(
+                            color: EaColor.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: wifiSsidController,
+                        cursorColor: EaColor.fore,
+                        style: EaText.secondary.copyWith(
+                          color: EaColor.textSecondary,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: "Network Name/SSID",
+                          labelStyle: EaText.secondary,
+                          filled: true,
+                          fillColor: EaColor.back,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.fore),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: wifiPasswordController,
+                        obscureText: true,
+                        cursorColor: EaColor.fore,
+                        style: EaText.secondary.copyWith(
+                          color: EaColor.textSecondary,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: "Network Password",
+                          labelStyle: EaText.secondary,
+                          filled: true,
+                          fillColor: EaColor.back,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.border),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: EaColor.fore),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _openNetworkSettings,
+                        icon: const Icon(Icons.wifi),
+                        label: const Text("Open Network Settings"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: EaColor.fore,
+                          side: const BorderSide(color: EaColor.fore),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               TextField(
                 controller: nameController,

@@ -190,6 +190,11 @@ typedef _coreGetStateC =
 typedef _coreGetStateDart =
     int Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>);
 
+typedef _coreIsDeviceAvailableC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
+typedef _coreIsDeviceAvailableDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
+
 typedef _coreRegisterDeviceC =
     Int32 Function(
       Pointer<Void>,
@@ -281,6 +286,11 @@ typedef _coreSetPositionC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Float);
 typedef _coreSetPositionDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
 
+typedef _coreProvisionWifiC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+typedef _coreProvisionWifiDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
@@ -320,6 +330,17 @@ final _coreListDevicesDart _coreListDevices = coreLib
 
 final _coreGetStateDart _coreGetState = coreLib
     .lookupFunction<_coreGetStateC, _coreGetStateDart>('core_get_state');
+
+final _coreIsDeviceAvailableDart? _coreIsDeviceAvailable = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreIsDeviceAvailableC, _coreIsDeviceAvailableDart>(
+          'core_is_device_available',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
 
 final _coreSetPowerDart _coreSetPower = coreLib
     .lookupFunction<_coreSetPowerC, _coreSetPowerDart>('core_set_power');
@@ -388,6 +409,16 @@ final _coreSetPositionDart _coreSetPosition = coreLib
       'core_set_position',
     );
 
+final _coreProvisionWifiDart? _coreProvisionWifi = (() {
+  try {
+    return coreLib.lookupFunction<_coreProvisionWifiC, _coreProvisionWifiDart>(
+      'core_provision_wifi',
+    );
+  } catch (_) {
+    return null;
+  }
+})();
+
 final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
     .lookupFunction<_coreSetEventCallbackC, _coreSetEventCallbackDart>(
       'core_set_event_callback',
@@ -444,6 +475,22 @@ class CoreEventData {
   });
 }
 
+class WifiProvisioningState {
+  static const String unprovisioned = 'unprovisioned';
+  static const String apConnected = 'ap_connected';
+  static const String homeWifiSent = 'home_wifi_sent';
+  static const String online = 'online';
+  static const String failed = 'failed';
+}
+
+class ProtocolConnectionState {
+  static const String unknown = 'unknown';
+  static const String connecting = 'connecting';
+  static const String connected = 'connected';
+  static const String disconnected = 'disconnected';
+  static const String failed = 'failed';
+}
+
 String _readFixedString(Array<Int8> array, int maxLen) {
   final bytes = <int>[];
 
@@ -476,6 +523,10 @@ class Bridge {
   static final Map<String, List<String>> _modeLabelsByDevice = {};
   static final Map<String, Map<String, dynamic>> _constraintsByDevice = {};
   static final Map<String, String> _assetByDevice = {};
+  static final Map<String, String> _wifiProvisioningByDevice = {};
+  static final Map<String, String> _wifiSsidByDevice = {};
+  static final Map<String, String> _protocolConnectionByDevice = {};
+  static final Map<String, int> _protocolByDevice = {};
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -486,6 +537,7 @@ class Bridge {
   static Pointer<NativeFunction<_coreEventTrampolineC>>? _eventCallbackPointer;
 
   static Timer? _simulateTimer;
+  static Timer? _reconnectTimer;
   static bool _simulating = false;
 
   static Stream<String> get onStateChanged => _stateController.stream;
@@ -519,6 +571,15 @@ class Bridge {
       _simulating = true;
 
       try {
+        final devices = listDevices();
+        final hasOnlyMockDevices =
+            devices.isNotEmpty &&
+            devices.every((d) => d.protocol == CoreProtocol.CORE_PROTOCOL_MOCK);
+
+        if (!hasOnlyMockDevices) {
+          return;
+        }
+
         final res = _coreSimulate(_ctx!);
         if (res != 0) {
           _throwLastError(res);
@@ -527,6 +588,29 @@ class Bridge {
         // ignore simulation errors to keep loop alive
       } finally {
         _simulating = false;
+      }
+    });
+  }
+
+  static void _startReconnectLoop() {
+    _reconnectTimer ??= Timer.periodic(const Duration(seconds: 6), (_) {
+      if (!_ready) return;
+
+      final uuids = _protocolByDevice.keys.toList();
+      for (final uuid in uuids) {
+        final protocol = _protocolByDevice[uuid];
+        if (protocol == null || protocol == CoreProtocol.CORE_PROTOCOL_MOCK) {
+          continue;
+        }
+
+        final current = connectionState(uuid);
+        if (current == ProtocolConnectionState.connected) continue;
+
+        try {
+          establishProtocolConnection(uuid: uuid, protocol: protocol);
+        } catch (_) {
+          // keep retrying in background
+        }
       }
     });
   }
@@ -563,6 +647,7 @@ class Bridge {
     }
 
     _startSimulationLoop();
+    _startReconnectLoop();
 
     _ready = true;
   }
@@ -570,10 +655,16 @@ class Bridge {
   static void destroy() {
     _simulateTimer?.cancel();
     _simulateTimer = null;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _stateCache.clear();
     _modeLabelsByDevice.clear();
     _constraintsByDevice.clear();
     _assetByDevice.clear();
+    _wifiProvisioningByDevice.clear();
+    _wifiSsidByDevice.clear();
+    _protocolConnectionByDevice.clear();
+    _protocolByDevice.clear();
 
     if (_ctx != null) {
       _coreDestroy(_ctx!);
@@ -654,6 +745,21 @@ class Bridge {
     if (assetPath != null && assetPath.trim().isNotEmpty) {
       _assetByDevice[uuid] = assetPath.trim();
     }
+
+    if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+      _wifiProvisioningByDevice[uuid] = WifiProvisioningState.unprovisioned;
+    }
+
+    _protocolByDevice[uuid] = protocol;
+
+    _protocolConnectionByDevice[uuid] =
+        protocol == CoreProtocol.CORE_PROTOCOL_MOCK
+        ? ProtocolConnectionState.connected
+        : ProtocolConnectionState.connecting;
+
+    if (protocol != CoreProtocol.CORE_PROTOCOL_WIFI) {
+      refreshDeviceConnection(uuid);
+    }
   }
 
   static void removeDevice(String uuid) {
@@ -672,6 +778,168 @@ class Bridge {
     _modeLabelsByDevice.remove(uuid);
     _constraintsByDevice.remove(uuid);
     _assetByDevice.remove(uuid);
+    _wifiProvisioningByDevice.remove(uuid);
+    _wifiSsidByDevice.remove(uuid);
+    _protocolConnectionByDevice.remove(uuid);
+    _protocolByDevice.remove(uuid);
+  }
+
+  static void markWifiApConnected(String uuid) {
+    _wifiProvisioningByDevice[uuid] = WifiProvisioningState.apConnected;
+  }
+
+  static void markWifiCredentialsSent(String uuid, {required String ssid}) {
+    _wifiProvisioningByDevice[uuid] = WifiProvisioningState.homeWifiSent;
+    _wifiSsidByDevice[uuid] = ssid.trim();
+  }
+
+  static void provisionWifi({
+    required String uuid,
+    required String ssid,
+    required String password,
+  }) {
+    _ensureReady();
+
+    final ssidTrimmed = ssid.trim();
+    if (ssidTrimmed.isEmpty || password.trim().isEmpty) {
+      throw Exception('Wi-Fi credentials are required.');
+    }
+
+    markWifiApConnected(uuid);
+
+    if (_coreProvisionWifi == null) {
+      markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
+      throw Exception('Core provisioning API unavailable. Rebuild native core.');
+    }
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final ssidPtr = ssidTrimmed.toNativeUtf8();
+    final passwordPtr = password.toNativeUtf8();
+
+    final res = _coreProvisionWifi!(_ctx!, uuidPtr, ssidPtr, passwordPtr);
+
+    calloc.free(uuidPtr);
+    calloc.free(ssidPtr);
+    calloc.free(passwordPtr);
+
+    if (res != 0) {
+      markWifiFailed(uuid);
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      _throwLastError(res);
+    }
+
+    markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
+    markWifiOnline(uuid);
+    _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connected;
+  }
+
+  static void markWifiOnline(String uuid) {
+    _wifiProvisioningByDevice[uuid] = WifiProvisioningState.online;
+  }
+
+  static void markWifiFailed(String uuid) {
+    _wifiProvisioningByDevice[uuid] = WifiProvisioningState.failed;
+  }
+
+  static String wifiProvisioningState(String uuid) {
+    return _wifiProvisioningByDevice[uuid] ?? WifiProvisioningState.unprovisioned;
+  }
+
+  static String? wifiProvisioningSsid(String uuid) {
+    return _wifiSsidByDevice[uuid];
+  }
+
+  static String wifiProvisioningLabel(String uuid) {
+    switch (wifiProvisioningState(uuid)) {
+      case WifiProvisioningState.apConnected:
+        return 'AP connected';
+      case WifiProvisioningState.homeWifiSent:
+        return 'Home Wi-Fi sent';
+      case WifiProvisioningState.online:
+        return 'Online';
+      case WifiProvisioningState.failed:
+        return 'Provision failed';
+      case WifiProvisioningState.unprovisioned:
+      default:
+        return 'Needs provisioning';
+    }
+  }
+
+  static bool isDeviceAvailable(String uuid) {
+    _ensureReady();
+
+    if (_coreIsDeviceAvailable == null) {
+      return true;
+    }
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final outAvailable = calloc<Bool>();
+
+    final res = _coreIsDeviceAvailable!(_ctx!, uuidPtr, outAvailable);
+
+    calloc.free(uuidPtr);
+
+    if (res != 0) {
+      calloc.free(outAvailable);
+      _throwLastError(res);
+    }
+
+    final available = outAvailable.value;
+    calloc.free(outAvailable);
+    return available;
+  }
+
+  static bool refreshDeviceConnection(String uuid) {
+    try {
+      final available = isDeviceAvailable(uuid);
+      _protocolConnectionByDevice[uuid] = available
+          ? ProtocolConnectionState.connected
+          : ProtocolConnectionState.disconnected;
+      return available;
+    } catch (_) {
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      return false;
+    }
+  }
+
+  static String connectionState(String uuid) {
+    return _protocolConnectionByDevice[uuid] ?? ProtocolConnectionState.unknown;
+  }
+
+  static String connectionLabel(String uuid) {
+    switch (connectionState(uuid)) {
+      case ProtocolConnectionState.connecting:
+        return 'Connecting';
+      case ProtocolConnectionState.connected:
+        return 'Connected';
+      case ProtocolConnectionState.disconnected:
+        return 'Disconnected';
+      case ProtocolConnectionState.failed:
+        return 'Connection failed';
+      case ProtocolConnectionState.unknown:
+      default:
+        return 'Connection unknown';
+    }
+  }
+
+  static bool establishProtocolConnection({
+    required String uuid,
+    required int protocol,
+  }) {
+    if (protocol == CoreProtocol.CORE_PROTOCOL_MOCK) {
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connected;
+      return true;
+    }
+
+    if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+      final ok = wifiProvisioningState(uuid) == WifiProvisioningState.online;
+      _protocolConnectionByDevice[uuid] = ok
+          ? ProtocolConnectionState.connected
+          : ProtocolConnectionState.disconnected;
+      return ok;
+    }
+
+    return refreshDeviceConnection(uuid);
   }
 
   static String? deviceAsset(String uuid) {
@@ -781,6 +1049,9 @@ class Bridge {
           capabilities: caps,
         ),
       );
+
+      _protocolByDevice[_readFixedString(item.uuid, CORE_MAX_UUID)] =
+          item.protocol;
     }
 
     calloc.free(buffer);
@@ -1044,11 +1315,17 @@ class Bridge {
 
       if (e.type == CoreEventType.CORE_EVENT_STATE_CHANGED) {
         _stateCache[uuid] = mappedState;
+        _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connected;
         _stateController.add(uuid);
       } else if (e.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
         _invalidateState(uuid);
         _modeLabelsByDevice.remove(uuid);
         _constraintsByDevice.remove(uuid);
+        _assetByDevice.remove(uuid);
+        _wifiProvisioningByDevice.remove(uuid);
+        _wifiSsidByDevice.remove(uuid);
+        _protocolConnectionByDevice.remove(uuid);
+        _protocolByDevice.remove(uuid);
       }
     } catch (_) {
       // swallow errors to avoid crashing native callback
