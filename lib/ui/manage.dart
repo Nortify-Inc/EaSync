@@ -156,6 +156,54 @@ class _ManageState extends State<Manage> {
     }
   }
 
+  void _showTopErrorSnack(String message) {
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    final entry = OverlayEntry(
+      builder: (_) {
+        return Positioned(
+          left: 12,
+          right: 12,
+          top: 30,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: EaColor.back,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaColor.fore),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: EaText.secondary.copyWith(
+                        color: EaColor.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () {
+      entry.remove();
+    });
+  }
+
   void _filterDevices() {
     final query = deviceSearchController.text.toLowerCase();
 
@@ -202,9 +250,7 @@ class _ManageState extends State<Manage> {
     } catch (e) {
       if (!mounted) return;
       setState(() => discovering = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Discovery failed: $e')));
+      _showTopErrorSnack('Discovery failed: $e');
     }
   }
 
@@ -294,9 +340,7 @@ class _ManageState extends State<Manage> {
       _loadDevices();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        _showTopErrorSnack(e.toString());
       }
     }
   }
@@ -502,9 +546,7 @@ class _ManageState extends State<Manage> {
       _loadDevices();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        _showTopErrorSnack(e.toString());
       }
     }
   }
@@ -515,15 +557,15 @@ class _ManageState extends State<Manage> {
       protocol: device.protocol,
     );
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? 'Connection established for ${device.name}'
-                : 'Unable to establish connection for ${device.name}',
+      if (ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection established for ${device.name}'),
           ),
-        ),
-      );
+        );
+      } else {
+        _showTopErrorSnack('Unable to establish connection for ${device.name}');
+      }
     }
     _loadDevices();
   }
@@ -653,9 +695,7 @@ class _ManageState extends State<Manage> {
 
     if (ssid.isEmpty || password.length < 8) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid SSID/password.')),
-        );
+        _showTopErrorSnack('Invalid SSID/password.');
       }
       return;
     }
@@ -674,9 +714,7 @@ class _ManageState extends State<Manage> {
       _loadDevices();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        _showTopErrorSnack(e.toString());
       }
     }
   }
@@ -1050,17 +1088,17 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
     if (isWifi) {
       if (!apConfirmed) {
-        _showError("Confirme a conexão com o Access Point do dispositivo.");
+        _showError("Please confirm you're connected to the device Access Point.");
         return;
       }
 
       if (ssid.isEmpty) {
-        _showError("Informe o SSID da rede doméstica.");
+        _showError("Please enter your home Wi-Fi SSID.");
         return;
       }
 
       if (password.trim().isEmpty || password.length < 8) {
-        _showError("Informe a senha do Wi-Fi (mínimo 8 caracteres).");
+        _showError("Please enter a Wi-Fi password with at least 8 characters.");
         return;
       }
     }
@@ -1157,11 +1195,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       }
 
       _showError(
-        "Abertura automática das configurações de rede não é suportada neste sistema.",
+        "Automatic network settings opening is not supported on this system.",
       );
 
     } catch (_) {
-      _showError("Não foi possível abrir as configurações de rede.");
+      _showError("Could not open network settings.");
     }
   }
 
@@ -1230,7 +1268,51 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    final overlay = Overlay.of(context, rootOverlay: true);
+
+    final entry = OverlayEntry(
+      builder: (_) {
+        return Positioned(
+          left: 12,
+          right: 12,
+          top: 30,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: EaColor.back,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaColor.fore),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.redAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      msg,
+                      style: EaText.secondary.copyWith(
+                        color: EaColor.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    overlay.insert(entry);
+    Future.delayed(const Duration(seconds: 3), () {
+      entry.remove();
+    });
   }
 
   String _generateUuid() {
@@ -1343,18 +1425,19 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                                       children: [
                                         Text(
                                           "${t.brand} ${t.model}",
-                                          style: EaText.primary,
+                                          style: EaText.secondary.copyWith(
+                                            fontSize: 16,
+                                            color: EaColor.textPrimary,
+                                          ),
                                         ),
                                         Text(
                                           _prettyCategory(t.category),
-                                          style: EaText.secondary,
+                                          style: EaText.secondary.copyWith(
+                                            fontSize: 12,
+                                            color: EaColor.textSecondary,
+                                          ),
                                         ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          "Protocol: ${t.protocol.toUpperCase()}",
-                                          style: EaText.secondaryTranslucent,
-                                        ),
-                                        const SizedBox(height: 6),
+                                        const SizedBox(height: 8),
                                         Wrap(
                                           spacing: 6,
                                           runSpacing: 4,
@@ -1432,7 +1515,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         controlAffinity: ListTileControlAffinity.leading,
                         activeColor: EaColor.fore,
                         title: Text(
-                          "I am already connected to the device's Access Point",
+                          "I've already connected to the device's Access Point",
                           style: EaText.secondary.copyWith(
                             color: EaColor.textSecondary,
                           ),
