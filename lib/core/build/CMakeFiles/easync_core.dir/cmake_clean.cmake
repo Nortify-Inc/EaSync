@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/easync_core.dir/drivers/ble.cpp.o"
+  "CMakeFiles/easync_core.dir/drivers/ble.cpp.o.d"
   "CMakeFiles/easync_core.dir/drivers/mock.cpp.o"
   "CMakeFiles/easync_core.dir/drivers/mock.cpp.o.d"
   "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o"

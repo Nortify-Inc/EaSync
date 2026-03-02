@@ -23,6 +23,7 @@
 #include "mqtt.hpp"
 #include "wifi.hpp"
 #include "zigbee.hpp"
+#include "ble.hpp"
 #include "payload_service.hpp"
 
 #include <unordered_map>
@@ -268,6 +269,9 @@ CoreContext* core_create(void) {
         context->drivers[CORE_PROTOCOL_ZIGBEE] = 
             std::make_shared<drivers::ZigBeeDriver>();
 
+        context->drivers[CORE_PROTOCOL_BLE] =
+            std::make_shared<drivers::BleDriver>();
+
         return context;
 
     } catch (...) {
@@ -395,6 +399,8 @@ CoreResult core_register_device_ex(CoreContext* core,
 
         std::memset(&dev.state, 0, sizeof(CoreDeviceState));
 
+        dev.driver->onDeviceRegistered(dev.uuid, dev.brand, dev.model);
+
         if (!dev.driver->connect(dev.uuid))
             return CORE_ERROR;
 
@@ -477,6 +483,7 @@ CoreResult core_remove_device(CoreContext* core, const char* uuid)
         // when transport is down/unavailable.
         if (it->second.driver) {
             (void)it->second.driver->disconnect(uuid);
+            it->second.driver->onDeviceRemoved(uuid);
         }
 
         core::PayloadService::instance().unbindDevice(uuid);
