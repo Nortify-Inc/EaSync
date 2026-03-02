@@ -129,6 +129,27 @@ class _ProfilesState extends State<Profiles>
     });
   }
 
+  void _showBottomSnack(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+          ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          backgroundColor: EaColor.back,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: EaColor.fore),
+          ),
+        ),
+      );
+  }
+
   void _loadDevices() {
     try {
       devices = Bridge.listDevices();
@@ -166,12 +187,7 @@ class _ProfilesState extends State<Profiles>
   void _applyProfile(Profile profile) {
     try {
       if (profile.actions.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Profile has no actions", style: EaText.secondary),
-            backgroundColor: EaColor.back,
-          ),
-        );
+        _showBottomSnack('Profile ${profile.name} has no actions.');
         return;
       }
 
@@ -231,12 +247,7 @@ class _ProfilesState extends State<Profiles>
         }
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Profile applied", style: EaText.secondary),
-          backgroundColor: EaColor.back,
-        ),
-      );
+      _showBottomSnack('Profile ${profile.name} was applied.');
     } catch (e) {
       _showTopErrorSnack(e.toString());
     }
@@ -319,7 +330,7 @@ class _ProfilesState extends State<Profiles>
             ),
             const SizedBox(height: 8),
             Text(
-              "Create profiles aligned with your mood",
+              "Create profiles aligned with your mood.",
               textAlign: TextAlign.center,
               style: EaText.secondaryTranslucent,
             ),

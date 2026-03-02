@@ -139,17 +139,22 @@ class _HomeState extends State<Home> {
       width: active ? 20 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: active ? EaColor.fore : EaColor.back,
+        color: active ? EaColor.secondaryFore : EaColor.back,
         borderRadius: BorderRadius.circular(20),
         boxShadow: active
             ? [
                 BoxShadow(
-                  color: Colors.deepPurpleAccent,
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+                  color: EaColor.fore,
+                  blurRadius: 6,
+                  offset: const Offset(0, 0),
                 ),
               ]
-            : [BoxShadow(color: EaColor.border, blurRadius: 2)],
+            : [
+              BoxShadow(
+                color: EaColor.back, 
+                blurRadius: 2
+                )
+              ],
       ),
     );
   }

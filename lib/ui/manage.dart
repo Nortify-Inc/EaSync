@@ -106,18 +106,23 @@ class Manage extends StatefulWidget {
   State<Manage> createState() => _ManageState();
 }
 
-class _ManageState extends State<Manage> {
+class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
   List<DeviceInfo> devices = [];
   List<DeviceInfo> filteredDevices = [];
   List<DiscoveredDevice> discoveredDevices = [];
   bool loading = true;
   bool discovering = false;
   late final TextEditingController deviceSearchController;
+  late final AnimationController _discoverPulse;
   StreamSubscription<CoreEventData>? _eventSub;
 
   @override
   void initState() {
     super.initState();
+    _discoverPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
     deviceSearchController = TextEditingController();
     deviceSearchController.addListener(_filterDevices);
     _eventSub = Bridge.onEvents.listen((event) {
@@ -131,6 +136,7 @@ class _ManageState extends State<Manage> {
 
   @override
   void dispose() {
+    _discoverPulse.dispose();
     deviceSearchController.dispose();
     _eventSub?.cancel();
     super.dispose();
@@ -202,6 +208,30 @@ class _ManageState extends State<Manage> {
     Future.delayed(const Duration(seconds: 3), () {
       entry.remove();
     });
+  }
+
+  void _showBottomSnack(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+          ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          backgroundColor: EaColor.back,
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(
+              color: EaColor.fore,
+              
+            ),
+          ),
+        ),
+      );
   }
 
   void _filterDevices() {
@@ -286,24 +316,36 @@ class _ManageState extends State<Manage> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.radar, color: EaColor.fore),
+                          Icon(d.icon, color: EaColor.fore),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(d.name, style: EaText.primary),
+                                Text(d.name, style: EaText.secondary.copyWith(fontSize: 16)),
+                                
                                 Text(
-                                  '${_protocolLabel(d.protocol)} • ${d.host}:${d.port}',
-                                  style: EaText.secondary,
+                                  '${d.host}:${d.port}',
+                                  style: EaText.secondary.copyWith(fontSize: 12),
                                 ),
+                                SizedBox(height: 6),
                                 Text(d.hint, style: EaText.secondaryTranslucent),
                               ],
                             ),
                           ),
                           TextButton(
                             onPressed: () => _registerDiscovered(d),
-                            child: const Text('Add'),
+                            style: ButtonStyle(
+                              side: WidgetStateProperty.fromMap({
+                                WidgetState.any: BorderSide(color: EaColor.fore, width: 1),
+                                
+                              }),
+                            ),
+                            child: Text(
+                              'Add',
+                              style: EaText.secondary.copyWith(color: EaColor.fore),
+                              
+                            ),
                           ),
                         ],
                       ),
@@ -332,9 +374,7 @@ class _ManageState extends State<Manage> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('${d.name} added.')));
+          _showBottomSnack('${d.name} was added.');
       }
 
       _loadDevices();
@@ -539,9 +579,7 @@ class _ManageState extends State<Manage> {
       Bridge.removeDevice(device.uuid);
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Device removed')));
+          _showBottomSnack('Device was removed.');
       }
       _loadDevices();
     } catch (e) {
@@ -558,11 +596,7 @@ class _ManageState extends State<Manage> {
     );
     if (mounted) {
       if (ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Connection established for ${device.name}'),
-          ),
-        );
+          _showBottomSnack('Connection established for ${device.name}.');
       } else {
         _showTopErrorSnack('Unable to establish connection for ${device.name}');
       }
@@ -707,9 +741,7 @@ class _ManageState extends State<Manage> {
         password: password,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Wi-Fi provisioned successfully.')),
-        );
+        _showBottomSnack('Wi-Fi was provisioned successfully.');
       }
       _loadDevices();
     } catch (e) {
@@ -737,27 +769,49 @@ class _ManageState extends State<Manage> {
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton.icon(
-              onPressed: discovering ? null : _discoverDevices,
-              icon: discovering
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.radar),
-              label: Text(
-                discovering ? 'Discovering...' : 'Discover',
-                style: EaText.secondary,
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: EaColor.fore),
-                foregroundColor: EaColor.fore,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+            child: SizedBox(
+              height: 32,
+              child: Stack(
+                children: [
+                  if (discovering)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: AnimatedBuilder(
+                          animation: _discoverPulse,
+                          builder: (_, _) {
+                            return CustomPaint(
+                              painter: _DiscoverBorderPainter(
+                                progress: _discoverPulse.value,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  Positioned.fill(
+                    child: OutlinedButton.icon(
+                      onPressed: discovering ? null : _discoverDevices,
+                      icon: const Icon(Icons.radar),
+                      label: discovering
+                          ? Text('Discovering...', style: EaText.secondary)
+                          : Text('Discover', style: EaText.secondary),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: discovering ? Colors.transparent : EaColor.fore,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: EaColor.fore,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 15),
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () => _openEditor(),
@@ -795,7 +849,7 @@ class _ManageState extends State<Manage> {
             Text("Add your first device", style: EaText.primary),
             const SizedBox(height: 4),
             Text(
-              "Use the button below to create a mock device",
+              "Let EaSync to discover him or add manually.",
               style: EaText.secondaryTranslucent,
               textAlign: TextAlign.center,
             ),
@@ -946,6 +1000,52 @@ String _capLabel(int cap) {
       return "Position";
     default:
       return "Unk";
+  }
+}
+
+class _DiscoverBorderPainter extends CustomPainter {
+  final double progress;
+
+  const _DiscoverBorderPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const radius = Radius.circular(12);
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect.deflate(.8), radius);
+
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = EaColor.fore.withValues(alpha: .24);
+
+    canvas.drawRRect(rrect, base);
+
+    final path = Path()..addRRect(rrect);
+    final metric = path.computeMetrics().first;
+    final length = metric.length;
+
+    final segment = length * .22;
+    final head = progress * length;
+    final tail = head - segment;
+
+    final active = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..color = EaColor.fore;
+
+    if (tail >= 0) {
+      canvas.drawPath(metric.extractPath(tail, head), active);
+    } else {
+      canvas.drawPath(metric.extractPath(length + tail, length), active);
+      canvas.drawPath(metric.extractPath(0, head), active);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DiscoverBorderPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
@@ -1141,12 +1241,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
         if (!connected) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Device added. Connection will be retried automatically in background.',
-                ),
-              ),
+            _showBottomSnack(
+              'Device was added. Connection will be retried automatically in background.',
             );
           }
         }
@@ -1313,6 +1409,27 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     Future.delayed(const Duration(seconds: 3), () {
       entry.remove();
     });
+  }
+
+  void _showBottomSnack(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+          ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          backgroundColor: EaColor.back,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: EaColor.fore),
+          ),
+        ),
+      );
   }
 
   String _generateUuid() {

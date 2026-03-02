@@ -6,11 +6,7 @@
  * @author Erick Radmann
  */
 
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:async';
-
-import 'package:ffi/ffi.dart';
+import 'handler.dart';
 
 DynamicLibrary _openCoreLibrary() {
   if (Platform.isWindows) {
@@ -476,6 +472,7 @@ class CoreEventData {
 }
 
 class DiscoveredDevice {
+  final IconData icon;
   final String id;
   final String name;
   final int protocol;
@@ -485,6 +482,7 @@ class DiscoveredDevice {
   final double confidence;
 
   DiscoveredDevice({
+    required this.icon,
     required this.id,
     required this.name,
     required this.protocol,
@@ -1041,10 +1039,10 @@ class Bridge {
     }
   }
 
-  static Future<bool> _checkHttp(String host, String path) async {
+  static Future<bool> _checkHttp(String host, String path, {int port = 80}) async {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 1);
     try {
-      final req = await client.getUrl(Uri.parse('http://$host$path'));
+      final req = await client.getUrl(Uri.parse('http://$host:$port$path'));
       final res = await req.close().timeout(const Duration(seconds: 1));
       await res.drain();
       return res.statusCode >= 200 && res.statusCode < 500;
@@ -1060,11 +1058,16 @@ class Bridge {
       '192.168.4.1',
       '192.168.0.1',
       '192.168.1.1',
+      '192.168.1.2',
       '192.168.1.10',
+      '192.168.1.20',
+      '192.168.1.30',
       '192.168.1.50',
       '192.168.1.100',
       'homeassistant.local',
       'mosquitto',
+      'mqtt.local',
+      'zigbee2mqtt.local',
     };
 
     try {
@@ -1078,15 +1081,149 @@ class Bridge {
           final parts = addr.address.split('.');
           if (parts.length != 4) continue;
           final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
+          final current = int.tryParse(parts[3]);
+
           hosts.add('$prefix.1');
+          hosts.add('$prefix.2');
           hosts.add('$prefix.10');
+          hosts.add('$prefix.20');
+          hosts.add('$prefix.30');
           hosts.add('$prefix.50');
           hosts.add('$prefix.100');
+
+          if (current != null) {
+            for (int i = -2; i <= 2; i++) {
+              final octet = current + i;
+              if (octet > 0 && octet < 255) {
+                hosts.add('$prefix.$octet');
+              }
+            }
+          }
         }
       }
     } catch (_) {}
 
     return hosts.toList();
+  }
+
+  static Future<List<T>> _runBatched<T>(
+    List<Future<T> Function()> tasks, {
+    int batchSize = 18,
+  }) async {
+    final out = <T>[];
+
+    for (var i = 0; i < tasks.length; i += batchSize) {
+      final end = (i + batchSize) > tasks.length ? tasks.length : (i + batchSize);
+      final chunk = tasks.sublist(i, end).map((t) => t());
+      out.addAll(await Future.wait(chunk));
+    }
+
+    return out;
+  }
+
+  static Future<bool> _hasLocalBleAdapter() async {
+    Future<bool> contains(String exe, List<String> args, Pattern p) async {
+      try {
+        final result = await Process.run(
+          exe,
+          args,
+          runInShell: true,
+        ).timeout(const Duration(milliseconds: 1200));
+
+        if (result.exitCode != 0) return false;
+        final text = '${result.stdout}\n${result.stderr}'.toLowerCase();
+        return text.contains(p);
+      } catch (_) {
+        return false;
+      }
+    }
+
+    return await contains('bluetoothctl', ['show'], 'controller') ||
+        await contains('hciconfig', [], 'hci');
+  }
+
+  static Future<List<DiscoveredDevice>> _probeHost(String host) async {
+    final results = <DiscoveredDevice>[];
+
+    const mqttPorts = [1883, 8883, 1884, 9001];
+    const wifiHttpPorts = [80, 8080, 8081];
+    const wifiPaths = [
+      '/provision',
+      '/wifi/provision',
+      '/state',
+      '/api/state',
+      '/status',
+      '/health',
+      '/',
+    ];
+
+    final mqttChecks = await Future.wait(
+      mqttPorts.map((p) async => MapEntry(p, await _checkTcp(host, p))),
+    );
+
+    for (final check in mqttChecks.where((e) => e.value)) {
+      final port = check.key;
+      final secure = port == 8883;
+
+      results.add(
+        DiscoveredDevice(
+          icon: Icons.compare_arrows_rounded,
+          id: 'mqtt:$host:$port',
+          name: 'MQTT Broker ($host)',
+          protocol: CoreProtocol.CORE_PROTOCOL_MQTT,
+          host: host,
+          port: port,
+          hint: secure
+              ? 'MQTT TLS broker detected on port $port'
+              : 'MQTT broker detected on port $port',
+          confidence: secure ? 0.90 : 0.86,
+        ),
+      );
+
+      if (port == 1883 || port == 8883) {
+        results.add(
+          DiscoveredDevice(
+            icon: Icons.rotate_90_degrees_cw_rounded,
+            id: 'zigbee:$host:$port',
+            name: 'Zigbee Gateway ($host)',
+            protocol: CoreProtocol.CORE_PROTOCOL_ZIGBEE,
+            host: host,
+            port: port,
+            hint: 'Potential ZigBee2MQTT gateway via MQTT:$port',
+            confidence: port == 8883 ? 0.74 : 0.70,
+          ),
+        );
+      }
+    }
+
+    final wifiTasks = <Future<bool>>[];
+    for (final port in wifiHttpPorts) {
+      for (final path in wifiPaths) {
+        wifiTasks.add(_checkHttp(host, path, port: port));
+      }
+    }
+
+    final wifiHits = await Future.wait(wifiTasks);
+    if (wifiHits.any((ok) => ok)) {
+      final port = wifiHttpPorts.firstWhere(
+        (p) => p == 80 || p == 8080,
+        orElse: () => 80,
+      );
+      results.add(
+        DiscoveredDevice(
+          icon: Icons.wifi_rounded,
+          id: 'wifi:$host:$port',
+          name: 'Wi-Fi Device ($host)',
+          protocol: CoreProtocol.CORE_PROTOCOL_WIFI,
+          host: host,
+          port: port,
+          hint: 'HTTP/device endpoint detected',
+          confidence: 0.75,
+        ),
+      );
+    }
+
+    return results;
   }
 
   static Future<List<DiscoveredDevice>> discoverDevices() async {
@@ -1096,62 +1233,41 @@ class Bridge {
 
     final hosts = await _candidateLanHosts();
 
-    for (final host in hosts) {
-      final mqttOk = await _checkTcp(host, 1883);
-      if (mqttOk) {
-        final mqttId = 'mqtt:$host:1883';
-        if (seen.add(mqttId)) {
-          discovered.add(
-            DiscoveredDevice(
-              id: mqttId,
-              name: 'MQTT Broker ($host)',
-              protocol: CoreProtocol.CORE_PROTOCOL_MQTT,
-              host: host,
-              port: 1883,
-              hint: 'Broker detected on port 1883',
-              confidence: 0.86,
-            ),
-          );
-        }
+    final probeTasks = hosts
+        .map<Future<List<DiscoveredDevice>> Function()>(
+          (host) => () => _probeHost(host),
+        )
+        .toList();
 
-        final zigbeeId = 'zigbee:$host:1883';
-        if (seen.add(zigbeeId)) {
-          discovered.add(
-            DiscoveredDevice(
-              id: zigbeeId,
-              name: 'Zigbee Gateway ($host)',
-              protocol: CoreProtocol.CORE_PROTOCOL_ZIGBEE,
-              host: host,
-              port: 1883,
-              hint: 'Potential zigbee2mqtt broker',
-              confidence: 0.70,
-            ),
-          );
-        }
-      }
+    final hostResults = await _runBatched(probeTasks, batchSize: 20);
 
-      final hasProvisionEndpoint =
-          await _checkHttp(host, '/provision') ||
-          await _checkHttp(host, '/wifi/provision') ||
-          await _checkHttp(host, '/state');
-
-      if (hasProvisionEndpoint) {
-        final wifiId = 'wifi:$host:80';
-        if (seen.add(wifiId)) {
-          discovered.add(
-            DiscoveredDevice(
-              id: wifiId,
-              name: 'Wi-Fi Device AP ($host)',
-              protocol: CoreProtocol.CORE_PROTOCOL_WIFI,
-              host: host,
-              port: 80,
-              hint: 'HTTP provisioning endpoint detected',
-              confidence: 0.72,
-            ),
-          );
+    for (final list in hostResults) {
+      for (final item in list) {
+        if (seen.add(item.id)) {
+          discovered.add(item);
         }
       }
     }
+
+    final hasBleAdapter = await _hasLocalBleAdapter();
+    if (hasBleAdapter) {
+      final ble = DiscoveredDevice(
+        icon: Icons.bluetooth_rounded,
+        id: 'ble:local:0',
+        name: 'Nearby BLE devices',
+        protocol: CoreProtocol.CORE_PROTOCOL_BLE,
+        host: 'local',
+        port: 0,
+        hint: 'Local BLE adapter detected',
+        confidence: 0.62,
+      );
+
+      if (seen.add(ble.id)) {
+        discovered.add(ble);
+      }
+    }
+
+    discovered.sort((a, b) => b.confidence.compareTo(a.confidence));
 
     _log('discovery', 'Discovery finished with ${discovered.length} candidates');
     return discovered;
