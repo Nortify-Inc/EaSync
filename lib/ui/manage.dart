@@ -12,6 +12,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
@@ -108,7 +109,9 @@ class Manage extends StatefulWidget {
 class _ManageState extends State<Manage> {
   List<DeviceInfo> devices = [];
   List<DeviceInfo> filteredDevices = [];
+  List<DiscoveredDevice> discoveredDevices = [];
   bool loading = true;
+  bool discovering = false;
   late final TextEditingController deviceSearchController;
   StreamSubscription<CoreEventData>? _eventSub;
 
@@ -184,6 +187,118 @@ class _ManageState extends State<Manage> {
         );
       },
     );
+  }
+
+  Future<void> _discoverDevices() async {
+    setState(() => discovering = true);
+    try {
+      final found = await Bridge.discoverDevices();
+      if (!mounted) return;
+      setState(() {
+        discoveredDevices = found;
+        discovering = false;
+      });
+      _openDiscoverySheet();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => discovering = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Discovery failed: $e')));
+    }
+  }
+
+  void _openDiscoverySheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: EaColor.back,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: discoveredDevices.isEmpty
+              ? Center(
+                  child: Text(
+                    'No devices discovered on network.',
+                    style: EaText.secondary,
+                  ),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: discoveredDevices.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) {
+                    final d = discoveredDevices[i];
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: EaColor.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.radar, color: EaColor.fore),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(d.name, style: EaText.primary),
+                                Text(
+                                  '${_protocolLabel(d.protocol)} • ${d.host}:${d.port}',
+                                  style: EaText.secondary,
+                                ),
+                                Text(d.hint, style: EaText.secondaryTranslucent),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => _registerDiscovered(d),
+                            child: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        );
+      },
+    );
+  }
+
+  void _registerDiscovered(DiscoveredDevice d) {
+    final uuid = 'disc-${DateTime.now().millisecondsSinceEpoch}';
+
+    try {
+      Bridge.registerDevice(
+        uuid: uuid,
+        name: d.name,
+        protocol: d.protocol,
+        capabilities: const [CoreCapability.CORE_CAP_POWER],
+        brand: 'Auto',
+        model: d.host,
+      );
+
+      Bridge.establishProtocolConnection(uuid: uuid, protocol: d.protocol);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('${d.name} added.')));
+      }
+
+      _loadDevices();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
   }
 
   void _openDeviceDetails(DeviceInfo device) {
@@ -269,6 +384,15 @@ class _ManageState extends State<Manage> {
                     onPressed: () => _retryConnection(device),
                     icon: const Icon(Icons.sync),
                     label: const Text('Retry connection'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: EaColor.fore,
+                      side: const BorderSide(color: EaColor.fore),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => _openDiagnostics(device),
+                    icon: const Icon(Icons.analytics_outlined),
+                    label: const Text('Diagnostics'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: EaColor.fore,
                       side: const BorderSide(color: EaColor.fore),
@@ -404,6 +528,68 @@ class _ManageState extends State<Manage> {
     _loadDevices();
   }
 
+  void _openDiagnostics(DeviceInfo device) {
+    final logs = Bridge.diagnostics(uuid: device.uuid, limit: 120);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: EaColor.back,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: logs.isEmpty
+              ? Center(
+                  child: Text('No diagnostics yet.', style: EaText.secondary),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Bridge.clearDiagnostics(uuid: device.uuid);
+                          Navigator.pop(context);
+                          _openDiagnostics(device);
+                        },
+                        child: const Text('Clear'),
+                      ),
+                    ),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: logs.length,
+                        separatorBuilder: (_, _) => const Divider(
+                          color: EaColor.border,
+                          height: 10,
+                        ),
+                        itemBuilder: (_, i) {
+                          final log = logs[i];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '[${log.category}] ${log.timestamp.toIso8601String()}',
+                                style: EaText.secondaryTranslucent,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(log.message, style: EaText.secondary),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
   Future<void> _retryWifiProvisioning(DeviceInfo device) async {
     final ssidController = TextEditingController(
       text: Bridge.wifiProvisioningSsid(device.uuid) ?? '',
@@ -475,7 +661,11 @@ class _ManageState extends State<Manage> {
     }
 
     try {
-      Bridge.provisionWifi(uuid: device.uuid, ssid: ssid, password: password);
+      await Bridge.provisionWifi(
+        uuid: device.uuid,
+        ssid: ssid,
+        password: password,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Wi-Fi provisioned successfully.')),
@@ -506,15 +696,46 @@ class _ManageState extends State<Manage> {
   Widget _fab() {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: SizedBox(
-        width: double.infinity,
-        child: FloatingActionButton.extended(
-          heroTag: "manageFab",
-          backgroundColor: EaColor.fore,
-          onPressed: () => _openEditor(),
-          icon: const Icon(Icons.add, color: Colors.black),
-          label: Text("Add device", style: EaText.primaryBack),
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: discovering ? null : _discoverDevices,
+              icon: discovering
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.radar),
+              label: Text(
+                discovering ? 'Discovering...' : 'Discover',
+                style: EaText.secondary,
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: EaColor.fore),
+                foregroundColor: EaColor.fore,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () => _openEditor(),
+              icon: const Icon(Icons.add),
+              label: Text("Add device", style: EaText.primaryBack),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: EaColor.fore,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -570,8 +791,8 @@ class _ManageState extends State<Manage> {
             ),
           ),
         ),
-
-        Expanded(
+        SizedBox(height: 8),
+        Expanded( 
           child: filteredDevices.isEmpty
               ? const Center(child: Text("No matching devices"))
               : ListView.builder(
@@ -702,8 +923,10 @@ class _DeviceEditor extends StatefulWidget {
 
 class _DeviceEditorState extends State<_DeviceEditor> {
   static const String _prefRememberWifi = 'setup.wifi.remember';
-  static const String _prefWifiSsid = 'setup.wifi.last.ssid';
-  static const String _prefWifiPassword = 'setup.wifi.last.password';
+  static const String _secureWifiSsid = 'setup.wifi.last.ssid.secure';
+  static const String _secureWifiPassword = 'setup.wifi.last.password.secure';
+
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   late TextEditingController nameController;
   late TextEditingController searchController;
@@ -751,8 +974,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     rememberWifiCredentials = prefs.getBool(_prefRememberWifi) ?? true;
 
     if (rememberWifiCredentials) {
-      wifiSsidController.text = prefs.getString(_prefWifiSsid) ?? '';
-      wifiPasswordController.text = prefs.getString(_prefWifiPassword) ?? '';
+      wifiSsidController.text =
+          await _secureStorage.read(key: _secureWifiSsid) ?? '';
+      wifiPasswordController.text =
+          await _secureStorage.read(key: _secureWifiPassword) ?? '';
     }
 
     if (mounted) setState(() {});
@@ -763,11 +988,17 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     await prefs.setBool(_prefRememberWifi, rememberWifiCredentials);
 
     if (rememberWifiCredentials) {
-      await prefs.setString(_prefWifiSsid, wifiSsidController.text.trim());
-      await prefs.setString(_prefWifiPassword, wifiPasswordController.text);
+      await _secureStorage.write(
+        key: _secureWifiSsid,
+        value: wifiSsidController.text.trim(),
+      );
+      await _secureStorage.write(
+        key: _secureWifiPassword,
+        value: wifiPasswordController.text,
+      );
     } else {
-      await prefs.remove(_prefWifiSsid);
-      await prefs.remove(_prefWifiPassword);
+      await _secureStorage.delete(key: _secureWifiSsid);
+      await _secureStorage.delete(key: _secureWifiPassword);
     }
   }
 
@@ -807,7 +1038,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (selectedTemplate == null) {
       _showError("Select a model");
       return;
@@ -862,7 +1093,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       );
 
       if (isWifi) {
-        Bridge.provisionWifi(uuid: uuid, ssid: ssid, password: password);
+        await Bridge.provisionWifi(uuid: uuid, ssid: ssid, password: password);
         _persistRememberWifiSettings();
       } else {
         final connected = Bridge.establishProtocolConnection(
@@ -1174,7 +1405,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 10),
                       Text(
                         "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your Wi-Fi credentials.",
                         style: EaText.secondary.copyWith(

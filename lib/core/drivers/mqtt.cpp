@@ -52,14 +52,34 @@ bool MqttDriver::init() {
     candidates.push_back("tcp://mosquitto:1883");
     candidates.push_back("tcp://homeassistant.local:1883");
     candidates.push_back("tcp://192.168.1.1:1883");
+    candidates.push_back("ssl://homeassistant.local:8883");
+    candidates.push_back("ssl://192.168.1.1:8883");
 
     mqtt::connect_options opts;
+    const bool forceTls =
+        (std::getenv("EASYNC_MQTT_TLS") != nullptr &&
+         std::string(std::getenv("EASYNC_MQTT_TLS")) == "1");
 
     for (const auto& candidate : candidates) {
         try {
             auto nextClient = std::make_unique<mqtt::async_client>(candidate, clientId);
             nextClient->set_callback(*this);
-            nextClient->connect(opts)->wait();
+
+            mqtt::connect_options localOpts = opts;
+            const bool candidateTls = candidate.rfind("ssl://", 0) == 0;
+
+            if (forceTls || candidateTls) {
+                mqtt::ssl_options ssl;
+
+                if (const char* ca = std::getenv("EASYNC_MQTT_CA_CERT")) {
+                    if (std::strlen(ca) > 0)
+                        ssl.set_trust_store(ca);
+                }
+
+                localOpts.set_ssl(ssl);
+            }
+
+            nextClient->connect(localOpts)->wait();
             nextClient->subscribe("easync/+/state", 1)->wait();
             nextClient->start_consuming();
 

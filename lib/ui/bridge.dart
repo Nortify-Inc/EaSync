@@ -475,6 +475,40 @@ class CoreEventData {
   });
 }
 
+class DiscoveredDevice {
+  final String id;
+  final String name;
+  final int protocol;
+  final String host;
+  final int port;
+  final String hint;
+  final double confidence;
+
+  DiscoveredDevice({
+    required this.id,
+    required this.name,
+    required this.protocol,
+    required this.host,
+    required this.port,
+    required this.hint,
+    required this.confidence,
+  });
+}
+
+class BridgeDiagnosticEntry {
+  final DateTime timestamp;
+  final String category;
+  final String message;
+  final String? uuid;
+
+  BridgeDiagnosticEntry({
+    required this.timestamp,
+    required this.category,
+    required this.message,
+    this.uuid,
+  });
+}
+
 class WifiProvisioningState {
   static const String unprovisioned = 'unprovisioned';
   static const String apConnected = 'ap_connected';
@@ -527,6 +561,7 @@ class Bridge {
   static final Map<String, String> _wifiSsidByDevice = {};
   static final Map<String, String> _protocolConnectionByDevice = {};
   static final Map<String, int> _protocolByDevice = {};
+  static final List<BridgeDiagnosticEntry> _diagnostics = [];
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -543,6 +578,21 @@ class Bridge {
   static Stream<String> get onStateChanged => _stateController.stream;
 
   static Stream<CoreEventData> get onEvents => _eventController.stream;
+
+  static void _log(String category, String message, {String? uuid}) {
+    _diagnostics.add(
+      BridgeDiagnosticEntry(
+        timestamp: DateTime.now(),
+        category: category,
+        message: message,
+        uuid: uuid,
+      ),
+    );
+
+    if (_diagnostics.length > 500) {
+      _diagnostics.removeRange(0, _diagnostics.length - 500);
+    }
+  }
 
   static DeviceState _cloneState(DeviceState s) {
     final clone = DeviceState(power: s.power);
@@ -624,15 +674,19 @@ class Bridge {
   static Future<void> init() async {
     if (_ready) return;
 
+    _log('core', 'Initializing bridge');
+
     _ctx = _coreCreate();
 
     if (_ctx == nullptr || _ctx == null) {
+      _log('core', 'core_create failed');
       throw Exception('core_create failed');
     }
 
     final res = _coreInit(_ctx!);
 
     if (res != 0) {
+      _log('core', 'core_init failed with code $res');
       _throwLastError(res);
     }
 
@@ -643,6 +697,7 @@ class Bridge {
     final cbRes = _coreSetEventCallback(_ctx!, _eventCallbackPointer!, nullptr);
 
     if (cbRes != 0) {
+      _log('core', 'core_set_event_callback failed with code $cbRes');
       _throwLastError(cbRes);
     }
 
@@ -650,9 +705,11 @@ class Bridge {
     _startReconnectLoop();
 
     _ready = true;
+    _log('core', 'Bridge ready');
   }
 
   static void destroy() {
+    _log('core', 'Destroying bridge');
     _simulateTimer?.cancel();
     _simulateTimer = null;
     _reconnectTimer?.cancel();
@@ -685,6 +742,7 @@ class Bridge {
     String? assetPath,
   }) {
     _ensureReady();
+    _log('device', 'Registering device $name', uuid: uuid);
 
     final uuidPtr = uuid.toNativeUtf8();
     final namePtr = name.toNativeUtf8();
@@ -724,6 +782,7 @@ class Bridge {
     calloc.free(capsPtr);
 
     if (res != 0) {
+      _log('device', 'Register failed with code $res', uuid: uuid);
       _throwLastError(res);
     }
 
@@ -760,10 +819,13 @@ class Bridge {
     if (protocol != CoreProtocol.CORE_PROTOCOL_WIFI) {
       refreshDeviceConnection(uuid);
     }
+
+    _log('device', 'Device registered', uuid: uuid);
   }
 
   static void removeDevice(String uuid) {
     _ensureReady();
+    _log('device', 'Removing device', uuid: uuid);
 
     final uuidPtr = uuid.toNativeUtf8();
     final res = _coreRemoveDevice(_ctx!, uuidPtr);
@@ -771,6 +833,7 @@ class Bridge {
     calloc.free(uuidPtr);
 
     if (res != 0) {
+      _log('device', 'Remove failed with code $res', uuid: uuid);
       _throwLastError(res);
     }
 
@@ -782,6 +845,7 @@ class Bridge {
     _wifiSsidByDevice.remove(uuid);
     _protocolConnectionByDevice.remove(uuid);
     _protocolByDevice.remove(uuid);
+    _log('device', 'Device removed', uuid: uuid);
   }
 
   static void markWifiApConnected(String uuid) {
@@ -793,12 +857,13 @@ class Bridge {
     _wifiSsidByDevice[uuid] = ssid.trim();
   }
 
-  static void provisionWifi({
+  static Future<void> provisionWifi({
     required String uuid,
     required String ssid,
     required String password,
-  }) {
+  }) async {
     _ensureReady();
+    _log('wifi', 'Starting Wi-Fi provisioning', uuid: uuid);
 
     final ssidTrimmed = ssid.trim();
     if (ssidTrimmed.isEmpty || password.trim().isEmpty) {
@@ -809,6 +874,7 @@ class Bridge {
 
     if (_coreProvisionWifi == null) {
       markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
+      _log('wifi', 'Provision API unavailable', uuid: uuid);
       throw Exception('Core provisioning API unavailable. Rebuild native core.');
     }
 
@@ -825,12 +891,29 @@ class Bridge {
     if (res != 0) {
       markWifiFailed(uuid);
       _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      _log('wifi', 'Provision failed with code $res', uuid: uuid);
       _throwLastError(res);
     }
 
     markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
+
+    var connected = false;
+    for (var i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(seconds: 2));
+      connected = refreshDeviceConnection(uuid);
+      if (connected) break;
+    }
+
+    if (!connected) {
+      markWifiFailed(uuid);
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      _log('wifi', 'Provision submitted but device did not come online', uuid: uuid);
+      throw Exception('Provisioning sent, but device is still offline.');
+    }
+
     markWifiOnline(uuid);
     _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connected;
+    _log('wifi', 'Provision succeeded and device is online', uuid: uuid);
   }
 
   static void markWifiOnline(String uuid) {
@@ -898,6 +981,7 @@ class Bridge {
       return available;
     } catch (_) {
       _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      _log('connection', 'Connection refresh failed', uuid: uuid);
       return false;
     }
   }
@@ -932,7 +1016,8 @@ class Bridge {
     }
 
     if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
-      final ok = wifiProvisioningState(uuid) == WifiProvisioningState.online;
+      final provisioned = wifiProvisioningState(uuid) == WifiProvisioningState.online;
+      final ok = provisioned && refreshDeviceConnection(uuid);
       _protocolConnectionByDevice[uuid] = ok
           ? ProtocolConnectionState.connected
           : ProtocolConnectionState.disconnected;
@@ -940,6 +1025,154 @@ class Bridge {
     }
 
     return refreshDeviceConnection(uuid);
+  }
+
+  static Future<bool> _checkTcp(String host, int port) async {
+    try {
+      final socket = await Socket.connect(
+        host,
+        port,
+        timeout: const Duration(milliseconds: 700),
+      );
+      await socket.close();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> _checkHttp(String host, String path) async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 1);
+    try {
+      final req = await client.getUrl(Uri.parse('http://$host$path'));
+      final res = await req.close().timeout(const Duration(seconds: 1));
+      await res.drain();
+      return res.statusCode >= 200 && res.statusCode < 500;
+    } catch (_) {
+      return false;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static Future<List<String>> _candidateLanHosts() async {
+    final hosts = <String>{
+      '192.168.4.1',
+      '192.168.0.1',
+      '192.168.1.1',
+      '192.168.1.10',
+      '192.168.1.50',
+      '192.168.1.100',
+      'homeassistant.local',
+      'mosquitto',
+    };
+
+    try {
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          final parts = addr.address.split('.');
+          if (parts.length != 4) continue;
+          final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
+          hosts.add('$prefix.1');
+          hosts.add('$prefix.10');
+          hosts.add('$prefix.50');
+          hosts.add('$prefix.100');
+        }
+      }
+    } catch (_) {}
+
+    return hosts.toList();
+  }
+
+  static Future<List<DiscoveredDevice>> discoverDevices() async {
+    _log('discovery', 'Starting network discovery');
+    final discovered = <DiscoveredDevice>[];
+    final seen = <String>{};
+
+    final hosts = await _candidateLanHosts();
+
+    for (final host in hosts) {
+      final mqttOk = await _checkTcp(host, 1883);
+      if (mqttOk) {
+        final mqttId = 'mqtt:$host:1883';
+        if (seen.add(mqttId)) {
+          discovered.add(
+            DiscoveredDevice(
+              id: mqttId,
+              name: 'MQTT Broker ($host)',
+              protocol: CoreProtocol.CORE_PROTOCOL_MQTT,
+              host: host,
+              port: 1883,
+              hint: 'Broker detected on port 1883',
+              confidence: 0.86,
+            ),
+          );
+        }
+
+        final zigbeeId = 'zigbee:$host:1883';
+        if (seen.add(zigbeeId)) {
+          discovered.add(
+            DiscoveredDevice(
+              id: zigbeeId,
+              name: 'Zigbee Gateway ($host)',
+              protocol: CoreProtocol.CORE_PROTOCOL_ZIGBEE,
+              host: host,
+              port: 1883,
+              hint: 'Potential zigbee2mqtt broker',
+              confidence: 0.70,
+            ),
+          );
+        }
+      }
+
+      final hasProvisionEndpoint =
+          await _checkHttp(host, '/provision') ||
+          await _checkHttp(host, '/wifi/provision') ||
+          await _checkHttp(host, '/state');
+
+      if (hasProvisionEndpoint) {
+        final wifiId = 'wifi:$host:80';
+        if (seen.add(wifiId)) {
+          discovered.add(
+            DiscoveredDevice(
+              id: wifiId,
+              name: 'Wi-Fi Device AP ($host)',
+              protocol: CoreProtocol.CORE_PROTOCOL_WIFI,
+              host: host,
+              port: 80,
+              hint: 'HTTP provisioning endpoint detected',
+              confidence: 0.72,
+            ),
+          );
+        }
+      }
+    }
+
+    _log('discovery', 'Discovery finished with ${discovered.length} candidates');
+    return discovered;
+  }
+
+  static List<BridgeDiagnosticEntry> diagnostics({String? uuid, int limit = 120}) {
+    final reversed = _diagnostics.reversed.where((entry) {
+      if (uuid == null || uuid.trim().isEmpty) return true;
+      return entry.uuid == uuid;
+    }).take(limit).toList();
+
+    return reversed.reversed.toList();
+  }
+
+  static void clearDiagnostics({String? uuid}) {
+    if (uuid == null || uuid.trim().isEmpty) {
+      _diagnostics.clear();
+      return;
+    }
+
+    _diagnostics.removeWhere((entry) => entry.uuid == uuid);
   }
 
   static String? deviceAsset(String uuid) {
@@ -1309,6 +1542,12 @@ class Bridge {
         uuid: uuid,
         state: mappedState,
         errorCode: e.errorCode,
+      );
+
+      _log(
+        'event',
+        'Core event type=${e.type} error=${e.errorCode}',
+        uuid: uuid.isEmpty ? null : uuid,
       );
 
       _eventController.add(data);
