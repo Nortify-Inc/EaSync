@@ -307,7 +307,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             Text(
-              "Your devices will appear here",
+              "Your devices will appear here.",
               textAlign: TextAlign.center,
               style: EaText.secondaryTranslucent,
             ),
