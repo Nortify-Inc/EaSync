@@ -693,6 +693,8 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
           if (hasTemperatureFreezer) _temperatureFreezerRow(a, d),
 
+          if (hasTime) _timeRow(a),
+
           if (hasColorTemperature) _colorTemperatureRow(a, d),
 
           if (hasLock) _lockRow(a),
@@ -701,7 +703,6 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
           if (hasPosition) _positionRow(a),
 
-          if (hasTime) _timeRow(a),
         ],
       ),
     );
