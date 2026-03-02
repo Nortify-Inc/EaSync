@@ -12,6 +12,39 @@
 #include <sstream>
 #include <functional>
 #include <vector>
+#include <algorithm>
+
+namespace {
+
+static std::string trim(const std::string& v) {
+    const auto begin = v.find_first_not_of(" \t\r\n");
+    if (begin == std::string::npos)
+        return "";
+
+    const auto end = v.find_last_not_of(" \t\r\n");
+    return v.substr(begin, end - begin + 1);
+}
+
+static std::string normalizeEndpoint(std::string raw) {
+    raw = trim(raw);
+    if (raw.empty())
+        return "";
+
+    const std::string http = "http://";
+    const std::string https = "https://";
+    if (raw.rfind(http, 0) == 0)
+        raw = raw.substr(http.size());
+    else if (raw.rfind(https, 0) == 0)
+        raw = raw.substr(https.size());
+
+    auto slash = raw.find('/');
+    if (slash != std::string::npos)
+        raw = raw.substr(0, slash);
+
+    return trim(raw);
+}
+
+}
 
 namespace drivers {
 
@@ -58,10 +91,34 @@ bool WifiDriver::connect(const std::string& uuid) {
 
     std::string ip = resolveIpFromUuid(uuid);
 
+    if (deviceIps.count(uuid) && !deviceIps[uuid].empty())
+        ip = deviceIps[uuid];
+
     deviceIps[uuid] = ip;
     states.emplace(uuid, CoreDeviceState{});
 
     return true;
+}
+
+void WifiDriver::onDeviceRegistered(
+    const std::string& uuid,
+    const std::string& brand,
+    const std::string& model
+) {
+    (void)brand;
+
+    const std::string endpoint = normalizeEndpoint(model);
+    if (endpoint.empty())
+        return;
+
+    std::lock_guard<std::mutex> lock(mutex);
+    deviceIps[uuid] = endpoint;
+}
+
+void WifiDriver::onDeviceRemoved(const std::string& uuid) {
+    std::lock_guard<std::mutex> lock(mutex);
+    deviceIps.erase(uuid);
+    states.erase(uuid);
 }
 
 bool WifiDriver::disconnect(const std::string& uuid) {
@@ -86,7 +143,7 @@ bool WifiDriver::provisionWifi(
 
     {
         std::lock_guard<std::mutex> lock(mutex);
-        if (deviceIps.count(uuid))
+        if (deviceIps.count(uuid) && !deviceIps[uuid].empty())
             ips.push_back(deviceIps[uuid]);
     }
 

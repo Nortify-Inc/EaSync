@@ -1,11 +1,8 @@
 #pragma once
 
 /**
- * @file wifi.hpp
- * @brief Declaration of the Wi-Fi driver based on HTTP requests for EaSync devices.
- * @param uuid Device identifier used for endpoint resolution.
- * @return Methods return true when the command/request is completed.
- * @author Erick Radmann
+ * @file ble.hpp
+ * @brief Declaration of the BLE driver used for local Bluetooth LE communication.
  */
 
 #include "driver.hpp"
@@ -16,29 +13,15 @@
 
 namespace drivers {
 
-class WifiDriver : public Driver {
-
+class BleDriver : public Driver {
 public:
-    WifiDriver();
-    ~WifiDriver() override = default;
+    BleDriver() = default;
+    ~BleDriver() override = default;
 
     bool init() override;
 
     bool connect(const std::string& uuid) override;
     bool disconnect(const std::string& uuid) override;
-    bool provisionWifi(
-        const std::string& uuid,
-        const std::string& ssid,
-        const std::string& password
-    ) override;
-
-    void onDeviceRegistered(
-        const std::string& uuid,
-        const std::string& brand,
-        const std::string& model
-    ) override;
-
-    void onDeviceRemoved(const std::string& uuid) override;
 
     bool setPower(const std::string& uuid, bool value) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;
@@ -51,40 +34,24 @@ public:
     bool setLock(const std::string& uuid, bool value) override;
     bool setMode(const std::string& uuid, uint32_t value) override;
     bool setPosition(const std::string& uuid, float value) override;
-    
 
     bool getState(const std::string& uuid, CoreDeviceState& outState) override;
     bool isAvailable(const std::string& uuid) override;
 
-    void setEventCallback(
-        DriverEventCallback cb,
-        void* userData
-    ) override;
+    void setEventCallback(DriverEventCallback cb, void* userData) override;
 
 private:
-    std::string resolveIpFromUuid(const std::string& uuid);
-
-    bool httpPost(const std::string& url, const std::string& body);
-    bool httpGet(const std::string& url, std::string& out);
-
-    void parseState(
-        const std::string& uuid,
-        const std::string& json
-    );
-
-    void notifyStateChange(
-        const std::string& uuid,
-        const CoreDeviceState& newState
-    );
+    bool ensureConnected(const std::string& uuid);
+    void notifyStateChange(const std::string& uuid, const CoreDeviceState& newState);
 
 private:
     std::mutex mutex;
-
     std::unordered_map<std::string, CoreDeviceState> states;
-    std::unordered_map<std::string, std::string> deviceIps;
+
+    bool adapterAvailable = false;
 
     DriverEventCallback eventCallback = nullptr;
     void* eventUserData = nullptr;
 };
 
-}
+} // namespace drivers

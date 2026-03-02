@@ -174,6 +174,30 @@ easync_core/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/build
 .PHONY : easync_core/fast
 
+drivers/ble.o: drivers/ble.cpp.o
+.PHONY : drivers/ble.o
+
+# target to build an object file
+drivers/ble.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/ble.cpp.o
+.PHONY : drivers/ble.cpp.o
+
+drivers/ble.i: drivers/ble.cpp.i
+.PHONY : drivers/ble.i
+
+# target to preprocess a source file
+drivers/ble.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/ble.cpp.i
+.PHONY : drivers/ble.cpp.i
+
+drivers/ble.s: drivers/ble.cpp.s
+.PHONY : drivers/ble.s
+
+# target to generate assembly for a file
+drivers/ble.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/ble.cpp.s
+.PHONY : drivers/ble.cpp.s
+
 drivers/mock.o: drivers/mock.cpp.o
 .PHONY : drivers/mock.o
 
@@ -355,6 +379,9 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... easync_core"
+	@echo "... drivers/ble.o"
+	@echo "... drivers/ble.i"
+	@echo "... drivers/ble.s"
 	@echo "... drivers/mock.o"
 	@echo "... drivers/mock.i"
 	@echo "... drivers/mock.s"

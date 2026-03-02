@@ -73,6 +73,28 @@ public:
         return false;
     }
 
+    /**
+     * @brief Optional lifecycle hook called when a device is registered.
+     *
+     * Drivers can use brand/model hints to configure transport endpoints.
+     */
+    virtual void onDeviceRegistered(
+        const std::string& uuid,
+        const std::string& brand,
+        const std::string& model
+    ) {
+        (void)uuid;
+        (void)brand;
+        (void)model;
+    }
+
+    /**
+     * @brief Optional lifecycle hook called when a device is removed.
+     */
+    virtual void onDeviceRemoved(const std::string& uuid) {
+        (void)uuid;
+    }
+
 
     /**
      * @brief Set power.

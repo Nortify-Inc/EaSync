@@ -8,6 +8,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/radmann/easync/lib/core/drivers/ble.cpp" "CMakeFiles/easync_core.dir/drivers/ble.cpp.o" "gcc" "CMakeFiles/easync_core.dir/drivers/ble.cpp.o.d"
   "/home/radmann/easync/lib/core/drivers/mock.cpp" "CMakeFiles/easync_core.dir/drivers/mock.cpp.o" "gcc" "CMakeFiles/easync_core.dir/drivers/mock.cpp.o.d"
   "/home/radmann/easync/lib/core/drivers/mqtt.cpp" "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o" "gcc" "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o.d"
   "/home/radmann/easync/lib/core/drivers/wifi.cpp" "CMakeFiles/easync_core.dir/drivers/wifi.cpp.o" "gcc" "CMakeFiles/easync_core.dir/drivers/wifi.cpp.o.d"
