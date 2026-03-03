@@ -437,6 +437,12 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                 children: [
                   Expanded(child: Text(device.name, style: EaText.primary)),
                   IconButton(
+                    onPressed: () => _renameDeviceNickname(device),
+                    icon: const Icon(Icons.edit_outlined),
+                    color: EaColor.fore,
+                    tooltip: 'Rename custom name',
+                  ),
+                  IconButton(
                     onPressed: () => _confirmRemoveDevice(device),
                     icon: const Icon(Icons.delete_outline),
                     color: Colors.redAccent,
@@ -594,6 +600,70 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         );
       },
     );
+  }
+
+  Future<void> _renameDeviceNickname(DeviceInfo device) async {
+    final controller = TextEditingController(text: device.name);
+
+    final newNickname = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: EaColor.back,
+          title: Text('Rename nickname', style: EaText.primary),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            cursorColor: EaColor.fore,
+            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Enter new nickname',
+              hintStyle: EaText.secondaryTranslucent,
+              filled: true,
+              fillColor: EaColor.secondaryBack,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: EaColor.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: EaColor.fore),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: EaText.secondary),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: Text(
+                'Save',
+                style: EaText.secondary.copyWith(color: EaColor.fore),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted) return;
+    final nickname = (newNickname ?? '').trim();
+    if (nickname.isEmpty || nickname == device.name.trim()) return;
+
+    try {
+      Bridge.renameDevice(device.uuid, nickname);
+      if (mounted) {
+        Navigator.pop(context);
+        _showBottomSnack('Nickname updated to "$nickname".');
+      }
+      _loadDevices();
+    } catch (e) {
+      if (mounted) {
+        _showTopErrorSnack(e.toString());
+      }
+    }
   }
 
   Future<void> _confirmRemoveDevice(DeviceInfo device) async {
@@ -979,9 +1049,6 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      if (d.brand.trim().isNotEmpty) _chip(d.brand),
-                      if (d.model.trim().isNotEmpty) _chip(d.model),
-                      _chip(Bridge.connectionLabel(d.uuid)),
                       if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI)
                         _chip(Bridge.wifiProvisioningLabel(d.uuid)),
                       ...d.capabilities.map((c) => _chip(_capLabel(c))),
@@ -1769,7 +1836,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                 cursorColor: EaColor.fore,
                 style: EaText.secondary.copyWith(color: EaColor.textSecondary),
                 decoration: InputDecoration(
-                  labelText: "Device Name",
+                  labelText: "Device Custom Name",
                   labelStyle: EaText.secondary,
                   filled: true,
                   fillColor: EaColor.back,
