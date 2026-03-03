@@ -3,7 +3,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Lamp QA",
-      "asset": "mocks/lamp.png",
+      "asset": "assets/images/mocks/lamp.png",
       "protocol": "mock",
       "capabilities": ["power", "brightness", "color", "colorTemperature"],
       "payloads": {
@@ -21,7 +21,7 @@
     {
       "brand": "EaSync",
       "model": "Mock AC QA",
-      "asset": "mocks/ac.png",
+      "asset": "assets/images/mocks/ac.png",
       "protocol": "mock",
       "capabilities": ["power", "temperature", "mode"],
       "payloads": {
@@ -38,7 +38,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Fridge QA",
-      "asset": "mocks/fridge.png",
+      "asset": "assets/images/mocks/fridge.png",
       "protocol": "mock",
       "capabilities": ["temperature_fridge", "temperature_freezer", "mode"],
       "payloads": {
@@ -56,7 +56,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Lock QA",
-      "asset": "mocks/lock.png",
+      "asset": "assets/images/mocks/lock.png",
       "protocol": "mock",
       "capabilities": ["lock"],
       "payloads": {
@@ -69,7 +69,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Curtain QA",
-      "asset": "mocks/curtains.png",
+      "asset": "assets/images/mocks/curtains.png",
       "protocol": "mock",
       "capabilities": ["position"],
       "payloads": {
@@ -82,7 +82,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Heated Floor QA",
-      "asset": "mocks/heatedFloor.png",
+      "asset": "assets/images/mocks/heatedFloor.png",
       "protocol": "mock",
       "capabilities": ["power", "temperature", "mode", "time"],
       "payloads": {
@@ -100,7 +100,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Schedule Outlet QA",
-      "asset": "mocks/lamp.png",
+      "asset": "assets/images/mocks/lamp.png",
       "protocol": "mock",
       "capabilities": ["power", "time"],
       "payloads": {
@@ -114,7 +114,7 @@
     {
       "brand": "EaSync",
       "model": "Mock Color Strip QA",
-      "asset": "mocks/colorStrip.png",
+      "asset": "assets/images/mocks/colorStrip.png",
       "protocol": "mock",
       "capabilities": ["power", "brightness", "color"],
       "payloads": {

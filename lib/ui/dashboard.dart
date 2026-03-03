@@ -17,7 +17,6 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   static const double _capRowGap = 12;
-  static const double _dotFadeOutThreshold = 0.035;
   static const List<String> _templateCategories = [
     'acs',
     'lamps',
@@ -108,7 +107,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         }
       }
     } catch (_) {
-      // keep icon fallback if template assets cannot be loaded
+      
     } finally {
       _templateAssetsLoaded = true;
     }
@@ -117,11 +116,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   String? _resolveAssetForDevice(DeviceInfo d) {
     final existing = Bridge.deviceAsset(d.uuid);
     if (existing != null && existing.trim().isNotEmpty) {
-      final normalized = existing.trim();
-      if (normalized.toLowerCase().endsWith('.jpg')) {
-        return '${normalized.substring(0, normalized.length - 4)}.png';
-      }
-      return normalized;
+      return existing.trim();
     }
 
     final brand = d.brand.trim().toLowerCase();
@@ -1485,7 +1480,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     ? (normalizedToBegin > 0.35
                       ? 1.0
                       : (normalizedToBegin / 0.35).clamp(0.0, 1.0))
-                      : (animated > _dotFadeOutThreshold ? 1.0 : 0.0);
+                      : (animated > 0.001 ? 1.0 : 0.0);
 
                   return RepaintBoundary(
                     child: Stack(
@@ -1534,7 +1529,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                     ? ClipRRect(
                                         borderRadius: BorderRadius.circular(14),
                                         child: Image.asset(
-                                          'assets/$deviceAssetPath',
+                                          deviceAssetPath,
                                           width: 60,
                                           height: 60,
                                           fit: BoxFit.cover,
@@ -1683,7 +1678,7 @@ class _RingPainter extends CustomPainter {
       canvas.translate(center.dx, center.dy);
       canvas.rotate(-start);
 
-      if (normalized < 0.02) {
+      if (normalized < 0.01) {
         final solidPaint = Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = ringWidth

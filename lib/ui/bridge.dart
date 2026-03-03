@@ -480,6 +480,7 @@ class DiscoveredDevice {
   final int port;
   final String hint;
   final double confidence;
+  final String vendor;
 
   DiscoveredDevice({
     required this.icon,
@@ -490,6 +491,21 @@ class DiscoveredDevice {
     required this.port,
     required this.hint,
     required this.confidence,
+    this.vendor = 'generic',
+  });
+}
+
+class DeviceConnectionHealth {
+  final DateTime? lastSeen;
+  final int lastLatencyMs;
+  final int consecutiveFailures;
+  final int totalFailures;
+
+  const DeviceConnectionHealth({
+    required this.lastSeen,
+    required this.lastLatencyMs,
+    required this.consecutiveFailures,
+    required this.totalFailures,
   });
 }
 
@@ -559,6 +575,8 @@ class Bridge {
   static final Map<String, String> _wifiSsidByDevice = {};
   static final Map<String, String> _protocolConnectionByDevice = {};
   static final Map<String, int> _protocolByDevice = {};
+  static final Map<String, String> _endpointByDevice = {};
+  static final Map<String, DeviceConnectionHealth> _healthByDevice = {};
   static final List<BridgeDiagnosticEntry> _diagnostics = [];
 
   static final StreamController<String> _stateController =
@@ -720,6 +738,8 @@ class Bridge {
     _wifiSsidByDevice.clear();
     _protocolConnectionByDevice.clear();
     _protocolByDevice.clear();
+    _endpointByDevice.clear();
+    _healthByDevice.clear();
 
     if (_ctx != null) {
       _coreDestroy(_ctx!);
@@ -809,6 +829,18 @@ class Bridge {
 
     _protocolByDevice[uuid] = protocol;
 
+    final endpointCandidate = _extractEndpointCandidate(model);
+    if (endpointCandidate != null) {
+      _endpointByDevice[uuid] = endpointCandidate;
+    }
+
+    _healthByDevice[uuid] = const DeviceConnectionHealth(
+      lastSeen: null,
+      lastLatencyMs: -1,
+      consecutiveFailures: 0,
+      totalFailures: 0,
+    );
+
     _protocolConnectionByDevice[uuid] =
         protocol == CoreProtocol.CORE_PROTOCOL_MOCK
         ? ProtocolConnectionState.connected
@@ -843,7 +875,54 @@ class Bridge {
     _wifiSsidByDevice.remove(uuid);
     _protocolConnectionByDevice.remove(uuid);
     _protocolByDevice.remove(uuid);
+    _endpointByDevice.remove(uuid);
+    _healthByDevice.remove(uuid);
     _log('device', 'Device removed', uuid: uuid);
+  }
+
+  static String? _extractEndpointCandidate(String? model) {
+    if (model == null) return null;
+    final value = model.trim();
+    if (value.isEmpty) return null;
+
+    final withoutHttp = value
+        .replaceFirst(RegExp(r'^https?://', caseSensitive: false), '');
+    final hostPort = withoutHttp.split('/').first.trim();
+
+    if (hostPort.isEmpty) return null;
+    if (!hostPort.contains('.') && !hostPort.contains(':')) return null;
+    return hostPort;
+  }
+
+  static String? endpointForDevice(String uuid) => _endpointByDevice[uuid];
+
+  static void setDeviceEndpoint(String uuid, String endpoint) {
+    final normalized = endpoint.trim();
+    if (normalized.isEmpty) return;
+    _endpointByDevice[uuid] = normalized;
+  }
+
+  static DeviceConnectionHealth health(String uuid) {
+    return _healthByDevice[uuid] ??
+        const DeviceConnectionHealth(
+          lastSeen: null,
+          lastLatencyMs: -1,
+          consecutiveFailures: 0,
+          totalFailures: 0,
+        );
+  }
+
+  static String healthLabel(String uuid) {
+    final h = health(uuid);
+    if (h.lastSeen == null) {
+      return 'Never seen';
+    }
+
+    final latency = h.lastLatencyMs >= 0 ? '${h.lastLatencyMs} ms' : 'n/a';
+    final failures = h.consecutiveFailures > 0
+        ? ' • failures ${h.consecutiveFailures}'
+        : '';
+    return 'Seen • $latency$failures';
   }
 
   static void markWifiApConnected(String uuid) {
@@ -971,17 +1050,55 @@ class Bridge {
   }
 
   static bool refreshDeviceConnection(String uuid) {
+    final start = DateTime.now();
     try {
       final available = isDeviceAvailable(uuid);
       _protocolConnectionByDevice[uuid] = available
           ? ProtocolConnectionState.connected
           : ProtocolConnectionState.disconnected;
+
+      final current = health(uuid);
+      final latency = DateTime.now().difference(start).inMilliseconds;
+
+      _healthByDevice[uuid] = DeviceConnectionHealth(
+        lastSeen: available ? DateTime.now() : current.lastSeen,
+        lastLatencyMs: latency,
+        consecutiveFailures: available ? 0 : current.consecutiveFailures + 1,
+        totalFailures: available ? current.totalFailures : current.totalFailures + 1,
+      );
+
       return available;
     } catch (_) {
       _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      final current = health(uuid);
+      _healthByDevice[uuid] = DeviceConnectionHealth(
+        lastSeen: current.lastSeen,
+        lastLatencyMs: -1,
+        consecutiveFailures: current.consecutiveFailures + 1,
+        totalFailures: current.totalFailures + 1,
+      );
       _log('connection', 'Connection refresh failed', uuid: uuid);
       return false;
     }
+  }
+
+  static Future<bool> verifyDiscoveredDevice(DiscoveredDevice d) async {
+    if (d.protocol == CoreProtocol.CORE_PROTOCOL_BLE) {
+      return _hasLocalBleAdapter();
+    }
+
+    if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+      return await _checkHttp(d.host, '/state', port: d.port) ||
+          await _checkHttp(d.host, '/provision', port: d.port) ||
+          await _checkHttp(d.host, '/', port: d.port);
+    }
+
+    if (d.protocol == CoreProtocol.CORE_PROTOCOL_MQTT ||
+        d.protocol == CoreProtocol.CORE_PROTOCOL_ZIGBEE) {
+      return _checkTcp(d.host, d.port);
+    }
+
+    return false;
   }
 
   static String connectionState(String uuid) {
@@ -1046,8 +1163,10 @@ class Bridge {
       final res = await req.close().timeout(const Duration(seconds: 1));
       await res.drain();
       return res.statusCode >= 200 && res.statusCode < 500;
+
     } catch (_) {
       return false;
+      
     } finally {
       client.close(force: true);
     }
@@ -1177,6 +1296,7 @@ class Bridge {
               ? 'MQTT TLS broker detected on port $port'
               : 'MQTT broker detected on port $port',
           confidence: secure ? 0.90 : 0.86,
+          vendor: host.contains('homeassistant') ? 'home-assistant' : 'generic',
         ),
       );
 
@@ -1191,6 +1311,7 @@ class Bridge {
             port: port,
             hint: 'Potential ZigBee2MQTT gateway via MQTT:$port',
             confidence: port == 8883 ? 0.74 : 0.70,
+            vendor: 'zigbee2mqtt',
           ),
         );
       }
@@ -1219,6 +1340,7 @@ class Bridge {
           port: port,
           hint: 'HTTP/device endpoint detected',
           confidence: 0.75,
+          vendor: host.contains('midea') ? 'midea' : 'generic',
         ),
       );
     }
@@ -1260,6 +1382,7 @@ class Bridge {
         port: 0,
         hint: 'Local BLE adapter detected',
         confidence: 0.62,
+        vendor: 'generic',
       );
 
       if (seen.add(ble.id)) {
