@@ -1831,6 +1831,8 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                 const SizedBox(height: 12),
               ],
 
+              const SizedBox(height: 10),
+
               TextField(
                 controller: nameController,
                 cursorColor: EaColor.fore,

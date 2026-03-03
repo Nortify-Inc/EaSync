@@ -1286,14 +1286,20 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 fridgeMax,
                                 fridgeStep,
                               ),
-                              value: temperatureFridge,
+                              value: (fridgeMin + fridgeMax - temperatureFridge)
+                                  .clamp(fridgeMin, fridgeMax),
                               activeColor: EaColor.fore,
                               inactiveColor: EaColor.fore.withValues(
                                 alpha: .25,
                               ),
                               onChanged: (v) {
+                                final mapped =
+                                    (fridgeMin + fridgeMax - v).clamp(
+                                      fridgeMin,
+                                      fridgeMax,
+                                    );
                                 final snapped = _snapStep(
-                                  v,
+                                  mapped,
                                   fridgeStep,
                                 ).clamp(fridgeMin, fridgeMax);
                                 setInnerState(
@@ -1348,14 +1354,20 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 freezerMax,
                                 freezerStep,
                               ),
-                              value: temperatureFreezer,
+                              value: (freezerMin + freezerMax - temperatureFreezer)
+                                  .clamp(freezerMin, freezerMax),
                               activeColor: EaColor.fore,
                               inactiveColor: EaColor.fore.withValues(
                                 alpha: .25,
                               ),
                               onChanged: (v) {
+                                final mapped =
+                                    (freezerMin + freezerMax - v).clamp(
+                                      freezerMin,
+                                      freezerMax,
+                                    );
                                 final snapped = _snapStep(
-                                  v,
+                                  mapped,
                                   freezerStep,
                                 ).clamp(freezerMin, freezerMax);
                                 setInnerState(
