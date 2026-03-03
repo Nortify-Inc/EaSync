@@ -307,16 +307,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutCubic,
-                  switchOutCurve: Curves.easeInCubic,
+                  switchInCurve: Curves.easeOutQuart,
+                  switchOutCurve: Curves.easeInQuart,
                   transitionBuilder: (child, animation) {
-                    final scale = Tween<double>(
-                      begin: 0.92,
-                      end: 1.0,
+                    final slide = Tween<Offset>(
+                      begin: const Offset(0, 0.015),
+                      end: Offset.zero,
                     ).animate(animation);
                     return FadeTransition(
                       opacity: animation,
-                      child: ScaleTransition(scale: scale, child: child),
+                      child: SlideTransition(position: slide, child: child),
                     );
                   },
                   child: visibleDevices.isEmpty

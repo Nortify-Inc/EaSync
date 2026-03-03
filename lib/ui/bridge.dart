@@ -880,6 +880,157 @@ class Bridge {
     _log('device', 'Device removed', uuid: uuid);
   }
 
+  static void _restoreStateSnapshot(
+    String uuid,
+    List<int> capabilities,
+    DeviceState state,
+  ) {
+    if (capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+      try {
+        setPower(uuid, state.power);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) {
+      try {
+        setBrightness(uuid, state.brightness);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_COLOR)) {
+      try {
+        setColor(uuid, state.color);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+      try {
+        setTemperature(uuid, state.temperature);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+      try {
+        setTemperatureFridge(uuid, state.temperatureFridge);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+      try {
+        setTemperatureFreezer(uuid, state.temperatureFreezer);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP)) {
+      try {
+        setTime(uuid, state.timestamp);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_COLOR_TEMPERATURE)) {
+      try {
+        setColorTemperature(uuid, state.colorTemperature);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_LOCK)) {
+      try {
+        setLock(uuid, state.lock);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_MODE)) {
+      try {
+        setMode(uuid, state.mode);
+      } catch (_) {}
+    }
+    if (capabilities.contains(CoreCapability.CORE_CAP_POSITION)) {
+      try {
+        setPosition(uuid, state.position);
+      } catch (_) {}
+    }
+  }
+
+  static void renameDevice(String uuid, String nickname) {
+    _ensureReady();
+
+    final newName = nickname.trim();
+    if (newName.isEmpty) {
+      throw Exception('Nickname cannot be empty.');
+    }
+
+    final devices = listDevices();
+    DeviceInfo? current;
+    for (final d in devices) {
+      if (d.uuid == uuid) {
+        current = d;
+        break;
+      }
+    }
+
+    if (current == null) {
+      throw Exception('Device not found for rename.');
+    }
+
+    if (current.name.trim() == newName) {
+      return;
+    }
+
+    final modeLabels = _modeLabelsByDevice[uuid] == null
+        ? null
+        : List<String>.from(_modeLabelsByDevice[uuid]!);
+    final constraints = _constraintsByDevice[uuid] == null
+        ? null
+        : Map<String, dynamic>.from(_constraintsByDevice[uuid]!);
+    final assetPath = _assetByDevice[uuid];
+    final wifiProvisioning = _wifiProvisioningByDevice[uuid];
+    final wifiSsid = _wifiSsidByDevice[uuid];
+    final protocolConnection = _protocolConnectionByDevice[uuid];
+    final endpoint = _endpointByDevice[uuid];
+    final health = _healthByDevice[uuid];
+
+    DeviceState? snapshot;
+    try {
+      snapshot = getState(uuid);
+    } catch (_) {
+      snapshot = _stateCache[uuid] == null ? null : _cloneState(_stateCache[uuid]!);
+    }
+
+    removeDevice(uuid);
+
+    registerDevice(
+      uuid: uuid,
+      name: newName,
+      protocol: current.protocol,
+      capabilities: List<int>.from(current.capabilities),
+      brand: current.brand,
+      model: current.model,
+      modeLabels: modeLabels,
+      constraints: constraints,
+      assetPath: assetPath,
+    );
+
+    if (wifiProvisioning != null) {
+      _wifiProvisioningByDevice[uuid] = wifiProvisioning;
+    }
+    if (wifiSsid != null) {
+      _wifiSsidByDevice[uuid] = wifiSsid;
+    }
+    if (endpoint != null) {
+      _endpointByDevice[uuid] = endpoint;
+    }
+    if (health != null) {
+      _healthByDevice[uuid] = health;
+    }
+
+    if (current.protocol != CoreProtocol.CORE_PROTOCOL_MOCK) {
+      try {
+        establishProtocolConnection(uuid: uuid, protocol: current.protocol);
+      } catch (_) {}
+    }
+
+    if (snapshot != null) {
+      _restoreStateSnapshot(uuid, current.capabilities, snapshot);
+    }
+
+    if (protocolConnection != null) {
+      _protocolConnectionByDevice[uuid] = protocolConnection;
+    }
+
+    _log('device', 'Device renamed to "$newName"', uuid: uuid);
+  }
+
   static String? _extractEndpointCandidate(String? model) {
     if (model == null) return null;
     final value = model.trim();
