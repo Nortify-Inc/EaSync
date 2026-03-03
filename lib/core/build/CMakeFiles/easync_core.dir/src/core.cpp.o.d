@@ -280,7 +280,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /home/radmann/easync/lib/core/drivers/wifi.hpp \
  /home/radmann/easync/lib/core/drivers/zigbee.hpp \
  /home/radmann/easync/lib/core/drivers/ble.hpp \
- /home/radmann/easync/lib/core/include/payload_service.hpp \
+ /home/radmann/easync/lib/core/include/payload_utility.hpp \
  /usr/include/c++/13/unordered_set \
  /usr/include/c++/13/bits/unordered_set.h /usr/include/c++/13/random \
  /usr/include/c++/13/cmath /usr/include/math.h \

@@ -1,8 +1,8 @@
 #pragma once
 
 /**
- * @file payload_service.hpp
- * @brief Payload template service used by protocol drivers.
+ * @file payload_utility.hpp
+ * @brief Payload template utility used by protocol drivers.
  * @param capability Capability key (for example: power, temperature, mode).
  * @return JSON payload strings assembled from template files.
  * @author Erick Radmann
@@ -17,9 +17,9 @@ struct PayloadCommand {
     std::string payload;
 };
 
-class PayloadService {
+class PayloadUtility {
 public:
-    static PayloadService& instance();
+    static PayloadUtility& instance();
 
     void bindDevice(const std::string& uuid,
                     const std::string& brand,
@@ -47,9 +47,9 @@ public:
                                  const std::string& valueJson);
 
 private:
-    PayloadService() = default;
-    PayloadService(const PayloadService&) = delete;
-    PayloadService& operator=(const PayloadService&) = delete;
+    PayloadUtility() = default;
+    PayloadUtility(const PayloadUtility&) = delete;
+    PayloadUtility& operator=(const PayloadUtility&) = delete;
 
     void ensureLoaded();
 };

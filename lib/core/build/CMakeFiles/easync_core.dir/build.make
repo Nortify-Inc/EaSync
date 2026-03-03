@@ -97,19 +97,19 @@ CMakeFiles/easync_core.dir/src/driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/driver.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/core/src/driver.cpp -o CMakeFiles/easync_core.dir/src/driver.cpp.s
 
-CMakeFiles/easync_core.dir/src/payload_service.cpp.o: CMakeFiles/easync_core.dir/flags.make
-CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/core/src/payload_service.cpp
-CMakeFiles/easync_core.dir/src/payload_service.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/src/payload_service.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/payload_service.cpp.o -MF CMakeFiles/easync_core.dir/src/payload_service.cpp.o.d -o CMakeFiles/easync_core.dir/src/payload_service.cpp.o -c /home/radmann/easync/lib/core/src/payload_service.cpp
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: CMakeFiles/easync_core.dir/flags.make
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: /home/radmann/easync/lib/core/src/payload_utility.cpp
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/src/payload_utility.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/payload_utility.cpp.o -MF CMakeFiles/easync_core.dir/src/payload_utility.cpp.o.d -o CMakeFiles/easync_core.dir/src/payload_utility.cpp.o -c /home/radmann/easync/lib/core/src/payload_utility.cpp
 
-CMakeFiles/easync_core.dir/src/payload_service.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/payload_service.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/core/src/payload_service.cpp > CMakeFiles/easync_core.dir/src/payload_service.cpp.i
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/payload_utility.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/core/src/payload_utility.cpp > CMakeFiles/easync_core.dir/src/payload_utility.cpp.i
 
-CMakeFiles/easync_core.dir/src/payload_service.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/payload_service.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/core/src/payload_service.cpp -o CMakeFiles/easync_core.dir/src/payload_service.cpp.s
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/payload_utility.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/core/src/payload_utility.cpp -o CMakeFiles/easync_core.dir/src/payload_utility.cpp.s
 
 CMakeFiles/easync_core.dir/drivers/ble.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/easync/lib/core/drivers/ble.cpp
@@ -185,7 +185,7 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s: cmake_force
 easync_core_OBJECTS = \
 "CMakeFiles/easync_core.dir/src/core.cpp.o" \
 "CMakeFiles/easync_core.dir/src/driver.cpp.o" \
-"CMakeFiles/easync_core.dir/src/payload_service.cpp.o" \
+"CMakeFiles/easync_core.dir/src/payload_utility.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/ble.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mock.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o" \
@@ -197,7 +197,7 @@ easync_core_EXTERNAL_OBJECTS =
 
 libeasync_core.so: CMakeFiles/easync_core.dir/src/core.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/src/driver.cpp.o
-libeasync_core.so: CMakeFiles/easync_core.dir/src/payload_service.cpp.o
+libeasync_core.so: CMakeFiles/easync_core.dir/src/payload_utility.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/ble.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mock.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o

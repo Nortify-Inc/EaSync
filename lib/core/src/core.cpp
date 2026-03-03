@@ -24,7 +24,7 @@
 #include "wifi.hpp"
 #include "zigbee.hpp"
 #include "ble.hpp"
-#include "payload_service.hpp"
+#include "payload_utility.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -295,7 +295,7 @@ void core_destroy(CoreContext* core) {
     }
 
     for (const auto& pair : core->devices) {
-        core::PayloadService::instance().unbindDevice(pair.first);
+        core::PayloadUtility::instance().unbindDevice(pair.first);
     }
 
     core->devices.clear();
@@ -405,7 +405,7 @@ CoreResult core_register_device_ex(CoreContext* core,
             return CORE_ERROR;
 
         core->devices[uuid] = dev;
-        core::PayloadService::instance().bindDevice(dev.uuid, dev.brand, dev.model);
+        core::PayloadUtility::instance().bindDevice(dev.uuid, dev.brand, dev.model);
 
         ev.type = CORE_EVENT_DEVICE_ADDED;
         std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
@@ -486,7 +486,7 @@ CoreResult core_remove_device(CoreContext* core, const char* uuid)
             it->second.driver->onDeviceRemoved(uuid);
         }
 
-        core::PayloadService::instance().unbindDevice(uuid);
+        core::PayloadUtility::instance().unbindDevice(uuid);
 
         core->devices.erase(it);
 

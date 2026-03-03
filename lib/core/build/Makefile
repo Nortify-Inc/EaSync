@@ -342,29 +342,29 @@ src/driver.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/driver.cpp.s
 .PHONY : src/driver.cpp.s
 
-src/payload_service.o: src/payload_service.cpp.o
-.PHONY : src/payload_service.o
+src/payload_utility.o: src/payload_utility.cpp.o
+.PHONY : src/payload_utility.o
 
 # target to build an object file
-src/payload_service.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_service.cpp.o
-.PHONY : src/payload_service.cpp.o
+src/payload_utility.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.o
+.PHONY : src/payload_utility.cpp.o
 
-src/payload_service.i: src/payload_service.cpp.i
-.PHONY : src/payload_service.i
+src/payload_utility.i: src/payload_utility.cpp.i
+.PHONY : src/payload_utility.i
 
 # target to preprocess a source file
-src/payload_service.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_service.cpp.i
-.PHONY : src/payload_service.cpp.i
+src/payload_utility.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.i
+.PHONY : src/payload_utility.cpp.i
 
-src/payload_service.s: src/payload_service.cpp.s
-.PHONY : src/payload_service.s
+src/payload_utility.s: src/payload_utility.cpp.s
+.PHONY : src/payload_utility.s
 
 # target to generate assembly for a file
-src/payload_service.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_service.cpp.s
-.PHONY : src/payload_service.cpp.s
+src/payload_utility.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.s
+.PHONY : src/payload_utility.cpp.s
 
 # Help Target
 help:
@@ -400,9 +400,9 @@ help:
 	@echo "... src/driver.o"
 	@echo "... src/driver.i"
 	@echo "... src/driver.s"
-	@echo "... src/payload_service.o"
-	@echo "... src/payload_service.i"
-	@echo "... src/payload_service.s"
+	@echo "... src/payload_utility.o"
+	@echo "... src/payload_utility.i"
+	@echo "... src/payload_utility.s"
 .PHONY : help
 
 
