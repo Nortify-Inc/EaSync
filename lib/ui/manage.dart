@@ -323,15 +323,26 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(d.name, style: EaText.secondary.copyWith(fontSize: 16)),
-                                
+
                                 Text(
                                   '${d.host}:${d.port}',
                                   style: EaText.secondary.copyWith(fontSize: 12),
                                 ),
-                                SizedBox(height: 6),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Confidence ${(d.confidence * 100).toStringAsFixed(0)}% • ${d.vendor}',
+                                  style: EaText.secondary.copyWith(fontSize: 12),
+                                ),
+                                const SizedBox(height: 6),
                                 Text(d.hint, style: EaText.secondaryTranslucent),
                               ],
                             ),
+                          ),
+                          IconButton(
+                            tooltip: 'Verify now',
+                            onPressed: () => _verifyDiscovered(d),
+                            icon: const Icon(Icons.fact_check_outlined),
+                            color: EaColor.fore,
                           ),
                           TextButton(
                             onPressed: () => _registerDiscovered(d),
@@ -357,18 +368,40 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     );
   }
 
-  void _registerDiscovered(DiscoveredDevice d) {
+  Future<void> _verifyDiscovered(DiscoveredDevice d) async {
+    final ok = await Bridge.verifyDiscoveredDevice(d);
+    if (!mounted) return;
+    if (ok) {
+      _showBottomSnack('${d.name} is reachable on ${d.host}:${d.port}.');
+    } else {
+      _showTopErrorSnack('Could not verify ${d.name} right now.');
+    }
+  }
+
+  Future<void> _registerDiscovered(DiscoveredDevice d) async {
     final uuid = 'disc-${DateTime.now().millisecondsSinceEpoch}';
 
     try {
+      final verified = await Bridge.verifyDiscoveredDevice(d);
+      if (!verified) {
+        if (mounted) {
+          _showTopErrorSnack(
+            'Could not validate ${d.name} on ${d.host}:${d.port}. Try again closer to the device.',
+          );
+        }
+        return;
+      }
+
       Bridge.registerDevice(
         uuid: uuid,
         name: d.name,
         protocol: d.protocol,
         capabilities: const [CoreCapability.CORE_CAP_POWER],
-        brand: 'Auto',
-        model: d.host,
+        brand: d.vendor,
+        model: '${d.host}:${d.port}',
       );
+
+      Bridge.setDeviceEndpoint(uuid, '${d.host}:${d.port}');
 
       Bridge.establishProtocolConnection(uuid: uuid, protocol: d.protocol);
 
@@ -459,6 +492,24 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   fontSize: 12,
                 ),
               ),
+              const SizedBox(height: 6),
+              Text(
+                Bridge.healthLabel(device.uuid),
+                style: EaText.secondary.copyWith(
+                  color: EaColor.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              if ((Bridge.endpointForDevice(device.uuid) ?? '').isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Endpoint: ${Bridge.endpointForDevice(device.uuid)}',
+                  style: EaText.secondary.copyWith(
+                    color: EaColor.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,

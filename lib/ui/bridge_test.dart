@@ -8,7 +8,7 @@
 
 import 'bridge.dart';
 
-void main() {
+Future<void> main() async {
   Bridge.init();
 
   try {
@@ -62,6 +62,19 @@ void main() {
     Bridge.setPower('ac-001', true);
     Bridge.setTemperature('ac-001', 22.5);
     Bridge.setTime('ac-001', DateTime.now().second + 3600);
+
+    final discovered = await Bridge.discoverDevices();
+    print('Discovered candidates: ${discovered.length}');
+    if (discovered.isNotEmpty) {
+      final first = discovered.first;
+      final ok = await Bridge.verifyDiscoveredDevice(first);
+      print(
+        'First candidate verification: ${first.name} ${first.host}:${first.port} => ${ok ? 'ok' : 'failed'}',
+      );
+    }
+
+    Bridge.refreshDeviceConnection('lamp-001');
+    print('Health lamp-001: ${Bridge.healthLabel('lamp-001')}');
 
     // Keep process alive to observe events
     Future.delayed(const Duration(seconds: 10), () {
