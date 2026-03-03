@@ -1,12 +1,12 @@
 /**
- * @file payload_service.cpp
+ * @file payload_utility.cpp
  * @brief Implements payload template loading and payload assembly from JSON files.
  * @param capability Capability key looked up in each template payload map.
  * @return Payload JSON strings with placeholders resolved.
  * @author Erick Radmann
  */
 
-#include "payload_service.hpp"
+#include "payload_utility.hpp"
 
 #include <algorithm>
 #include <array>
@@ -349,17 +349,17 @@ core::PayloadCommand resolveCommand(PayloadTemplate entry,
 
 namespace core {
 
-PayloadService& PayloadService::instance() {
-    static PayloadService s;
+PayloadUtility& PayloadUtility::instance() {
+    static PayloadUtility s;
     return s;
 }
 
-void PayloadService::ensureLoaded() {
+void PayloadUtility::ensureLoaded() {
     std::lock_guard<std::mutex> lock(gMutex);
     loadTemplatesLocked();
 }
 
-void PayloadService::bindDevice(const std::string& uuid,
+void PayloadUtility::bindDevice(const std::string& uuid,
                                 const std::string& brand,
                                 const std::string& model)
 {
@@ -367,12 +367,12 @@ void PayloadService::bindDevice(const std::string& uuid,
     gDeviceProfiles[uuid] = DeviceProfile{brand, model};
 }
 
-void PayloadService::unbindDevice(const std::string& uuid) {
+void PayloadUtility::unbindDevice(const std::string& uuid) {
     std::lock_guard<std::mutex> lock(gMutex);
     gDeviceProfiles.erase(uuid);
 }
 
-std::string PayloadService::createPayload(const std::string& brand,
+std::string PayloadUtility::createPayload(const std::string& brand,
                                           const std::string& model,
                                           const std::string& capability,
                                           const std::string& valueJson)
@@ -380,14 +380,14 @@ std::string PayloadService::createPayload(const std::string& brand,
     return createCommand(brand, model, "", capability, valueJson).payload;
 }
 
-std::string PayloadService::createPayload(const std::string& uuid,
+std::string PayloadUtility::createPayload(const std::string& uuid,
                                           const std::string& capability,
                                           const std::string& valueJson)
 {
     return createCommand(uuid, capability, valueJson).payload;
 }
 
-PayloadCommand PayloadService::createCommand(const std::string& brand,
+PayloadCommand PayloadUtility::createCommand(const std::string& brand,
                                              const std::string& model,
                                              const std::string& uuid,
                                              const std::string& capability,
@@ -401,7 +401,7 @@ PayloadCommand PayloadService::createCommand(const std::string& brand,
     return resolveCommand(entry, uuid, valueJson);
 }
 
-PayloadCommand PayloadService::createCommand(const std::string& uuid,
+PayloadCommand PayloadUtility::createCommand(const std::string& uuid,
                                              const std::string& capability,
                                              const std::string& valueJson)
 {

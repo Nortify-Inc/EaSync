@@ -7,7 +7,7 @@
  */
 
 #include "zigbee.hpp"
-#include "payload_service.hpp"
+#include "payload_utility.hpp"
 
 #include <sstream>
 #include <vector>
@@ -22,7 +22,7 @@ static core::PayloadCommand buildCommandFromTemplate(
     const std::string& valueJson,
     const std::string& fallbackJson
 ) {
-    core::PayloadCommand fromTemplate = core::PayloadService::instance().createCommand(
+    core::PayloadCommand fromTemplate = core::PayloadUtility::instance().createCommand(
         uuid,
         capability,
         valueJson

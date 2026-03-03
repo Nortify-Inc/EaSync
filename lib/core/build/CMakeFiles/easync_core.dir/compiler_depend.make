@@ -566,7 +566,7 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/easync/lib/core/dri
   /home/radmann/easync/lib/core/drivers/driver.hpp \
   /home/radmann/easync/lib/core/drivers/mqtt.hpp \
   /home/radmann/easync/lib/core/include/core.h \
-  /home/radmann/easync/lib/core/include/payload_service.hpp \
+  /home/radmann/easync/lib/core/include/payload_utility.hpp \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -1198,7 +1198,7 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/easync/lib/core/d
   /home/radmann/easync/lib/core/drivers/driver.hpp \
   /home/radmann/easync/lib/core/drivers/zigbee.hpp \
   /home/radmann/easync/lib/core/include/core.h \
-  /home/radmann/easync/lib/core/include/payload_service.hpp \
+  /home/radmann/easync/lib/core/include/payload_utility.hpp \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -1558,7 +1558,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/easync/lib/core/src/cor
   /home/radmann/easync/lib/core/drivers/wifi.hpp \
   /home/radmann/easync/lib/core/drivers/zigbee.hpp \
   /home/radmann/easync/lib/core/include/core.h \
-  /home/radmann/easync/lib/core/include/payload_service.hpp \
+  /home/radmann/easync/lib/core/include/payload_utility.hpp \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -2201,8 +2201,8 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/easync/lib/core/src/d
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h
 
-CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/core/src/payload_service.cpp \
-  /home/radmann/easync/lib/core/include/payload_service.hpp \
+CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: /home/radmann/easync/lib/core/src/payload_utility.cpp \
+  /home/radmann/easync/lib/core/include/payload_utility.hpp \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -3028,8 +3028,6 @@ CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/c
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
 
-/home/radmann/easync/lib/core/src/payload_service.cpp:
-
 /usr/include/c++/13/bits/ostream.tcc:
 
 /usr/include/asm-generic/socket.h:
@@ -3111,6 +3109,8 @@ CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/c
 /usr/include/c++/13/thread:
 
 /usr/include/c++/13/bits/vector.tcc:
+
+/home/radmann/easync/lib/core/src/payload_utility.cpp:
 
 /usr/include/c++/13/tr1/ell_integral.tcc:
 
@@ -3236,7 +3236,7 @@ CMakeFiles/easync_core.dir/src/payload_service.cpp.o: /home/radmann/easync/lib/c
 
 /home/radmann/easync/lib/core/drivers/mqtt.hpp:
 
-/home/radmann/easync/lib/core/include/payload_service.hpp:
+/home/radmann/easync/lib/core/include/payload_utility.hpp:
 
 /usr/include/c++/13/algorithm:
 

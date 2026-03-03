@@ -41,6 +41,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   final Map<String, String> _assetByBrandModel = {};
   final Map<String, String> _assetByModel = {};
   bool _templateAssetsLoaded = false;
+  int? _selectedCapabilityFilter;
 
   StreamSubscription<String>? _stateSub;
   StreamSubscription<CoreEventData>? _eventSub;
@@ -55,6 +56,321 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     if (step <= 0) return 1;
     final raw = ((max - min) / step).round();
     return raw.clamp(1, 400);
+  }
+
+  String _capLabel(int cap) {
+    switch (cap) {
+      case CoreCapability.CORE_CAP_POWER:
+        return 'Power';
+      case CoreCapability.CORE_CAP_BRIGHTNESS:
+        return 'Brightness';
+      case CoreCapability.CORE_CAP_COLOR:
+        return 'Color';
+      case CoreCapability.CORE_CAP_TEMPERATURE:
+        return 'Temperature';
+      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
+        return 'Fridge';
+      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
+        return 'Freezer';
+      case CoreCapability.CORE_CAP_TIMESTAMP:
+        return 'Schedule';
+      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
+        return 'White Temp';
+      case CoreCapability.CORE_CAP_LOCK:
+        return 'Lock';
+      case CoreCapability.CORE_CAP_MODE:
+        return 'Mode';
+      case CoreCapability.CORE_CAP_POSITION:
+        return 'Position';
+      default:
+        return 'Other';
+    }
+  }
+
+  List<int> _availableCapabilities() {
+    final order = <int>[
+      CoreCapability.CORE_CAP_POWER,
+      CoreCapability.CORE_CAP_BRIGHTNESS,
+      CoreCapability.CORE_CAP_COLOR,
+      CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
+      CoreCapability.CORE_CAP_TEMPERATURE,
+      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+      CoreCapability.CORE_CAP_LOCK,
+      CoreCapability.CORE_CAP_MODE,
+      CoreCapability.CORE_CAP_POSITION,
+      CoreCapability.CORE_CAP_TIMESTAMP,
+    ];
+
+    final available = <int>{};
+    for (final d in devices) {
+      available.addAll(d.capabilities);
+    }
+
+    return order.where(available.contains).toList();
+  }
+
+  List<DeviceInfo> _visibleDevices() {
+    final cap = _selectedCapabilityFilter;
+    if (cap == null) return devices;
+    return devices.where((d) => d.capabilities.contains(cap)).toList();
+  }
+
+  void _applyCapabilityFilter(int? cap) {
+    setState(() {
+      _selectedCapabilityFilter = cap;
+
+      final visible = _visibleDevices();
+      for (final d in visible) {
+        if (d.capabilities.isEmpty) continue;
+
+        final safeIndex = (capIndexByDevice[d.uuid] ?? 0).clamp(
+          0,
+          d.capabilities.length - 1,
+        );
+        final activeCap = d.capabilities[safeIndex];
+        final target = _capProgress(d, activeCap);
+
+        // Replay "enter dashboard" style growth only for non-zero targets.
+        if (target > 0.000001) {
+          previousProgress[d.uuid] = 0.0;
+          animatedProgress[d.uuid] = target;
+        } else {
+          // Avoid replaying zero-target dot fade animation.
+          previousProgress[d.uuid] = target;
+          animatedProgress[d.uuid] = target;
+        }
+
+        final ring = _ringColor(d);
+        previousRingColorByDevice[d.uuid] = ring;
+        ringColorByDevice[d.uuid] = ring;
+      }
+    });
+  }
+
+  int _countDevicesForCap(int cap) {
+    return devices.where((d) => d.capabilities.contains(cap)).length;
+  }
+
+  Widget _buildCapabilityFilterBar(List<int> availableCaps) {
+    Widget chip({
+      required String label,
+      required IconData icon,
+      required bool selected,
+      required VoidCallback onTap,
+    }) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected ? EaColor.fore : EaColor.back,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: selected ? EaColor.fore : EaColor.border,
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 15,
+                  color: selected ? EaColor.back : EaColor.fore,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: EaText.small.copyWith(
+                    color: selected ? EaColor.back : EaColor.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: EaColor.secondaryBack,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: EaColor.border),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            chip(
+              label: 'All',
+              icon: Icons.grid_view_rounded,
+              selected: _selectedCapabilityFilter == null,
+              onTap: () => _applyCapabilityFilter(null),
+            ),
+            const SizedBox(width: 8),
+            ...availableCaps.map(
+              (cap) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: chip(
+                  label: '${_capLabel(cap)} (${_countDevicesForCap(cap)})',
+                  icon: _capIcon(cap),
+                  selected: _selectedCapabilityFilter == cap,
+                  onTap: () => _applyCapabilityFilter(cap),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      // quick summary
+      // keeps filter context visible while scrolling
+      
+    );
+  }
+
+  Widget _buildAnimatedBody() {
+    if (loading) {
+      return KeyedSubtree(
+        key: const ValueKey('dashboard-loading'),
+        child: _loading(),
+      );
+    }
+
+    if (error != null) {
+      return KeyedSubtree(
+        key: const ValueKey('dashboard-error'),
+        child: _errorState(),
+      );
+    }
+
+    if (devices.isEmpty) {
+      return KeyedSubtree(
+        key: const ValueKey('dashboard-empty'),
+        child: _emptyState(),
+      );
+    }
+
+    final availableCaps = _availableCapabilities();
+    final visibleDevices = _visibleDevices();
+    final selectedCount = _selectedCapabilityFilter == null
+        ? devices.length
+        : visibleDevices.length;
+
+    return KeyedSubtree(
+      key: ValueKey('dashboard-ready-${_selectedCapabilityFilter ?? -1}-${devices.length}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (availableCaps.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCapabilityFilterBar(availableCaps),
+                  const SizedBox(height: 10),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: animation,
+                      child: SizeTransition(
+                        sizeFactor: animation,
+                        axisAlignment: -1,
+                        child: child,
+                      ),
+                    ),
+                    child: Text(
+                      _selectedCapabilityFilter == null
+                          ? 'Showing all devices (${devices.length})'
+                          : 'Filtered: $selectedCount of ${devices.length}',
+                      key: ValueKey('filter-summary-${_selectedCapabilityFilter ?? -1}-$selectedCount'),
+                      style: EaText.secondaryTranslucent.copyWith(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: PageStorage(
+              bucket: _bucket,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeInCubic,
+                  transitionBuilder: (child, animation) {
+                    final scale = Tween<double>(
+                      begin: 0.92,
+                      end: 1.0,
+                    ).animate(animation);
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(scale: scale, child: child),
+                    );
+                  },
+                  child: visibleDevices.isEmpty
+                      ? Container(
+                          key: const ValueKey('filter-empty'),
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 26,
+                          ),
+                          decoration: BoxDecoration(
+                            color: EaColor.secondaryBack,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: EaColor.border),
+                          ),
+                          child: Text(
+                            'No devices match this capability filter.',
+                            textAlign: TextAlign.center,
+                            style: EaText.secondaryTranslucent,
+                          ),
+                        )
+                      : Wrap(
+                          key: ValueKey('filter-wrap-${_selectedCapabilityFilter ?? -1}-${visibleDevices.length}'),
+                          spacing: 18,
+                          runSpacing: 18,
+                          children: visibleDevices.asMap().entries.map((entry) {
+                            final i = entry.key;
+                            final d = entry.value;
+                            final extra = (i * 35).clamp(0, 280);
+                            return TweenAnimationBuilder<double>(
+                              key: ValueKey('device-card-${d.uuid}-${_selectedCapabilityFilter ?? -1}'),
+                              tween: Tween(begin: 0, end: 1),
+                              duration: Duration(milliseconds: 220 + extra),
+                              curve: Curves.easeOutCubic,
+                              builder: (_, t, child) {
+                                return Transform.scale(
+                                  scale: 0.90 + (0.10 * t),
+                                  child: Opacity(
+                                    opacity: t,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: _deviceCard(d),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   double _clampByConstraint(
@@ -148,6 +464,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
       devices = Bridge.listDevices();
 
+      if (_selectedCapabilityFilter != null) {
+        final stillExists = devices.any(
+          (d) => d.capabilities.contains(_selectedCapabilityFilter),
+        );
+        if (!stillExists) {
+          _selectedCapabilityFilter = null;
+        }
+      }
+
       for (final d in devices) {
         final resolved = _resolveAssetForDevice(d);
         if (resolved != null) {
@@ -172,7 +497,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             : (animatedProgress[d.uuid] ?? progress);
         animatedProgress[d.uuid] = progress;
 
-        final color = _capColor(d, cap);
+        final color = _ringColor(d);
+
         previousRingColorByDevice[d.uuid] = ringColorByDevice[d.uuid] ?? color;
         ringColorByDevice[d.uuid] = color;
         initializedDevices.add(d.uuid);
@@ -202,7 +528,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
         final newProgress = _capProgress(device, cap);
         final oldProgress = animatedProgress[uuid] ?? newProgress;
-        final newRingColor = _capColor(device, cap);
+        final newRingColor = _ringColor(device);
         final oldRingColor = ringColorByDevice[uuid] ?? newRingColor;
 
         if ((newProgress - oldProgress).abs() > 0.001) {
@@ -379,49 +705,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     }
   }
 
-  Color _capColor(DeviceInfo device, int cap) {
-    final s = Bridge.getState(device.uuid);
-
-    switch (cap) {
-      case CoreCapability.CORE_CAP_POWER:
-        return s.power
-            ? const Color.fromARGB(255, 0, 255, 90)
-            : const Color.fromARGB(255, 255, 36, 36);
-
-      case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return const Color.fromARGB(255, 255, 128, 0);
-
-      case CoreCapability.CORE_CAP_TEMPERATURE:
-        return const Color.fromARGB(255, 140, 0, 255);
-
-      case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-        return const Color.fromARGB(255, 0, 204, 255);
-
-      case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        return const Color.fromARGB(255, 0, 153, 255);
-
-      case CoreCapability.CORE_CAP_TIMESTAMP:
-        return const Color.fromARGB(255, 50, 120, 255);
-
-      case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-        return const Color.fromARGB(255, 255, 191, 0);
-
-      case CoreCapability.CORE_CAP_LOCK:
-        return s.lock
-            ? const Color.fromARGB(255, 255, 40, 40)
-            : const Color.fromARGB(255, 64, 255, 128);
-
-      case CoreCapability.CORE_CAP_MODE:
-        return const Color.fromARGB(255, 90, 80, 255);
-
-      case CoreCapability.CORE_CAP_POSITION:
-        return const Color.fromARGB(255, 0, 220, 180);
-
-      case CoreCapability.CORE_CAP_COLOR:
-        return Color(0xFF000000 | s.color);
-
-      default:
+  Color _ringColor(DeviceInfo device) {
+    final status = Bridge.connectionState(device.uuid);
+    switch (status) {
+      case ProtocolConnectionState.connected:
         return EaColor.fore;
+      case ProtocolConnectionState.connecting:
+        return EaColor.secondaryFore;
+      case ProtocolConnectionState.disconnected:
+      case ProtocolConnectionState.failed:
+      case ProtocolConnectionState.unknown:
+      default:
+        return EaColor.textDisabled;
     }
   }
 
@@ -472,7 +767,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return "${b.round()}%";
 
       case CoreCapability.CORE_CAP_COLOR:
-        return s.color;
+        return '';
 
       case CoreCapability.CORE_CAP_TEMPERATURE:
         final t = _clampByConstraint(
@@ -552,7 +847,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     PageStorage.of(context).writeState(context, next, identifier: device.uuid);
 
     final target = _capProgress(device, caps[next]);
-    final targetColor = _capColor(device, caps[next]);
+    final targetColor = _ringColor(device);
 
     previousProgress[device.uuid] = animatedProgress[device.uuid] ?? target;
 
@@ -567,20 +862,21 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return _loading();
-    if (error != null) return _errorState();
-    if (devices.isEmpty) return _emptyState();
-
-    return PageStorage(
-      bucket: _bucket,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-        child: Wrap(
-          spacing: 18,
-          runSpacing: 18,
-          children: devices.map((d) => _deviceCard(d)).toList(),
-        ),
-      ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.03),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+      child: _buildAnimatedBody(),
     );
   }
 
@@ -1448,10 +1744,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     final target = animatedProgress[device.uuid] ?? _capProgress(device, cap);
     final syncDotToGradient = target <= 0.000001;
+    final ringColorTarget = _ringColor(device);
 
     final begin = previousProgress[device.uuid] ?? target;
-
-    final ringColorTarget = _capColor(device, cap);
 
     double dragStartX = 0;
     double dragDelta = 0;
@@ -1551,51 +1846,47 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
+                                        horizontal: 9,
                                       ),
-                                      width:
-                                          cap != CoreCapability.CORE_CAP_COLOR
-                                          ? null
-                                          : 30,
                                       height: 30,
                                       alignment: Alignment.center,
-                                      decoration:
-                                          cap != CoreCapability.CORE_CAP_COLOR
-                                          ? BoxDecoration(
-                                              color: EaColor.back,
-                                              border: BoxBorder.all(
-                                                color: EaColor.fore,
+                                      decoration: BoxDecoration(
+                                        color: EaColor.back,
+                                        border: Border.all(
+                                          color: EaColor.fore.withValues(alpha: .75),
+                                        ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          if (cap == CoreCapability.CORE_CAP_COLOR) ...[
+                                            Container(
+                                              width: 30,
+                                              height: 30,
+                                              decoration: BoxDecoration(
+                                                color: Color(
+                                                  0xFF000000 |
+                                                      Bridge.getState(device.uuid).color,
+                                                ),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: EaColor.border),
                                               ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                            )
-                                          : BoxDecoration(
-                                              color: effectiveRingColor,
-                                              border: BoxBorder.all(
-                                                color: EaColor.fore,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
                                             ),
-                                      child:
-                                          cap != CoreCapability.CORE_CAP_COLOR
-                                          ? Row(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  _capIcon(cap),
-                                                  size: 20,
-                                                  color: EaColor.secondaryFore,
-                                                ),
-                                                SizedBox(width: 3),
-                                                Text(
-                                                  _capValue(device, cap),
-                                                  style: EaText.secondary,
-                                                ),
-                                              ],
-                                            )
-                                          : null,
+                                          ] else ...[
+                                            Icon(
+                                              _capIcon(cap),
+                                              size: 18,
+                                              color: EaColor.secondaryFore,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              _capValue(device, cap).toString(),
+                                              style: EaText.secondary,
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),

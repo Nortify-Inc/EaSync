@@ -10,7 +10,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CORE_SRC
     src/core.cpp
     src/driver.cpp
-    src/payload_service.cpp
+    src/payload_utility.cpp
 )
 
 file(GLOB DRIVER_SRC
