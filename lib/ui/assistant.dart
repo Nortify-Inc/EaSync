@@ -626,11 +626,33 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final known = <String, int>{
       'white': 0x00F5F5F5,
       'blue': 0x000066FF,
+      'light blue': 0x0000FFFF,
+      'dark blue': 0x000000FF,
       'green': 0x0000C853,
+      'light green': 0x0090EE90,
+      'dark green': 0x00008700,
       'red': 0x00E53935,
+      'light red': 0x00FF6E64,
+      'dark red': 0x00B71C1C,
       'purple': 0x009C27B0,
+      'light purple': 0x009932CC,
+      'dark purple': 0x0065117A,
+      'pink': 0x00EC407A,
+      'light pink': 0x00FF80AB,
+      'dark pink': 0x00B0003A,
+      'violet': 0x008A2BE2,
+      'indigo': 0x004B0082,
+      'brown': 0x008B4513,
+      'black': 0x00000000,
+      'gray': 0x00808080,
+      'silver': 0x00C0C0C0,
+      'gold': 0x00FFD700,
       'yellow': 0x00FFD600,
+      'light yellow': 0x00FFFF99,
+      'dark yellow': 0x00B2A100,
       'orange': 0x00FB8C00,
+      'light orange': 0x00FFA500,
+      'dark orange': 0x00B26A00,
       'cyan': 0x0000BCD4,
     };
 
@@ -1229,6 +1251,246 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     return actions;
   }
 
+  DeviceInfo? _temperatureTargetFromText(String input, List<DeviceInfo> devices) {
+    if (devices.isEmpty) return null;
+
+    bool hasAnyTempCap(DeviceInfo d) {
+      return d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) ||
+          d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE) ||
+          d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER);
+    }
+
+    final byName = _findDeviceFromText(input, devices);
+    if (byName != null && hasAnyTempCap(byName)) {
+      return byName;
+    }
+
+    final q = _normalizeInput(input);
+    final asksColdDevice = _containsAny(q, [
+      'fridge',
+      'freezer',
+      'geladeira',
+      'congelador',
+      'refrigerator',
+    ]);
+
+    final tempDevices = devices
+      .where(hasAnyTempCap)
+        .toList();
+    if (tempDevices.isEmpty) return null;
+
+    if (asksColdDevice) {
+      for (final d in tempDevices) {
+        final n = d.name.toLowerCase();
+        if (n.contains('fridge') ||
+            n.contains('freezer') ||
+            n.contains('geladeira') ||
+            n.contains('congelador') ||
+            n.contains('refrigerator')) {
+          return d;
+        }
+      }
+    }
+
+    return tempDevices.first;
+  }
+
+  String? _localNlpFallback(String input) {
+    final q = _normalizeInput(input);
+    final devices = Bridge.listDevices();
+
+    final asksInventory = _containsAnyPhrase(q, [
+      'what are my devices',
+      'what devices do i have',
+      'list my devices',
+      'list devices',
+      'which devices',
+      'devices available',
+      'my devices',
+      'quais dispositivos',
+      'listar dispositivos',
+    ]);
+
+    if (asksInventory) {
+      if (devices.isEmpty) return 'No devices are currently available.';
+      final names = devices.map((d) => d.name).toList();
+      return 'Devices (${names.length}): ${names.join(', ')}';
+    }
+
+    final asksPosition = _containsAny(q, [
+      'position',
+      'posicao',
+      'curtain',
+      'curtains',
+      'blind',
+      'blinds',
+      'shade',
+      'open',
+      'close',
+    ]);
+
+    if (asksPosition) {
+      final rows = <String>[];
+      for (final d in devices) {
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) continue;
+        final s = Bridge.getState(d.uuid);
+        rows.add('${d.name} ${s.position.toStringAsFixed(0)}%');
+      }
+      if (rows.isNotEmpty) {
+        return 'Position: ${rows.join(', ')}';
+      }
+    }
+
+    final asksBrightness = _containsAny(q, ['brightness', 'brilho']);
+    if (asksBrightness) {
+      final rows = <String>[];
+      for (final d in devices) {
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) continue;
+        final s = Bridge.getState(d.uuid);
+        rows.add('${d.name} ${s.brightness}%');
+      }
+      if (rows.isNotEmpty) {
+        return 'Brightness: ${rows.join(', ')}';
+      }
+    }
+
+    final asksPower = _containsAny(q, [' power', 'turned on', 'is on', 'is off', 'ligado', 'desligado']);
+    if (asksPower) {
+      final target = _findDeviceFromText(q, devices);
+      if (target != null && target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+        final s = Bridge.getState(target.uuid);
+        return s.power
+            ? 'Yes. ${target.name} is ON.'
+            : 'No. ${target.name} is OFF at this moment.';
+      }
+      int onCount = 0;
+      for (final d in devices) {
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_POWER)) continue;
+        if (Bridge.getState(d.uuid).power) onCount++;
+      }
+      if (devices.isNotEmpty) {
+        return '$onCount of ${devices.length} devices are ON.';
+      }
+    }
+
+    final asksLock = _containsAny(q, ['lock', 'unlock', 'fechadura', 'tranca']);
+    if (asksLock) {
+      final rows = <String>[];
+      for (final d in devices) {
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_LOCK)) continue;
+        final s = Bridge.getState(d.uuid);
+        rows.add('${d.name} ${s.lock ? 'locked' : 'unlocked'}');
+      }
+      if (rows.isNotEmpty) {
+        return 'Lock state: ${rows.join(', ')}';
+      }
+    }
+
+    final asksTemperature = _containsAny(q, [
+      'temperature',
+      'temperatura',
+      'temp',
+      'tempeature',
+      '°c',
+    ]);
+
+    if (!asksTemperature) return null;
+
+    final target = _temperatureTargetFromText(q, devices);
+    if (target == null) {
+      return 'I could not find a temperature-capable device.';
+    }
+
+    final setIntent = _containsAnyPhrase(q, [
+      'set ',
+      'can you set',
+      'adjust',
+      'change',
+      'defina',
+      'ajusta',
+      'mude',
+    ]);
+
+    final value = _extractFirstInt(q);
+    if (setIntent && value != null) {
+      final n = target.name.toLowerCase();
+      final coldDevice = n.contains('fridge') ||
+          n.contains('freezer') ||
+          n.contains('geladeira') ||
+          n.contains('congelador') ||
+          n.contains('refrigerator');
+      final asksFreezer = _containsAny(q, ['freezer', 'congelador']);
+      final asksFridge = _containsAny(q, ['fridge', 'geladeira', 'refrigerator']);
+
+      double temp;
+      if ((asksFreezer &&
+              target.capabilities
+                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) ||
+          (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) &&
+              !target.capabilities
+                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE) &&
+              target.capabilities
+                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER))) {
+        temp = value.clamp(-24, -14).toDouble();
+      } else if ((asksFridge &&
+              target.capabilities
+                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) ||
+          (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) &&
+              target.capabilities
+                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE))) {
+        temp = value.clamp(1, 8).toDouble();
+      } else {
+        final minT = coldDevice ? -20 : 16;
+        final maxT = coldDevice ? 12 : 30;
+        temp = value.clamp(minT, maxT).toDouble();
+      }
+
+      if (target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+        final before = Bridge.getState(target.uuid);
+        if (!before.power) {
+          Bridge.setPower(target.uuid, true);
+        }
+      }
+
+      if (asksFreezer &&
+          target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+        Bridge.setTemperatureFreezer(target.uuid, temp);
+      } else if (asksFridge &&
+          target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+        Bridge.setTemperatureFridge(target.uuid, temp);
+      } else if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+        Bridge.setTemperature(target.uuid, temp);
+      } else if (target.capabilities
+          .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+        Bridge.setTemperatureFridge(target.uuid, temp);
+      } else if (target.capabilities
+          .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+        Bridge.setTemperatureFreezer(target.uuid, temp);
+      }
+      return 'Sure! Now ${target.name} is running at ${temp.toStringAsFixed(0)}°C.';
+    }
+
+    final state = Bridge.getState(target.uuid);
+    if (_containsAny(q, ['freezer', 'congelador']) &&
+        target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+      return '${target.name} freezer temperature is ${state.temperatureFreezer.toStringAsFixed(0)}°C.';
+    }
+    if (_containsAny(q, ['fridge', 'geladeira', 'refrigerator']) &&
+        target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+      return '${target.name} fridge temperature is ${state.temperatureFridge.toStringAsFixed(0)}°C.';
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+      return '${target.name} temperature is ${state.temperature.toStringAsFixed(0)}°C.';
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+      return '${target.name} fridge temperature is ${state.temperatureFridge.toStringAsFixed(0)}°C.';
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+      return '${target.name} freezer temperature is ${state.temperatureFreezer.toStringAsFixed(0)}°C.';
+    }
+    return '${target.name} temperature is unavailable right now.';
+  }
+
   Future<void> _executeAssistantCommand(String raw) async {
     final input = raw.trim();
     if (input.isEmpty) return;
@@ -1238,10 +1500,23 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
     try {
       final backendReply = Bridge.aiExecuteCommand(input).trim();
-      if (backendReply.isNotEmpty) {
-        _appendAssistantChat(backendReply);
+      final lower = backendReply.toLowerCase();
+      final genericOrStale = backendReply.isEmpty ||
+          lower.contains('i can report status, online devices and possible behavior insights') ||
+          lower.contains('i could not identify the target device') ||
+          lower.contains('mention the device name');
+
+      if (genericOrStale) {
+        final backendChat = Bridge.aiProcessChat(input).trim();
+        if (backendChat.isNotEmpty) {
+          _appendAssistantChat(backendChat);
+        } else if (backendReply.isNotEmpty) {
+          _appendAssistantChat(backendReply);
+        } else {
+          _appendAssistantChat('${_friendlyPrefix()} I could not process this request right now.');
+        }
       } else {
-        _appendAssistantChat('${_friendlyPrefix()} I could not process this request right now.');
+        _appendAssistantChat(backendReply);
       }
     } catch (_) {
       _appendAssistantChat('${_friendlyPrefix()} I failed to process the command. Please try again.');
@@ -2408,7 +2683,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           TextField(
             controller: _commandController,
             minLines: 1,
-            maxLines: 2,
+            maxLines: 1,
+            textInputAction: TextInputAction.send,
             cursorColor: EaColor.fore,
             onSubmitted: (_) => _submitCurrentCommand(),
             style: EaText.secondary.copyWith(color: EaColor.textPrimary),
