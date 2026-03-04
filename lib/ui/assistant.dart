@@ -1754,41 +1754,22 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           final st = Bridge.getState(d.uuid);
           _lastPowerByDevice[d.uuid] = st.power;
           _lastStateByDevice[d.uuid] = _copyState(st);
-        } catch (_) {
-          _lastPowerByDevice[d.uuid] = false;
-        }
-      }
-
-      _eventSub = Bridge.onEvents.listen((event) {
-        if (event.type != CoreEventType.CORE_EVENT_STATE_CHANGED) return;
-
-        final prev = _lastPowerByDevice[event.uuid] ?? false;
-        final next = event.state.power;
-        _lastPowerByDevice[event.uuid] = next;
-
-        _recordStatePattern(
-          event.uuid,
-          _lastStateByDevice[event.uuid],
-          event.state,
-        );
-        _lastStateByDevice[event.uuid] = _copyState(event.state);
-
-        if (!prev && next) {
-          _recordPowerOnSignal();
-        }
-      });
-
-      _startAutomationLoop();
-      _startAssistantDataRotation();
-      _startAnnotationRotation();
-      _startRoundHourWeatherLoop();
-
-      if (mounted) {
-        setState(() => _loading = false);
+        } catch (_) {}
       }
 
       _recordAppOpenSignal();
-      _bootstrapLocationAndWeather();
+      await _bootstrapLocationAndWeather();
+      _startRoundHourWeatherLoop();
+      _startAutomationLoop();
+      _startAnnotationRotation();
+      _startAssistantDataRotation();
+
+      if (_chatMessages.isEmpty) {
+        _appendAssistantChat(
+          'Hello. I am online and ready to help with your home automation.',
+          animate: false,
+        );
+      }
     } catch (e) {
       _initError = 'Assistant failed to initialize: $e';
     }
