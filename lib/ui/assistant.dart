@@ -137,11 +137,28 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   String? _generalResponse(String text) {
     final q = text.toLowerCase();
 
-    if (_containsAny(q, ['thanks', 'thank you', 'thx'])) {
-      return '${_friendlyPrefix()} You\'re welcome — happy to help!';
+    if (_containsAny(q, ['thanks', 'thank you', 'thx', 'appreciate it'])) {
+      const replies = [
+        'You\'re very welcome!',
+        'Anytime — happy to help.',
+        'My pleasure. Want me to optimize something else?',
+        'Of course! Always here for you.',
+      ];
+      return '${_friendlyPrefix()} ${replies[_rng.nextInt(replies.length)]}';
     }
-    if (_containsAny(q, ['how are you', 'how is it going', 'how\'s it going'])) {
-      return '${_friendlyPrefix()} I\'m doing great and fully ready to automate your home.';
+    if (_containsAny(q, ['how are you', 'how is it going', 'how\'s it going', 'you good'])) {
+      const replies = [
+        'I\'m doing great and ready to help.',
+        'I\'m excellent — systems online and focused.',
+        'All good here. Want a quick status of your home?',
+      ];
+      return replies[_rng.nextInt(replies.length)];
+    }
+    if (_containsAny(q, ['good morning', 'good afternoon', 'good evening', 'hello', 'hi'])) {
+      return _greetingResponse();
+    }
+    if (_containsAny(q, ['bye', 'good night', 'see you', 'talk later'])) {
+      return 'See you soon. I\'ll keep learning your routines in the meantime.';
     }
     if (_containsAny(q, ['who are you', 'what are you'])) {
       return 'I\'m your EaSync Assistant. I can automate devices, apply scenes, and learn your routine patterns.';
@@ -159,6 +176,12 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     }
     if (_containsAny(q, ['outside temperature', 'weather', 'how hot'])) {
       return 'Outside is around ${_outsideTemp.toStringAsFixed(0)}°C near ${_locationQuery.isEmpty ? 'your saved area' : _locationQuery}.';
+    }
+    if (_containsAny(q, ['what should i do', 'any suggestion', 'recommend something'])) {
+      return 'I suggest enabling Auto-arrival and running a comfort profile before your usual arrival hour.';
+    }
+    if (_containsAny(q, ['what did you learn', 'what have you learned', 'learning summary'])) {
+      return 'I\'m learning that your activity peaks around ${_hourLabel(_topHour(_appOpenByHour))} and arrival-like usage is around ${_hourLabel(_topHour(_powerOnByHour))}.';
     }
     if (_containsAny(q, ['good job', 'nice', 'great'])) {
       return 'That\'s great! I appreciate it. Want me to run a quick home optimization?';
@@ -563,7 +586,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
         target.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) {
       final pct = (_extractFirstInt(clause) ?? 70).clamp(0, 100);
       Bridge.setBrightness(target.uuid, pct);
-      actions.add('set brightness to ${pct}% on ${target.name}');
+      actions.add('set brightness to $pct% on ${target.name}');
       _pushCommandLog('Brightness $pct% → ${target.name}');
     }
 
@@ -1549,7 +1572,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: annotations.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, i) => const SizedBox(height: 8),
                     itemBuilder: (_, i) {
                       final a = annotations[i];
                       return _card(
@@ -1589,7 +1612,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     await _executeAssistantCommand(cmd);
   }
 
-  Widget _buildChatPanel() {
+  Widget _buildChatPanel(double panelHeight) {
     final quickPrompts = <String>[
       'Turn on AC and set temperature 23',
       'Set brightness 65 and color blue',
@@ -1604,7 +1627,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
-      height: 392,
+      height: panelHeight,
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
         color: EaColor.back.withValues(alpha: .95),
@@ -1856,12 +1879,14 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     final currentDataTile = dataTiles[_assistantDataIndex % dataTiles.length];
     final annotations = _annotationModels();
     final currentAnnotation = annotations[_annotationIndex % annotations.length];
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final chatPanelHeight = (screenHeight * 0.34).clamp(270.0, 420.0).toDouble();
 
     return SafeArea(
       child: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 300),
+            padding: EdgeInsets.fromLTRB(16, 10, 16, chatPanelHeight + 44),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2042,7 +2067,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                   child: Container(
-                    height: 170,
+                    height: (chatPanelHeight * 0.62).clamp(140.0, 230.0).toDouble(),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
@@ -2063,7 +2088,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
             left: 12,
             right: 12,
             bottom: 10,
-            child: _buildChatPanel(),
+            child: _buildChatPanel(chatPanelHeight),
           ),
         ],
       ),

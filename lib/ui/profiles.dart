@@ -253,6 +253,129 @@ class _ProfilesState extends State<Profiles>
     }
   }
 
+  DeviceInfo? _firstWithCapability(int capability) {
+    for (final d in devices) {
+      if (d.capabilities.contains(capability)) return d;
+    }
+    return null;
+  }
+
+  Profile? _assistantRecommendedProfile() {
+    final actions = <DeviceAction>[];
+
+    final climate = _firstWithCapability(CoreCapability.CORE_CAP_TEMPERATURE);
+    if (climate != null) {
+      actions.add(
+        DeviceAction(
+          deviceId: climate.uuid,
+          power: climate.capabilities.contains(CoreCapability.CORE_CAP_POWER)
+              ? true
+              : null,
+          temperature: 23,
+        ),
+      );
+    }
+
+    final light = _firstWithCapability(CoreCapability.CORE_CAP_BRIGHTNESS) ??
+        _firstWithCapability(CoreCapability.CORE_CAP_POWER);
+    if (light != null) {
+      actions.add(
+        DeviceAction(
+          deviceId: light.uuid,
+          power: light.capabilities.contains(CoreCapability.CORE_CAP_POWER)
+              ? true
+              : null,
+          brightness: light.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
+              ? 38
+              : null,
+        ),
+      );
+    }
+
+    final curtain = _firstWithCapability(CoreCapability.CORE_CAP_POSITION);
+    if (curtain != null) {
+      actions.add(DeviceAction(deviceId: curtain.uuid, position: 28));
+    }
+
+    if (actions.isEmpty) return null;
+    return Profile(
+      name: 'Assistant Comfort',
+      actions: actions,
+      icon: Icons.auto_awesome,
+    );
+  }
+
+  void _addAssistantRecommendedProfile(Profile recommended) {
+    var name = recommended.name;
+    var index = 2;
+    while (profiles.any((p) => p.name.toLowerCase() == name.toLowerCase())) {
+      name = '${recommended.name} $index';
+      index++;
+    }
+
+    setState(() {
+      profiles.add(Profile(name: name, actions: recommended.actions, icon: recommended.icon));
+    });
+    _showBottomSnack('Profile $name was added.');
+  }
+
+  Widget _assistantRecommendedCard() {
+    final recommended = _assistantRecommendedProfile();
+    if (recommended == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: EaColor.back,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: EaColor.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: EaColor.fore.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.auto_awesome, color: EaColor.fore),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recommended by your assistant',
+                    style: EaText.secondary.copyWith(fontSize: 12),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(recommended.name, style: EaText.primary),
+                  Text(
+                    '${recommended.actions.length} actions ready',
+                    style: EaText.secondary,
+                  ),
+                ],
+              ),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _addAssistantRecommendedProfile(recommended),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Add'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: EaColor.fore,
+                side: const BorderSide(color: EaColor.fore),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -261,6 +384,7 @@ class _ProfilesState extends State<Profiles>
       child: Column(
         children: [
           Expanded(child: _body()),
+          _assistantRecommendedCard(),
           _fab(),
         ],
       ),
