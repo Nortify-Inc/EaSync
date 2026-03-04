@@ -76,7 +76,7 @@
         "position": { "topic": "mock/{uuid}/set", "template": { "position": "{value}" } }
       },
       "constrains": {
-        "position": { "min": 0, "max": 100 }
+        "position": { "min": 0, "max": 100, "step": 10 }
       }
     },
     {

@@ -10,6 +10,17 @@ import 'handler.dart';
 
 bool _hasAiBackendSymbols(DynamicLibrary lib) {
   try {
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_model_process_chat');
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_model_execute_command');
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_set_chat_model_script');
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+bool _hasLegacyAiBackendSymbols(DynamicLibrary lib) {
+  try {
     lib.lookup<NativeFunction<Void Function()>>('core_ai_process_chat');
     lib.lookup<NativeFunction<Void Function()>>('core_ai_execute_command');
     lib.lookup<NativeFunction<Void Function()>>('core_ai_get_annotations');
@@ -19,8 +30,11 @@ bool _hasAiBackendSymbols(DynamicLibrary lib) {
   }
 }
 
+String _loadedCoreLibraryPath = 'libeasync_core.so';
+
 DynamicLibrary _openCoreLibrary() {
   if (Platform.isWindows) {
+    _loadedCoreLibraryPath = 'core.dll';
     return DynamicLibrary.open('core.dll');
   }
 
@@ -28,8 +42,31 @@ DynamicLibrary _openCoreLibrary() {
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final cwd = Directory.current.path;
     DynamicLibrary? firstLoadable;
+    DynamicLibrary? legacyLoadable;
+    String? legacyPath;
+
+    List<String> projectRootCandidates(String from) {
+      final out = <String>[];
+      var dir = Directory(from);
+      for (var i = 0; i < 10; i++) {
+        final pubspec = File('${dir.path}/pubspec.yaml');
+        if (pubspec.existsSync()) {
+          out.add('${dir.path}/lib/core/build/libeasync_core.so');
+        }
+        final parent = dir.parent;
+        if (parent.path == dir.path) break;
+        dir = parent;
+      }
+      return out;
+    }
+
+    final dynamicCandidates = <String>{
+      ...projectRootCandidates(cwd),
+      ...projectRootCandidates(executableDir),
+    };
 
     final candidates = <String>[
+      ...dynamicCandidates,
       '$cwd/lib/core/build/libeasync_core.so',
       '$executableDir/lib/libeasync_core.so',
       '$cwd/build/linux/x64/debug/bundle/lib/libeasync_core.so',
@@ -45,16 +82,28 @@ DynamicLibrary _openCoreLibrary() {
         final lib = DynamicLibrary.open(path);
         firstLoadable ??= lib;
         if (_hasAiBackendSymbols(lib)) {
+          _loadedCoreLibraryPath = path;
           return lib;
+        }
+        if (legacyLoadable == null && _hasLegacyAiBackendSymbols(lib)) {
+          legacyLoadable = lib;
+          legacyPath = path;
         }
       } catch (_) {}
     }
 
+    if (legacyLoadable != null) {
+      _loadedCoreLibraryPath = legacyPath ?? 'legacy-ai-loadable';
+      return legacyLoadable;
+    }
+
     if (firstLoadable != null) {
+      _loadedCoreLibraryPath = 'fallback-first-loadable';
       return firstLoadable;
     }
   }
 
+  _loadedCoreLibraryPath = 'libeasync_core.so';
   return DynamicLibrary.open('libeasync_core.so');
 }
 
@@ -357,6 +406,11 @@ typedef _coreAiProcessChatC =
 typedef _coreAiProcessChatDart =
   int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
+typedef _coreAiModelProcessChatC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _coreAiModelProcessChatDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
 typedef _coreAiGetAnnotationsC =
   Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
 typedef _coreAiGetAnnotationsDart =
@@ -366,6 +420,26 @@ typedef _coreAiExecuteCommandC =
   Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _coreAiExecuteCommandDart =
   int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
+typedef _coreAiModelExecuteCommandC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _coreAiModelExecuteCommandDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
+typedef _coreAiSetChatModelScriptC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreAiSetChatModelScriptDart =
+  int Function(Pointer<Void>, Pointer<Utf8>);
+
+typedef _coreAiModelExecuteCommandAsyncStartC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+typedef _coreAiModelExecuteCommandAsyncStartDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+
+typedef _coreAiModelExecuteCommandAsyncPollC =
+  Int32 Function(Pointer<Void>, Uint64, Pointer<Bool>, Pointer<Int8>, Uint32);
+typedef _coreAiModelExecuteCommandAsyncPollDart =
+  int Function(Pointer<Void>, int, Pointer<Bool>, Pointer<Int8>, int);
 
 typedef _coreAiLearningSnapshotC =
   Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
@@ -571,6 +645,17 @@ final _coreAiProcessChatDart? _coreAiProcessChat = (() {
   }
 })();
 
+final _coreAiModelProcessChatDart? _coreAiModelProcessChat = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiModelProcessChatC, _coreAiModelProcessChatDart>(
+          'core_ai_model_process_chat',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
 final _coreAiGetAnnotationsDart? _coreAiGetAnnotations = (() {
   try {
     return coreLib
@@ -588,6 +673,52 @@ final _coreAiExecuteCommandDart? _coreAiExecuteCommand = (() {
         .lookupFunction<_coreAiExecuteCommandC, _coreAiExecuteCommandDart>(
           'core_ai_execute_command',
         );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiModelExecuteCommandDart? _coreAiModelExecuteCommand = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreAiModelExecuteCommandC,
+      _coreAiModelExecuteCommandDart
+    >('core_ai_model_execute_command');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiSetChatModelScriptDart? _coreAiSetChatModelScript = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreAiSetChatModelScriptC,
+      _coreAiSetChatModelScriptDart
+    >('core_ai_set_chat_model_script');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiModelExecuteCommandAsyncStartDart?
+_coreAiModelExecuteCommandAsyncStart = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreAiModelExecuteCommandAsyncStartC,
+      _coreAiModelExecuteCommandAsyncStartDart
+    >('core_ai_model_execute_command_async_start');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiModelExecuteCommandAsyncPollDart?
+_coreAiModelExecuteCommandAsyncPoll = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreAiModelExecuteCommandAsyncPollC,
+      _coreAiModelExecuteCommandAsyncPollDart
+    >('core_ai_model_execute_command_async_poll');
   } catch (_) {
     return null;
   }
@@ -884,10 +1015,56 @@ class Bridge {
     }
   }
 
+  static String? _resolveChatInferenceScriptPath() {
+    final cwd = Directory.current.path;
+    final executableDir = File(Platform.resolvedExecutable).parent.path;
+
+    final candidates = <String>[
+      '$cwd/lib/ai/models/chatInferenceCli.py',
+      '$cwd/../lib/ai/models/chatInferenceCli.py',
+      '$cwd/../../lib/ai/models/chatInferenceCli.py',
+      '$cwd/../../../lib/ai/models/chatInferenceCli.py',
+      '$executableDir/lib/ai/models/chatInferenceCli.py',
+      '$executableDir/../lib/ai/models/chatInferenceCli.py',
+      '$executableDir/../../lib/ai/models/chatInferenceCli.py',
+      '$executableDir/../../../lib/ai/models/chatInferenceCli.py',
+      '$executableDir/../../../../lib/ai/models/chatInferenceCli.py',
+    ];
+
+    for (final path in candidates) {
+      final f = File(path);
+      if (f.existsSync()) {
+        return f.absolute.path;
+      }
+    }
+    return null;
+  }
+
+  static void _configureChatInferenceScriptIfAvailable() {
+    if (_coreAiSetChatModelScript == null || _ctx == null) return;
+
+    final scriptPath = _resolveChatInferenceScriptPath();
+    if (scriptPath == null || scriptPath.trim().isEmpty) {
+      _log('ai', 'Chat inference script path not found; using native auto-discovery');
+      return;
+    }
+
+    final scriptPtr = scriptPath.toNativeUtf8();
+    final res = _coreAiSetChatModelScript!(_ctx!, scriptPtr);
+    calloc.free(scriptPtr);
+
+    if (res == 0) {
+      _log('ai', 'Configured chat inference script path: $scriptPath');
+    } else {
+      _log('ai', 'Failed to configure chat inference script path (code=$res)');
+    }
+  }
+
   static Future<void> init() async {
     if (_ready) return;
 
     _log('core', 'Initializing bridge');
+    _log('core', 'Native library candidate loaded: $_loadedCoreLibraryPath');
 
     _ctx = _coreCreate();
 
@@ -913,6 +1090,8 @@ class Bridge {
       _log('core', 'core_set_event_callback failed with code $cbRes');
       _throwLastError(cbRes);
     }
+
+    _configureChatInferenceScriptIfAvailable();
 
     _startSimulationLoop();
     _startReconnectLoop();
@@ -2166,14 +2345,15 @@ class Bridge {
 
   static String aiProcessChat(String input) {
     _ensureReady();
-    if (_coreAiProcessChat == null) {
+    final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
+    if (processFn == null) {
       return 'AI backend unavailable in current native library.';
     }
 
     final inPtr = input.toNativeUtf8();
     final outPtr = calloc<Int8>(2048);
 
-    final res = _coreAiProcessChat!(_ctx!, inPtr, outPtr, 2048);
+    final res = processFn(_ctx!, inPtr, outPtr, 2048);
 
     calloc.free(inPtr);
 
@@ -2189,8 +2369,10 @@ class Bridge {
 
   static String aiExecuteCommand(String input) {
     _ensureReady();
-    if (_coreAiExecuteCommand == null) {
-      if (_coreAiProcessChat != null) {
+    final execFn = _coreAiModelExecuteCommand ?? _coreAiExecuteCommand;
+    final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
+    if (execFn == null) {
+      if (processFn != null) {
         return aiProcessChat(input);
       }
       return 'I could not process this request right now.';
@@ -2198,7 +2380,7 @@ class Bridge {
 
     final inPtr = input.toNativeUtf8();
     final outPtr = calloc<Int8>(4096);
-    final res = _coreAiExecuteCommand!(_ctx!, inPtr, outPtr, 4096);
+    final res = execFn(_ctx!, inPtr, outPtr, 4096);
 
     calloc.free(inPtr);
 
@@ -2223,7 +2405,7 @@ class Bridge {
       r.contains('i could not identify the target device') ||
       r.contains('mention the device name');
 
-    if (_coreAiProcessChat != null &&
+    if (processFn != null &&
       ((r.contains('no actionable changes') ||
           r.contains('could not map this command')) &&
         questionLike ||
@@ -2232,6 +2414,55 @@ class Bridge {
     }
 
     return response;
+  }
+
+  static Future<String> aiExecuteCommandAsync(String input) async {
+    _ensureReady();
+
+    final startFn = _coreAiModelExecuteCommandAsyncStart;
+    final pollFn = _coreAiModelExecuteCommandAsyncPoll;
+    if (startFn == null || pollFn == null) {
+      return aiExecuteCommand(input);
+    }
+
+    final inPtr = input.toNativeUtf8();
+    final tokenPtr = calloc<Uint64>();
+    final startRes = startFn(_ctx!, inPtr, tokenPtr);
+    calloc.free(inPtr);
+
+    if (startRes != 0) {
+      calloc.free(tokenPtr);
+      if (startRes == CoreResult.CORE_ERROR) {
+        return aiExecuteCommand(input);
+      }
+      _throwLastError(startRes);
+    }
+
+    final token = tokenPtr.value;
+    calloc.free(tokenPtr);
+
+    final readyPtr = calloc<Bool>();
+    final outPtr = calloc<Int8>(4096);
+    try {
+      while (true) {
+        final pollRes = pollFn(_ctx!, token, readyPtr, outPtr, 4096);
+        if (pollRes != 0) {
+          _throwLastError(pollRes);
+        }
+
+        if (readyPtr.value) {
+          final response = outPtr.cast<Utf8>().toDartString();
+          return response.trim().isEmpty
+              ? 'I could not process this request right now.'
+              : response;
+        }
+
+        await Future.delayed(const Duration(milliseconds: 24));
+      }
+    } finally {
+      calloc.free(readyPtr);
+      calloc.free(outPtr);
+    }
   }
 
   static List<String> aiAnnotations() {

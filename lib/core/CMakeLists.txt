@@ -12,6 +12,8 @@ set(CORE_SRC
     src/driver.cpp
     src/payload_utility.cpp
     ../ai/src/aiEngine.cpp
+    ../ai/src/chatModelRuntime.cpp
+    ../ai/src/chatCommandRouter.cpp
 )
 
 file(GLOB DRIVER_SRC

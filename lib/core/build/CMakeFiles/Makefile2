@@ -81,12 +81,12 @@ clean: CMakeFiles/easync_core.dir/clean
 CMakeFiles/easync_core.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10 "Built target easync_core"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/easync/lib/core/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12 "Built target easync_core"
 .PHONY : CMakeFiles/easync_core.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/easync_core.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/easync/lib/core/build/CMakeFiles 10
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/easync/lib/core/build/CMakeFiles 12
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/easync_core.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/easync/lib/core/build/CMakeFiles 0
 .PHONY : CMakeFiles/easync_core.dir/rule

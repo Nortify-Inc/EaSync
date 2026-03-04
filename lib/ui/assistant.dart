@@ -1499,27 +1499,48 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     _setAssistantThinking(true);
 
     try {
-      final backendReply = Bridge.aiExecuteCommand(input).trim();
+      final backendReply = (await Bridge.aiExecuteCommandAsync(input)).trim();
       final lower = backendReply.toLowerCase();
+      final unavailableReply = lower.contains('i could not process this request right now') ||
+          lower.contains('ai backend unavailable in current native library');
       final genericOrStale = backendReply.isEmpty ||
           lower.contains('i can report status, online devices and possible behavior insights') ||
           lower.contains('i could not identify the target device') ||
           lower.contains('mention the device name');
 
-      if (genericOrStale) {
-        final backendChat = Bridge.aiProcessChat(input).trim();
-        if (backendChat.isNotEmpty) {
-          _appendAssistantChat(backendChat);
-        } else if (backendReply.isNotEmpty) {
-          _appendAssistantChat(backendReply);
+      if (unavailableReply) {
+        final local = _localNlpFallback(input) ?? _generalResponse(input);
+        if (local != null && local.trim().isNotEmpty) {
+          _appendAssistantChat(local, animate: false);
         } else {
-          _appendAssistantChat('${_friendlyPrefix()} I could not process this request right now.');
+          _appendAssistantChat(
+            '${_friendlyPrefix()} I could not process this request right now.',
+            animate: false,
+          );
+        }
+        return;
+      }
+
+      if (genericOrStale) {
+        final local = _localNlpFallback(input) ?? _generalResponse(input);
+        if (local != null && local.trim().isNotEmpty) {
+          _appendAssistantChat(local, animate: false);
+        } else if (backendReply.isNotEmpty) {
+          _appendAssistantChat(backendReply, animate: false);
+        } else {
+          _appendAssistantChat(
+            '${_friendlyPrefix()} I could not process this request right now.',
+            animate: false,
+          );
         }
       } else {
-        _appendAssistantChat(backendReply);
+        _appendAssistantChat(backendReply, animate: false);
       }
     } catch (_) {
-      _appendAssistantChat('${_friendlyPrefix()} I failed to process the command. Please try again.');
+      _appendAssistantChat(
+        '${_friendlyPrefix()} I failed to process the command. Please try again.',
+        animate: false,
+      );
     }
   }
 
@@ -2648,7 +2669,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               Text(
                 _assistantThinking
                     ? 'Thinking...'
-                    : (_isRecordingAudio ? 'Listening...' : 'Ready'),
+                    : (_isRecordingAudio ? 'Listening...' : 'Online'),
                 style: EaText.secondaryTranslucent,
               ),
             ],
