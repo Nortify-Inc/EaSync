@@ -4,6 +4,8 @@
 
 EaSync is a unified platform for smart device control and automation, integrating multiple protocols into a single C++ backend with a modern Flutter interface.
 
+It includes a smart Assistant that learns real user patterns from device state changes and suggests automations/profiles based on learned behavior.
+
 ---
 
 ## 🌐 Technologies
@@ -42,6 +44,13 @@ EaSync is a unified platform for smart device control and automation, integratin
 - Modular: separate drivers for each device type  
 - Real-time logging and state management  
 - Easy extension for new devices and protocols
+- AI Assistant with:
+	- natural text command execution
+	- Android voice command input
+	- device-state Q&A (power, temperature, brightness, color, position, mode, lock)
+	- pattern learning from real state changes
+	- annotations based on learned usage
+	- AI-driven profile recommendations based on user behavior
 
 ---
 
@@ -67,6 +76,7 @@ lib/
 │ └─ driver.cpp  
 │  
 ├─ ui/  
+│ ├─ assistant.dart  
 │ ├─ bridge.dart  
 │ ├─ bridge_test.dart  
 │ ├─ dashboard.dart  
@@ -87,11 +97,137 @@ lib/
 
 ## ⚙️ Installation
 
-### Backend (C++)
+### 1) Backend (C++)
 
 ```bash
 cd easync/lib/core
 chmod +x build.sh
 ./build.sh
-
 ```
+
+### 2) Flutter dependencies
+
+```bash
+cd easync
+flutter pub get
+```
+
+### 3) Run app
+
+```bash
+flutter run -d linux
+```
+
+For Android:
+
+```bash
+flutter run -d android
+```
+
+---
+
+## 🧠 Assistant notes
+
+- Voice recognition is currently enabled for Android.
+- Assistant recommendations and annotations improve over time as user/device interactions are observed.
+
+---
+
+## ✅ Development checks
+
+```bash
+flutter analyze
+flutter test
+```
+
+Native core can be rebuilt anytime with:
+
+```bash
+cd lib/core
+./build.sh
+```
+
+---
+
+## 🧱 Architecture overview
+
+- Flutter UI layer in [lib/ui/assistant.dart](lib/ui/assistant.dart), [lib/ui/dashboard.dart](lib/ui/dashboard.dart), [lib/ui/manage.dart](lib/ui/manage.dart), [lib/ui/profiles.dart](lib/ui/profiles.dart)
+- FFI bridge in [lib/ui/bridge.dart](lib/ui/bridge.dart)
+- Native core and protocol drivers in [lib/core/src/core.cpp](lib/core/src/core.cpp) and [lib/core/drivers](lib/core/drivers)
+- Platform runners in [linux/runner](linux/runner), [windows/runner](windows/runner), [android/app](android/app), [ios/Runner](ios/Runner)
+
+---
+
+## ⚡ Quickstart (Linux)
+
+```bash
+git clone <your-repo-url>
+cd easync
+flutter pub get
+cd lib/core && ./build.sh && cd ../..
+flutter run -d linux
+```
+
+---
+
+## 🎙️ Assistant command examples
+
+### Automation
+- `turn on AC and set temperature 23`
+- `set brightness 65 and color blue`
+- `set curtains position 40`
+
+### Device state Q&A
+- `is living room lamp on?`
+- `what color is kitchen lamp?`
+- `what is AC temperature?`
+- `curtain position?`
+- `which devices are online?`
+
+### Natural language variants
+- `ela está ligada?`
+- `qual a temperatura do ar?`
+- `quais devices tenho?`
+
+---
+
+## 🧪 Testing and diagnostics
+
+```bash
+flutter test
+flutter analyze
+```
+
+Useful files:
+- bridge integration tests: [lib/ui/bridge_test.dart](lib/ui/bridge_test.dart)
+- analysis rules: [analysis_options.yaml](analysis_options.yaml)
+
+---
+
+## 🛠 Troubleshooting
+
+- If native symbols fail to load, rebuild core:
+
+```bash
+cd lib/core
+./build.sh
+```
+
+- If dependencies are out of sync:
+
+```bash
+flutter clean
+flutter pub get
+```
+
+- Voice commands unavailable on desktop:
+	- expected behavior (voice recognition is Android-focused currently).
+
+---
+
+## 🗺 Roadmap
+
+- Better room-aware disambiguation (automatic best-match by context)
+- More advanced profile generation from long-term behavior
+- Expanded protocol adapters and driver templates
+- Cloud backup for user automation preferences
