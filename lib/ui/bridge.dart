@@ -945,6 +945,8 @@ class Bridge {
   static Timer? _simulateTimer;
   static Timer? _reconnectTimer;
   static bool _simulating = false;
+  static final bool _enableAutoSimulation =
+      (Platform.environment['EASYNC_ENABLE_SIMULATION'] == '1');
 
   static Stream<String> get onStateChanged => _stateController.stream;
 
@@ -1123,7 +1125,9 @@ class Bridge {
 
     _configureChatInferenceScriptIfAvailable();
 
-    _startSimulationLoop();
+    if (_enableAutoSimulation) {
+      _startSimulationLoop();
+    }
     _startReconnectLoop();
 
     _ready = true;
