@@ -47,6 +47,7 @@ class _AssistantState extends State<Assistant> {
   bool _useUsageHistory = true;
   bool _allowDeviceControl = true;
   bool _allowAutoRoutines = true;
+  int _assistantDataIndex = 0;
   int _annotationIndex = 0;
 
   final Map<int, int> _powerOnByHour = {};
@@ -55,6 +56,7 @@ class _AssistantState extends State<Assistant> {
 
   StreamSubscription<CoreEventData>? _eventSub;
   Timer? _automationTimer;
+  Timer? _assistantDataTimer;
   Timer? _annotationTimer;
   final TextEditingController _commandController = TextEditingController();
   bool _useAudioInput = false;
@@ -72,6 +74,7 @@ class _AssistantState extends State<Assistant> {
   void dispose() {
     _eventSub?.cancel();
     _automationTimer?.cancel();
+    _assistantDataTimer?.cancel();
     _annotationTimer?.cancel();
     _commandController.dispose();
     super.dispose();
@@ -363,8 +366,6 @@ class _AssistantState extends State<Assistant> {
         }
       }
 
-      await _recordAppOpenSignal();
-
       _eventSub = Bridge.onEvents.listen((event) {
         if (event.type != CoreEventType.CORE_EVENT_STATE_CHANGED) return;
 
@@ -378,20 +379,30 @@ class _AssistantState extends State<Assistant> {
       });
 
       _startAutomationLoop();
+      _startAssistantDataRotation();
       _startAnnotationRotation();
 
-      if (_useLocationData) {
-        await _resolveLocationFromDeviceOrNetwork();
+      if (mounted) {
+        setState(() => _loading = false);
       }
 
-      if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
-        await _fetchOutsideTemperature();
-      }
+      _recordAppOpenSignal();
+      _bootstrapLocationAndWeather();
     } catch (e) {
       _initError = 'Assistant failed to initialize: $e';
-    } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
+    }
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+  }
+
+  Future<void> _bootstrapLocationAndWeather() async {
+    if (_useLocationData) {
+      await _resolveLocationFromDeviceOrNetwork();
+    }
+
+    if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
+      await _fetchOutsideTemperature();
     }
   }
 
@@ -557,13 +568,45 @@ class _AssistantState extends State<Assistant> {
     await _fetchOutsideTemperature();
   }
 
+  void _startAssistantDataRotation() {
+    _assistantDataTimer?.cancel();
+    _assistantDataTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted) return;
+      final total = _assistantDataTiles().length;
+      if (total <= 1) return;
+      setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
+    });
+  }
+
+  void _nextAssistantDataTile() {
+    final total = _assistantDataTiles().length;
+    if (total <= 1) return;
+    setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
+  }
+
+  void _prevAssistantDataTile() {
+    final total = _assistantDataTiles().length;
+    if (total <= 1) return;
+    setState(() => _assistantDataIndex = (_assistantDataIndex - 1 + total) % total);
+  }
+
+  void _nextAnnotationTile() {
+    final total = _annotationModels().length;
+    if (total <= 1) return;
+    setState(() => _annotationIndex = (_annotationIndex + 1) % total);
+  }
+
+  void _prevAnnotationTile() {
+    final total = _annotationModels().length;
+    if (total <= 1) return;
+    setState(() => _annotationIndex = (_annotationIndex - 1 + total) % total);
+  }
+
   void _startAnnotationRotation() {
     _annotationTimer?.cancel();
     _annotationTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
-      final total = _annotationModels().length;
-      if (total <= 1) return;
-      setState(() => _annotationIndex = (_annotationIndex + 1) % total);
+      _nextAnnotationTile();
     });
   }
 
@@ -583,7 +626,7 @@ class _AssistantState extends State<Assistant> {
             permission == LocationPermission.whileInUse) {
           final pos = await Geolocator.getCurrentPosition(
             locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
-          );
+          ).timeout(const Duration(seconds: 4));
 
           final viaReverse = await _reverseGeocodeLocation(pos.latitude, pos.longitude);
           if (viaReverse.trim().isNotEmpty) {
@@ -608,14 +651,14 @@ class _AssistantState extends State<Assistant> {
   }
 
   Future<String> _reverseGeocodeLocation(double lat, double lon) async {
+    HttpClient? client;
     try {
       final uri = Uri.parse('https://geocode.maps.co/reverse?lat=$lat&lon=$lon');
-      final client = HttpClient();
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
-      final res = await req.close();
-      final raw = await res.transform(utf8.decoder).join();
-      client.close();
+      final res = await req.close().timeout(const Duration(seconds: 4));
+      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return '';
       final address = decoded['address'];
@@ -626,18 +669,20 @@ class _AssistantState extends State<Assistant> {
       return country.isEmpty ? city : '$city,$country';
     } catch (_) {
       return '';
+    } finally {
+      client?.close(force: true);
     }
   }
 
   Future<String> _resolveLocationFromNetwork() async {
+    HttpClient? client;
     try {
       final uri = Uri.parse('https://ipwho.is/');
-      final client = HttpClient();
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
-      final res = await req.close();
-      final raw = await res.transform(utf8.decoder).join();
-      client.close();
+      final res = await req.close().timeout(const Duration(seconds: 4));
+      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return '';
       final city = (decoded['city'] ?? '').toString();
@@ -646,6 +691,8 @@ class _AssistantState extends State<Assistant> {
       return country.isEmpty ? city : '$city,$country';
     } catch (_) {
       return '';
+    } finally {
+      client?.close(force: true);
     }
   }
 
@@ -653,15 +700,15 @@ class _AssistantState extends State<Assistant> {
     if (!_useWeatherData) return;
     if (_locationQuery.trim().isEmpty) return;
     setState(() => _weatherLoading = true);
+    HttpClient? client;
     try {
       final encoded = Uri.encodeComponent(_locationQuery.trim());
       final uri = Uri.parse('https://wttr.in/$encoded?format=j1');
-      final client = HttpClient();
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
-      final res = await req.close();
-      final raw = await res.transform(utf8.decoder).join();
-      client.close();
+      final res = await req.close().timeout(const Duration(seconds: 4));
+      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
 
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
@@ -679,6 +726,7 @@ class _AssistantState extends State<Assistant> {
     } catch (_) {
       // Keep previously known temperature.
     } finally {
+      client?.close(force: true);
       if (mounted) setState(() => _weatherLoading = false);
     }
   }
@@ -817,6 +865,72 @@ class _AssistantState extends State<Assistant> {
         ],
       ),
     );
+  }
+
+  List<Widget> _assistantDataTiles() {
+    return [
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _useLocationData && _useWeatherData && _useUsageHistory,
+        activeColor: EaColor.fore,
+        onChanged: (v) async {
+          if (v == null) return;
+          setState(() {
+            _useLocationData = v;
+            _useWeatherData = v;
+            _useUsageHistory = v;
+          });
+          if (v) {
+            await _resolveLocationFromDeviceOrNetwork();
+            if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
+              await _fetchOutsideTemperature();
+            }
+          }
+          await _persistState();
+        },
+        title: Text('Allow AI to consume insights data', style: EaText.secondary),
+        subtitle: Text(
+          'Includes location, weather and usage history for better annotations.',
+          style: EaText.secondaryTranslucent,
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _allowDeviceControl && _allowAutoRoutines,
+        activeColor: EaColor.fore,
+        onChanged: (v) async {
+          if (v == null) return;
+          setState(() {
+            _allowDeviceControl = v;
+            _allowAutoRoutines = v;
+          });
+          await _persistState();
+        },
+        title: Text('Allow AI to run automations', style: EaText.secondary),
+        subtitle: Text(
+          'Includes device control and automatic routines.',
+          style: EaText.secondaryTranslucent,
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _autoArrivalEnabled && _allowAutoRoutines,
+        activeThumbColor: EaColor.fore,
+        onChanged: (v) {
+          if (!_allowAutoRoutines) return;
+          setState(() => _autoArrivalEnabled = v);
+          _persistState();
+        },
+        title: Text('Enable auto-arrival routine', style: EaText.secondary),
+        subtitle: Text(
+          'Auto run near ${_hourLabel(_topHour(_powerOnByHour))} when weather is warm.',
+          style: EaText.secondaryTranslucent,
+        ),
+        secondary: const Icon(Icons.auto_mode, color: EaColor.fore),
+      ),
+    ];
   }
 
   List<_AnnotationModel> _annotationModels() {
@@ -981,6 +1095,8 @@ class _AssistantState extends State<Assistant> {
       );
     }
 
+    final dataTiles = _assistantDataTiles();
+    final currentDataTile = dataTiles[_assistantDataIndex % dataTiles.length];
     final annotations = _annotationModels();
     final currentAnnotation = annotations[_annotationIndex % annotations.length];
 
@@ -1038,112 +1154,44 @@ class _AssistantState extends State<Assistant> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _useLocationData,
-                    activeColor: EaColor.fore,
-                    onChanged: (v) async {
-                      if (v == null) return;
-                      setState(() => _useLocationData = v);
-                      if (v) {
-                        await _resolveLocationFromDeviceOrNetwork();
-                        if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
-                          await _fetchOutsideTemperature();
-                        }
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _nextAssistantDataTile,
+                    onHorizontalDragEnd: (details) {
+                      final vx = details.primaryVelocity ?? 0;
+                      if (vx < 0) {
+                        _nextAssistantDataTile();
+                      } else if (vx > 0) {
+                        _prevAssistantDataTile();
                       }
-                      await _persistState();
                     },
-                    title: Text('Allow AI to consume location', style: EaText.secondary),
-                    subtitle: Text(
-                      'Use device GPS when available, otherwise network-based location.',
-                      style: EaText.secondaryTranslucent,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: KeyedSubtree(
+                        key: ValueKey('assistant-data-${_assistantDataIndex % dataTiles.length}'),
+                        child: currentDataTile,
+                      ),
                     ),
-                    controlAffinity: ListTileControlAffinity.leading,
                   ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _useWeatherData,
-                    activeColor: EaColor.fore,
-                    onChanged: (v) async {
-                      if (v == null) return;
-                      setState(() => _useWeatherData = v);
-                      if (v && _locationQuery.trim().isNotEmpty) {
-                        await _fetchOutsideTemperature();
-                      }
-                      await _persistState();
-                    },
-                    title: Text('Allow AI to consume weather data', style: EaText.secondary),
-                    subtitle: Text(
-                      'Weather informs climate and arrival suggestions.',
-                      style: EaText.secondaryTranslucent,
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _useUsageHistory,
-                    activeColor: EaColor.fore,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _useUsageHistory = v);
-                      _persistState();
-                    },
-                    title: Text('Allow AI to consume usage history', style: EaText.secondary),
-                    subtitle: Text(
-                      'Lets Assistant learn open/arrival patterns over time.',
-                      style: EaText.secondaryTranslucent,
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _allowDeviceControl,
-                    activeColor: EaColor.fore,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _allowDeviceControl = v);
-                      _persistState();
-                    },
-                    title: Text('Allow AI to control devices', style: EaText.secondary),
-                    subtitle: Text(
-                      'Enables command execution and suggestion apply buttons.',
-                      style: EaText.secondaryTranslucent,
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _allowAutoRoutines,
-                    activeColor: EaColor.fore,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _allowAutoRoutines = v);
-                      _persistState();
-                    },
-                    title: Text('Allow AI to run automatic routines', style: EaText.secondary),
-                    subtitle: Text(
-                      'Allows periodic auto-arrival automation near learned time.',
-                      style: EaText.secondaryTranslucent,
-                    ),
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 2),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _autoArrivalEnabled && _allowAutoRoutines,
-                    activeThumbColor: EaColor.fore,
-                    onChanged: (v) {
-                      if (!_allowAutoRoutines) return;
-                      setState(() => _autoArrivalEnabled = v);
-                      _persistState();
-                    },
-                    title: Text('Enable auto-arrival routine', style: EaText.secondary),
-                    subtitle: Text(
-                      'Auto run near ${_hourLabel(_topHour(_powerOnByHour))} when weather is warm.',
-                      style: EaText.secondaryTranslucent,
-                    ),
-                    secondary: const Icon(Icons.auto_mode, color: EaColor.fore),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(dataTiles.length, (i) {
+                      final active = i == (_assistantDataIndex % dataTiles.length);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        width: active ? 18 : 6,
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        decoration: BoxDecoration(
+                          color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
@@ -1160,49 +1208,49 @@ class _AssistantState extends State<Assistant> {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 220,
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _card(
-                      icon: currentAnnotation.icon,
-                      title: currentAnnotation.title,
-                      description: currentAnnotation.description,
-                      trailing: currentAnnotation.onApply == null
-                          ? null
-                          : TextButton(
-                              onPressed: currentAnnotation.onApply,
-                              child: Text(
-                                currentAnnotation.actionLabel ?? 'Apply',
-                                style: EaText.accent,
-                              ),
-                            ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(annotations.length, (i) {
-                        final active = i == (_annotationIndex % annotations.length);
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 220),
-                          width: active ? 18 : 6,
-                          height: 6,
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          decoration: BoxDecoration(
-                            color: active
-                                ? EaColor.fore
-                                : EaColor.fore.withValues(alpha: .22),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 4),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _nextAnnotationTile,
+              onHorizontalDragEnd: (details) {
+                final vx = details.primaryVelocity ?? 0;
+                if (vx < 0) {
+                  _nextAnnotationTile();
+                } else if (vx > 0) {
+                  _prevAnnotationTile();
+                }
+              },
+              child: _card(
+                icon: currentAnnotation.icon,
+                title: currentAnnotation.title,
+                description: currentAnnotation.description,
+                trailing: currentAnnotation.onApply == null
+                    ? null
+                    : TextButton(
+                        onPressed: currentAnnotation.onApply,
+                        child: Text(
+                          currentAnnotation.actionLabel ?? 'Apply',
+                          style: EaText.accent,
+                        ),
+                      ),
               ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(annotations.length, (i) {
+                final active = i == (_annotationIndex % annotations.length);
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: active ? 18 : 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 14),
             Text('Command center', style: EaText.primary.copyWith(fontSize: 18)),
