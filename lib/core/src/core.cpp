@@ -1857,7 +1857,10 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
             collectByCap(CORE_CAP_COLOR);
         }
     } else if (q.find("ac") != std::string::npos || q.find("climate") != std::string::npos ||
-               q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos) {
+               q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos ||
+               q.find("temperatura") != std::string::npos || q.find("temp") != std::string::npos ||
+               q.find("fridge") != std::string::npos || q.find("freezer") != std::string::npos ||
+               q.find("geladeira") != std::string::npos || q.find("congelador") != std::string::npos) {
         collectByCap(CORE_CAP_TEMPERATURE);
     } else if (q.find("curtain") != std::string::npos || q.find("blind") != std::string::npos ||
                q.find("cortina") != std::string::npos) {
@@ -1900,7 +1903,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
         core->ai.observeCommand(raw, nowTs);
 
         const bool mentionsStateDomain = containsAny(q, {
-            "brightness", "brilho", "temperature", "temperatura", "color", "cor",
+            "brightness", "brilho", "temperature", "temperatura", "temp", "tempeature", "thermo", "color", "cor",
             "position", "posicao", "ligad", "power", "online", "status", "estado",
             "open", "close", "abr", "fech"
         });
@@ -1926,12 +1929,18 @@ CoreResult core_ai_execute_command(CoreContext* core,
             "yellow", "amarelo", "orange", "laranja", "white", "branco"
         });
 
-        const bool informationalLike = informationalCue || (questionLike && !explicitAction) ||
-                                       (mentionsStateDomain && questionLike);
+        const bool informationalLike = !explicitAction &&
+                                       (informationalCue || questionLike ||
+                                        (mentionsStateDomain && questionLike));
         const bool actionLike = explicitAction ||
                                 (mentionsStateDomain && hasValueHint && !informationalLike);
 
-        if (!actionLike || informationalLike) {
+        const bool forceChatRouting = containsAny(q, {
+            "devices", "dispositivos", "dispositivo", "list", "lista", "listar",
+            "status", "estado", "online", "hello", "hi", "oi", "ola", "olá", "help", "ajuda"
+        }) && !explicitAction;
+
+        if (forceChatRouting || !actionLike || informationalLike) {
             const auto snapshots = collectSnapshots(core);
             reply = core->ai.processChat(raw, snapshots);
         } else if (!perms.allowDeviceControl) {
@@ -1998,11 +2007,19 @@ CoreResult core_ai_execute_command(CoreContext* core,
                         }
                     }
 
-                    if ((clause.find("temperature") != std::string::npos || clause.find("temperatura") != std::string::npos) &&
+                    if ((clause.find("temperature") != std::string::npos || clause.find("temperatura") != std::string::npos ||
+                        clause.find("temp") != std::string::npos || clause.find("tempeature") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_TEMPERATURE)) {
                         const int v = firstInteger(clause);
                         if (v >= 0) {
-                            const float t = static_cast<float>(std::clamp(v, 16, 30));
+                            const std::string devName = lowerCopy(dev->name);
+                            const bool coldDevice = devName.find("fridge") != std::string::npos ||
+                                                    devName.find("freezer") != std::string::npos ||
+                                                    devName.find("geladeira") != std::string::npos ||
+                                                    devName.find("congelador") != std::string::npos;
+                            const int minT = coldDevice ? -20 : 16;
+                            const int maxT = coldDevice ? 12 : 30;
+                            const float t = static_cast<float>(std::clamp(v, minT, maxT));
                             if (hasCapability(*dev, CORE_CAP_POWER) && !dev->state.power) {
                                 dev->driver->setPower(dev->uuid, true);
                                 dev->state.power = true;

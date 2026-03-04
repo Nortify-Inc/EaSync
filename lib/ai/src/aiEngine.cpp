@@ -98,6 +98,11 @@ void AiEngine::recordPattern(const std::string& uuid,
 std::string AiEngine::processChat(const std::string& input,
                                   const std::vector<DeviceSnapshot>& devices) const {
     const std::string q = normalize(input);
+    const bool asksTemperature = q.find("temperatura") != std::string::npos ||
+                                 q.find("temperature") != std::string::npos ||
+                                 q.find("tempeature") != std::string::npos ||
+                                 q.find("temp") != std::string::npos ||
+                                 q.find("thermo") != std::string::npos;
 
     if (q.empty()) {
         return "I can help with commands, device status, and behavior insights.";
@@ -115,6 +120,7 @@ std::string AiEngine::processChat(const std::string& input,
 
     if (q.find("list") != std::string::npos || q.find("lista") != std::string::npos ||
         q.find("listar") != std::string::npos || q.find("devices") != std::string::npos ||
+        q.find("device") != std::string::npos ||
         q.find("dispositivo") != std::string::npos || q.find("dispositivos") != std::string::npos) {
         std::ostringstream oss;
         oss << "Devices (" << devices.size() << "): ";
@@ -201,15 +207,13 @@ std::string AiEngine::processChat(const std::string& input,
         return target->name + std::string(target->state.power ? " is ON." : " is OFF.");
     }
 
-    if ((q.find("temperatura") != std::string::npos || q.find("temperature") != std::string::npos) &&
-        target && hasCapability(*target, CORE_CAP_TEMPERATURE)) {
+    if (asksTemperature && target && hasCapability(*target, CORE_CAP_TEMPERATURE)) {
         std::ostringstream oss;
         oss << target->name << " temperature is " << static_cast<int>(target->state.temperature) << "°C.";
         return oss.str();
     }
 
-    if ((q.find("temperatura") != std::string::npos || q.find("temperature") != std::string::npos) &&
-        !target) {
+    if (asksTemperature && !target) {
         std::vector<std::string> rows;
         for (const auto& d : devices) {
             if (hasCapability(d, CORE_CAP_TEMPERATURE)) {
@@ -430,6 +434,22 @@ const DeviceSnapshot* AiEngine::findByName(const std::string& text,
         }
         if (lights.size() == 1) {
             return lights.front();
+        }
+    }
+
+    if (text.find("ac") != std::string::npos || text.find("climate") != std::string::npos ||
+        text.find("fridge") != std::string::npos || text.find("freezer") != std::string::npos ||
+        text.find("geladeira") != std::string::npos || text.find("congelador") != std::string::npos ||
+        text.find("temperature") != std::string::npos || text.find("temperatura") != std::string::npos ||
+        text.find("tempeature") != std::string::npos || text.find("temp") != std::string::npos) {
+        std::vector<const DeviceSnapshot*> thermal;
+        for (const auto& d : devices) {
+            if (hasCapability(d, CORE_CAP_TEMPERATURE)) {
+                thermal.push_back(&d);
+            }
+        }
+        if (thermal.size() == 1) {
+            return thermal.front();
         }
     }
 
