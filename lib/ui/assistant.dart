@@ -37,6 +37,13 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   static const _kUseUsageHistory = 'assistant.use_usage_history';
   static const _kAllowDeviceControl = 'assistant.allow_device_control';
   static const _kAllowAutoRoutines = 'assistant.allow_auto_routines';
+  static const _kDeviceActivityById = 'assistant.device_activity_by_id';
+  static const _kTempSetSum = 'assistant.temp_set_sum';
+  static const _kTempSetCount = 'assistant.temp_set_count';
+  static const _kBrightnessSetSum = 'assistant.brightness_set_sum';
+  static const _kBrightnessSetCount = 'assistant.brightness_set_count';
+  static const _kPositionSetSum = 'assistant.position_set_sum';
+  static const _kPositionSetCount = 'assistant.position_set_count';
 
   bool _loading = true;
   String? _initError;
@@ -60,6 +67,15 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   final Map<int, int> _powerOnByHour = {};
   final Map<int, int> _appOpenByHour = {};
   final Map<String, bool> _lastPowerByDevice = {};
+  final Map<String, DeviceState> _lastStateByDevice = {};
+  final Map<String, int> _deviceActivityById = {};
+  double _tempSetSum = 0;
+  int _tempSetCount = 0;
+  double _brightnessSetSum = 0;
+  int _brightnessSetCount = 0;
+  double _positionSetSum = 0;
+  int _positionSetCount = 0;
+  String? _lastReferencedDeviceId;
   List<DeviceInfo> _pendingTargets = [];
   String? _pendingClause;
   final VoiceRecognition _voiceRecognition = VoiceRecognition();
@@ -272,6 +288,71 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     return source.map((k, v) => MapEntry(k.toString(), v));
   }
 
+  Map<String, int> _decodeStringIntMap(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return {};
+      final out = <String, int>{};
+      for (final e in decoded.entries) {
+        final k = e.key.toString();
+        final v = int.tryParse(e.value.toString());
+        if (k.isEmpty || v == null) continue;
+        out[k] = v;
+      }
+      return out;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  DeviceState _copyState(DeviceState s) {
+    return DeviceState(power: s.power)
+      ..brightness = s.brightness
+      ..color = s.color
+      ..temperature = s.temperature
+      ..temperatureFridge = s.temperatureFridge
+      ..temperatureFreezer = s.temperatureFreezer
+      ..timestamp = s.timestamp
+      ..colorTemperature = s.colorTemperature
+      ..lock = s.lock
+      ..mode = s.mode
+      ..position = s.position;
+  }
+
+  void _recordStatePattern(String uuid, DeviceState? prev, DeviceState next) {
+    if (prev == null || !_useUsageHistory) return;
+
+    var changed = false;
+    if (prev.power != next.power) changed = true;
+
+    if (prev.brightness != next.brightness) {
+      changed = true;
+      _brightnessSetSum += next.brightness.toDouble();
+      _brightnessSetCount++;
+    }
+
+    if ((prev.temperature - next.temperature).abs() >= 0.3) {
+      changed = true;
+      _tempSetSum += next.temperature;
+      _tempSetCount++;
+    }
+
+    if (prev.color != next.color) changed = true;
+    if (prev.mode != next.mode) changed = true;
+    if (prev.lock != next.lock) changed = true;
+
+    if ((prev.position - next.position).abs() >= 1) {
+      changed = true;
+      _positionSetSum += next.position;
+      _positionSetCount++;
+    }
+
+    if (!changed) return;
+    _deviceActivityById[uuid] = (_deviceActivityById[uuid] ?? 0) + 1;
+    unawaited(_persistState());
+  }
+
   String _normalizeInput(String raw) {
     final lower = raw.toLowerCase();
     final collapsed = lower.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -329,6 +410,206 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       if (text.contains(w)) return true;
     }
     return false;
+  }
+
+  bool _containsAnyPhrase(String text, List<String> phrases) {
+    for (final p in phrases) {
+      if (text.contains(p)) return true;
+      final tokens = p.split(' ').where((e) => e.trim().isNotEmpty).toList();
+      if (tokens.length >= 2 && tokens.every(text.contains)) return true;
+    }
+    return false;
+  }
+
+  DeviceInfo? _findDeviceFromText(String text, List<DeviceInfo> devices) {
+    if (devices.isEmpty) return null;
+    final q = _normalizeInput(text);
+
+    DeviceInfo? best;
+    var bestScore = 0;
+    for (final d in devices) {
+      final name = _normalizeInput(d.name);
+      final brand = _normalizeInput(d.brand);
+      final model = _normalizeInput(d.model);
+      final hay = '$name $brand $model';
+
+      if (q.contains(name) && name.trim().isNotEmpty) {
+        _lastReferencedDeviceId = d.uuid;
+        return d;
+      }
+
+      final words = q.split(RegExp(r'\s+')).where((w) => w.length > 2).toList();
+      var score = 0;
+      for (final w in words) {
+        if (hay.contains(w)) score++;
+      }
+      if (score > bestScore) {
+        best = d;
+        bestScore = score;
+      }
+    }
+
+    if (best != null && bestScore >= 2) {
+      _lastReferencedDeviceId = best.uuid;
+      return best;
+    }
+
+    List<DeviceInfo> byType(List<String> hints, List<int> caps) {
+      return devices.where((d) {
+        final hay = _normalizeInput('${d.name} ${d.brand} ${d.model}');
+        final hintMatch = hints.any((h) => hay.contains(h));
+        final capMatch = caps.any(d.capabilities.contains);
+        return hintMatch || capMatch;
+      }).toList();
+    }
+
+    if (_containsAnyPhrase(q, [
+      'lamp',
+      'light',
+      'lights',
+      'luz',
+      'lampada',
+      'luminaire',
+    ])) {
+      final lamps = byType(
+        ['lamp', 'light', 'luz', 'lampada'],
+        [CoreCapability.CORE_CAP_BRIGHTNESS, CoreCapability.CORE_CAP_COLOR],
+      );
+      if (lamps.length == 1) {
+        _lastReferencedDeviceId = lamps.first.uuid;
+        return lamps.first;
+      }
+    }
+
+    if (_containsAnyPhrase(q, [
+      'ac',
+      'air conditioner',
+      'climate',
+      'hvac',
+      'ar condicionado',
+    ])) {
+      final acs = byType(
+        ['ac', 'air', 'climate', 'hvac', 'ar condicionado'],
+        [CoreCapability.CORE_CAP_TEMPERATURE, CoreCapability.CORE_CAP_MODE],
+      );
+      if (acs.length == 1) {
+        _lastReferencedDeviceId = acs.first.uuid;
+        return acs.first;
+      }
+    }
+
+    if (_containsAnyPhrase(q, [
+      'curtain',
+      'blind',
+      'shade',
+      'cortina',
+      'persiana',
+    ])) {
+      final curtains = byType(
+        ['curtain', 'blind', 'shade', 'cortina', 'persiana'],
+        [CoreCapability.CORE_CAP_POSITION],
+      );
+      if (curtains.length == 1) {
+        _lastReferencedDeviceId = curtains.first.uuid;
+        return curtains.first;
+      }
+    }
+
+    if (_containsAnyPhrase(q, [
+      'ela esta ligada',
+      'ele esta ligado',
+      'it is on',
+      'is it on',
+      'this device',
+      'that device',
+      'esse dispositivo',
+      'essa lampada',
+      'este aparelho',
+    ])) {
+      final remembered = _lastReferencedDeviceId;
+      if (remembered != null) {
+        for (final d in devices) {
+          if (d.uuid == remembered) return d;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  bool _isDeviceLikelyOnline(DeviceInfo d) {
+    final h = Bridge.health(d.uuid);
+    if (h.lastSeen == null) return false;
+    if (h.consecutiveFailures >= 4) return false;
+    final age = DateTime.now().difference(h.lastSeen!).inMinutes;
+    return age <= 20;
+  }
+
+  String _colorName(int color) {
+    final rgb = color & 0x00FFFFFF;
+    final known = <String, int>{
+      'white': 0x00F5F5F5,
+      'blue': 0x000066FF,
+      'green': 0x0000C853,
+      'red': 0x00E53935,
+      'purple': 0x009C27B0,
+      'yellow': 0x00FFD600,
+      'orange': 0x00FB8C00,
+      'cyan': 0x0000BCD4,
+    };
+
+    String nearest = 'custom';
+    var bestDist = 1 << 30;
+    for (final e in known.entries) {
+      final c = e.value;
+      final dr = ((rgb >> 16) & 0xFF) - ((c >> 16) & 0xFF);
+      final dg = ((rgb >> 8) & 0xFF) - ((c >> 8) & 0xFF);
+      final db = (rgb & 0xFF) - (c & 0xFF);
+      final dist = dr * dr + dg * dg + db * db;
+      if (dist < bestDist) {
+        bestDist = dist;
+        nearest = e.key;
+      }
+    }
+    return nearest;
+  }
+
+  String _positionLabel(double position) {
+    if (position <= 1) return 'closed (0%)';
+    if (position >= 99) return 'opened (100%)';
+    return '${position.toStringAsFixed(0)}%';
+  }
+
+  String _deviceStateSnapshot(DeviceInfo target, DeviceState state) {
+    final parts = <String>[];
+
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+      parts.add('power ${state.power ? 'ON' : 'OFF'}');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+      parts.add('temperature ${state.temperature.toStringAsFixed(0)}°C');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) {
+      parts.add('brightness ${state.brightness}%');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_COLOR)) {
+      final raw = state.color & 0x00FFFFFF;
+      final hex = raw.toRadixString(16).padLeft(6, '0').toUpperCase();
+      parts.add('color ${_colorName(state.color)} (#$hex)');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) {
+      parts.add('position ${_positionLabel(state.position)}');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_MODE)) {
+      final modeName = Bridge.modeName(target.uuid, state.mode);
+      parts.add('mode $modeName');
+    }
+    if (target.capabilities.contains(CoreCapability.CORE_CAP_LOCK)) {
+      parts.add('lock ${state.lock ? 'locked' : 'unlocked'}');
+    }
+
+    if (parts.isEmpty) return '${target.name} has no readable state.';
+    return '${target.name}: ${parts.join(' • ')}.';
   }
 
   Set<int> _requiredCapabilitiesForClause(String clause) {
@@ -510,6 +791,233 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   String? _informationalDevicesResponse(String text, List<DeviceInfo> devices) {
     final q = text.toLowerCase();
 
+    final asksInventory = _containsAnyPhrase(q, [
+      'what devices',
+      'list devices',
+      'which devices',
+      'devices available',
+      'what devices do i have',
+      'which devices do i have',
+      'show my devices',
+      'quais devices',
+      'quais dispositivos',
+      'que dispositivos eu tenho',
+      'quais aparelhos eu tenho',
+      'devices tem',
+      'devices tenho',
+      'lista de dispositivos',
+      'meus devices',
+      'meus dispositivos',
+      'o que eu tenho conectado',
+    ]);
+
+    if (asksInventory) {
+      if (devices.isEmpty) return 'No devices are registered right now.';
+      final names = devices.take(12).map((d) => d.name).join(', ');
+      return 'You currently have ${devices.length} device(s): $names${devices.length > 12 ? '...' : ''}.';
+    }
+
+    final asksOnline = _containsAnyPhrase(q, [
+      'online devices',
+      'which devices are online',
+      'who is online',
+      'what is online',
+      'quais devices estao online',
+      'quais dispositivos estao online',
+      'dispositivos online',
+      'aparelhos online',
+      'quem esta online',
+      'o que esta online',
+    ]);
+
+    if (asksOnline) {
+      if (devices.isEmpty) return 'No devices are registered right now.';
+      final online = devices.where(_isDeviceLikelyOnline).toList();
+      if (online.isEmpty) {
+        return 'I cannot confirm online devices right now. Try again after device activity refresh.';
+      }
+      final names = online.take(12).map((d) => d.name).join(', ');
+      return 'Online now (${online.length}/${devices.length}): $names${online.length > 12 ? '...' : ''}.';
+    }
+
+    final asksPowerState = _containsAnyPhrase(q, [
+      'is it on',
+      'is it off',
+      'is on',
+      'is off',
+      'turned on',
+      'turned off',
+      'power status',
+      'status of',
+      'ela esta ligada',
+      'ele esta ligado',
+      'esta ligado',
+      'esta ligada',
+      'esta desligado',
+      'esta desligada',
+      'ligado ou desligado',
+      'estado de energia',
+      'status da lampada',
+      'status do device',
+      'status do dispositivo',
+      'device status',
+      'state of',
+    ]);
+
+    final asksColorState = _containsAnyPhrase(q, [
+      'what color',
+      'which color',
+      'current color',
+      'color of',
+      'que cor',
+      'qual cor',
+      'cor atual',
+      'de que cor',
+      'cor da',
+      'cor do',
+    ]);
+
+    final asksTempState = _containsAnyPhrase(q, [
+      'temperature',
+      'temp',
+      'current temp',
+      'temperatura',
+      'qual a temperatura',
+      'quanto esta a temperatura',
+      'em c',
+      'em °c',
+      'celsius',
+      'graus',
+      '°c',
+    ]);
+
+    final asksBrightnessState = _containsAnyPhrase(q, [
+      'brightness',
+      'brilho',
+      'dimmer',
+      'intensity',
+      'intensidade',
+      'percent',
+      'porcentagem',
+      '%',
+    ]);
+
+    final asksPositionState = _containsAnyPhrase(q, [
+      'position',
+      'open',
+      'opened',
+      'close',
+      'closed',
+      'aberta',
+      'fechada',
+      'aberto',
+      'fechado',
+      'percentual',
+      'posição',
+      'posicao',
+      '%',
+    ]);
+
+    final asksModeState = _containsAnyPhrase(q, [
+      'mode',
+      'modo',
+      'which mode',
+      'qual modo',
+    ]);
+
+    final asksLockState = _containsAnyPhrase(q, [
+      'lock status',
+      'locked',
+      'unlocked',
+      'trancada',
+      'destrancada',
+      'fechadura',
+    ]);
+
+    final asksGenericState = _containsAnyPhrase(q, [
+      'status',
+      'state',
+      'estado',
+      'como esta',
+      'como está',
+      'situation of',
+    ]);
+
+    if (asksPowerState ||
+        asksColorState ||
+        asksTempState ||
+        asksBrightnessState ||
+        asksPositionState ||
+        asksModeState ||
+        asksLockState ||
+        asksGenericState) {
+      final target = _findDeviceFromText(q, devices);
+      if (target == null) {
+        return 'Tell me the device/type, for example: "is Living Room Lamp on?", "what is AC temperature?", or "curtain position?".';
+      }
+      _lastReferencedDeviceId = target.uuid;
+
+      DeviceState state;
+      try {
+        state = Bridge.getState(target.uuid);
+      } catch (_) {
+        return 'I could not read the current state for ${target.name} right now.';
+      }
+
+      if (asksColorState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_COLOR)) {
+          return '${target.name} does not support color control.';
+        }
+        final raw = state.color & 0x00FFFFFF;
+        final hex = raw.toRadixString(16).padLeft(6, '0').toUpperCase();
+        return '${target.name} is currently ${_colorName(state.color)} (#$hex).';
+      }
+
+      if (asksTempState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+          return '${target.name} does not expose temperature.';
+        }
+        return '${target.name} temperature is ${state.temperature.toStringAsFixed(0)}°C.';
+      }
+
+      if (asksBrightnessState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) {
+          return '${target.name} does not expose brightness percentage.';
+        }
+        return '${target.name} brightness is ${state.brightness}%.';
+      }
+
+      if (asksPositionState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) {
+          return '${target.name} does not expose position state.';
+        }
+        return '${target.name} position is ${_positionLabel(state.position)}.';
+      }
+
+      if (asksModeState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_MODE)) {
+          return '${target.name} does not expose mode.';
+        }
+        return '${target.name} mode is ${Bridge.modeName(target.uuid, state.mode)}.';
+      }
+
+      if (asksLockState) {
+        if (!target.capabilities.contains(CoreCapability.CORE_CAP_LOCK)) {
+          return '${target.name} does not expose lock state.';
+        }
+        return '${target.name} is currently ${state.lock ? 'locked' : 'unlocked'}.';
+      }
+
+      if (asksGenericState) {
+        return _deviceStateSnapshot(target, state);
+      }
+
+      if (!target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+        return '${target.name} does not expose power state.';
+      }
+      return '${target.name} is currently ${state.power ? 'ON' : 'OFF'}.';
+    }
+
     if (_containsAny(q, ['what devices', 'list devices', 'which devices', 'devices available'])) {
       if (devices.isEmpty) return 'No devices are registered right now.';
       final names = devices.take(8).map((d) => d.name).join(', ');
@@ -567,6 +1075,11 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     }
 
     final actions = <String>[];
+    _lastReferencedDeviceId = target.uuid;
+    DeviceState? currentState;
+    try {
+      currentState = Bridge.getState(target.uuid);
+    } catch (_) {}
 
     if ((clause.contains('turn off') || clause.contains('power off')) &&
         target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
@@ -592,6 +1105,13 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
 
     if ((clause.contains('temperature') || clause.contains('temp')) &&
         target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+      if (target.capabilities.contains(CoreCapability.CORE_CAP_POWER) &&
+          currentState != null &&
+          !currentState.power) {
+        Bridge.setPower(target.uuid, true);
+        actions.add('turned on ${target.name}');
+        _pushCommandLog('Auto power ON for temperature → ${target.name}');
+      }
       final rawInt = _extractFirstInt(clause) ?? 23;
       final temp = rawInt.clamp(16, 30).toDouble();
       Bridge.setTemperature(target.uuid, temp);
@@ -667,15 +1187,15 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       return;
     }
 
-    if (!hasAction && general != null) {
-      _appendAssistantChat(general);
-      return;
-    }
-
     final devices = Bridge.listDevices();
     final informational = _informationalDevicesResponse(text, devices);
     if (!hasAction && informational != null) {
       _appendAssistantChat(informational);
+      return;
+    }
+
+    if (!hasAction && general != null) {
+      _appendAssistantChat(general);
       return;
     }
 
@@ -847,7 +1367,9 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       // Baseline state for edge detection (power OFF -> ON)
       for (final d in Bridge.listDevices()) {
         try {
-          _lastPowerByDevice[d.uuid] = Bridge.getState(d.uuid).power;
+          final st = Bridge.getState(d.uuid);
+          _lastPowerByDevice[d.uuid] = st.power;
+          _lastStateByDevice[d.uuid] = _copyState(st);
         } catch (_) {
           _lastPowerByDevice[d.uuid] = false;
         }
@@ -859,6 +1381,9 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
         final prev = _lastPowerByDevice[event.uuid] ?? false;
         final next = event.state.power;
         _lastPowerByDevice[event.uuid] = next;
+
+        _recordStatePattern(event.uuid, _lastStateByDevice[event.uuid], event.state);
+        _lastStateByDevice[event.uuid] = _copyState(event.state);
 
         if (!prev && next) {
           _recordPowerOnSignal();
@@ -967,6 +1492,13 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     await prefs.setBool(_kUseUsageHistory, _useUsageHistory);
     await prefs.setBool(_kAllowDeviceControl, _allowDeviceControl);
     await prefs.setBool(_kAllowAutoRoutines, _allowAutoRoutines);
+    await prefs.setString(_kDeviceActivityById, jsonEncode(_deviceActivityById));
+    await prefs.setDouble(_kTempSetSum, _tempSetSum);
+    await prefs.setInt(_kTempSetCount, _tempSetCount);
+    await prefs.setDouble(_kBrightnessSetSum, _brightnessSetSum);
+    await prefs.setInt(_kBrightnessSetCount, _brightnessSetCount);
+    await prefs.setDouble(_kPositionSetSum, _positionSetSum);
+    await prefs.setInt(_kPositionSetCount, _positionSetCount);
   }
 
   Future<void> _loadState() async {
@@ -990,6 +1522,16 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     _useUsageHistory = prefs.getBool(_kUseUsageHistory) ?? true;
     _allowDeviceControl = prefs.getBool(_kAllowDeviceControl) ?? true;
     _allowAutoRoutines = prefs.getBool(_kAllowAutoRoutines) ?? true;
+
+    _deviceActivityById
+      ..clear()
+      ..addAll(_decodeStringIntMap(prefs.getString(_kDeviceActivityById)));
+    _tempSetSum = prefs.getDouble(_kTempSetSum) ?? 0;
+    _tempSetCount = prefs.getInt(_kTempSetCount) ?? 0;
+    _brightnessSetSum = prefs.getDouble(_kBrightnessSetSum) ?? 0;
+    _brightnessSetCount = prefs.getInt(_kBrightnessSetCount) ?? 0;
+    _positionSetSum = prefs.getDouble(_kPositionSetSum) ?? 0;
+    _positionSetCount = prefs.getInt(_kPositionSetCount) ?? 0;
   }
 
   int _topHour(Map<int, int> source) {
@@ -1268,10 +1810,15 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
 
     try {
       Bridge.setPower(target.uuid, true);
-      Bridge.setTemperature(target.uuid, 23);
+      final preferred = _preferredTemperature() ?? 23;
+      Bridge.setTemperature(target.uuid, preferred);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Suggestion applied to ${target.name}.')),
+        SnackBar(
+          content: Text(
+            'Suggestion applied to ${target.name} (${preferred.toStringAsFixed(0)}°C).',
+          ),
+        ),
       );
     } catch (_) {}
   }
@@ -1282,6 +1829,38 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     final peak = _powerOnByHour[_topHour(_powerOnByHour)] ?? 0;
     final ratio = (peak / total).clamp(0.0, 1.0);
     return (0.35 + ratio * 0.60).clamp(0.35, 0.95);
+  }
+  
+  double? _preferredTemperature() {
+    if (_tempSetCount < 2) return null;
+    return (_tempSetSum / _tempSetCount).clamp(16, 30);
+  }
+  
+  double? _preferredBrightness() {
+    if (_brightnessSetCount < 2) return null;
+    return (_brightnessSetSum / _brightnessSetCount).clamp(0, 100);
+  }
+  
+  double? _preferredPosition() {
+    if (_positionSetCount < 2) return null;
+    return (_positionSetSum / _positionSetCount).clamp(0, 100);
+  }
+  
+  String _topActiveDeviceName(List<DeviceInfo> list) {
+    if (_deviceActivityById.isEmpty) return 'none yet';
+    String? bestId;
+    var best = -1;
+    for (final e in _deviceActivityById.entries) {
+      if (e.value > best) {
+        best = e.value;
+        bestId = e.key;
+      }
+    }
+    if (bestId == null) return 'none yet';
+    for (final d in list) {
+      if (d.uuid == bestId) return d.name;
+    }
+    return 'recent device';
   }
 
   Future<void> _runArrivalRoutine({bool automatic = false}) async {
@@ -1307,10 +1886,12 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
         : _outsideTemp >= 27
         ? 23.0
         : 24.0;
+    final learnedTemp = _preferredTemperature();
+    final targetTemp = (learnedTemp ?? desiredTemp).clamp(16.0, 30.0);
 
     try {
       Bridge.setPower(target.uuid, true);
-      Bridge.setTemperature(target.uuid, desiredTemp);
+      Bridge.setTemperature(target.uuid, targetTemp);
 
       if (automatic) {
         final now = DateTime.now();
@@ -1324,7 +1905,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
           content: Text(
             automatic
                 ? 'Assistant auto-routine applied on ${target.name}.'
-                : 'Arrival routine applied on ${target.name}.',
+                : 'Arrival routine applied on ${target.name} (${targetTemp.toStringAsFixed(0)}°C).',
           ),
         ),
       );
@@ -1480,25 +2061,30 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   }
 
   List<_AnnotationModel> _annotationModels() {
+    final devices = Bridge.listDevices();
     final learnedArrivalHour = _topHour(_powerOnByHour);
     final openPatternHour = _topHour(_appOpenByHour);
     final nowHour = DateTime.now().hour;
     final nearArrival = (nowHour - learnedArrivalHour).abs() <= 1;
     final arrivalConfidence = (_arrivalConfidence() * 100).round();
+    final preferredTemp = _preferredTemperature();
+    final preferredBrightness = _preferredBrightness();
+    final preferredPosition = _preferredPosition();
+    final topDevice = _topActiveDeviceName(devices);
 
     final items = <_AnnotationModel>[
       _AnnotationModel(
         icon: Icons.psychology_outlined,
         title: 'Learning your patterns',
         description: _useUsageHistory
-            ? 'Observed actions: $_observedActions. Typical app-open around ${_hourLabel(openPatternHour)}.'
+            ? 'Observed actions: $_observedActions. Typical app-open around ${_hourLabel(openPatternHour)}. Most active device: $topDevice.'
             : 'Usage-history consumption is disabled in Assistant Data.',
       ),
       _AnnotationModel(
         icon: Icons.schedule,
         title: 'Arrival behavior',
         description: _useUsageHistory
-            ? 'The user usually gets home around ${_hourLabel(learnedArrivalHour)} and tends to prefer ${_outsideTemp >= 26 ? 'cooler' : 'balanced'} comfort settings.'
+            ? 'The user usually gets home around ${_hourLabel(learnedArrivalHour)}. Learned comfort: ${preferredTemp?.toStringAsFixed(0) ?? '23'}°C, brightness ${preferredBrightness?.toStringAsFixed(0) ?? '45'}%${preferredPosition != null ? ', curtain ${preferredPosition.toStringAsFixed(0)}%' : ''}.'
             : 'Enable usage history to improve arrival-behavior learning.',
       ),
     ];
@@ -1509,7 +2095,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
           icon: Icons.wb_sunny_outlined,
           title: 'Climate suggestion',
           description: nearArrival
-              ? 'It is warm and near your typical arrival time. Suggestion: enable AC at 23°C now.'
+              ? 'It is warm and near your typical arrival time. Suggestion: enable AC at ${(preferredTemp ?? 23).toStringAsFixed(0)}°C now.'
               : 'Warm weather detected. Suggestion: prepare cooling mode before arrival.',
           onApply: _allowDeviceControl ? _applyClimateSuggestion : null,
           actionLabel: _allowDeviceControl ? 'Apply' : 'Disabled',
