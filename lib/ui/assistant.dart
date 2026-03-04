@@ -24,7 +24,7 @@ class Assistant extends StatefulWidget {
   State<Assistant> createState() => _AssistantState();
 }
 
-class _AssistantState extends State<Assistant> with SingleTickerProviderStateMixin {
+class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   static const _kPowerOnByHour = 'assistant.power_on_by_hour';
   static const _kAppOpenByHour = 'assistant.app_open_by_hour';
   static const _kObservedActions = 'assistant.observed_actions';
@@ -91,6 +91,9 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   bool _voiceCommandExecuted = false;
   bool _assistantThinking = false;
   late final AnimationController _thinkingController;
+  late final AnimationController _chatBorderPulse;
+  final PageController _assistantDataPageController = PageController();
+  final PageController _annotationPageController = PageController();
   final TextEditingController _commandController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
   bool _isRecordingAudio = false;
@@ -106,6 +109,10 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 950),
     );
+    _chatBorderPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
     _commandController.addListener(_onCommandTextChanged);
     _initAssistant();
   }
@@ -121,6 +128,9 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     _voiceSilenceTimer?.cancel();
     _chatTypingTimer?.cancel();
     _thinkingController.dispose();
+    _chatBorderPulse.dispose();
+    _assistantDataPageController.dispose();
+    _annotationPageController.dispose();
     _commandController.removeListener(_onCommandTextChanged);
     _commandController.dispose();
     _chatScrollController.dispose();
@@ -419,6 +429,66 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       if (tokens.length >= 2 && tokens.every(text.contains)) return true;
     }
     return false;
+  }
+
+  bool _isLikelyStateQuestion(String text) {
+    final q = _normalizeInput(text);
+    final questionLike = q.contains('?') ||
+        _containsAnyPhrase(q, [
+          'is ',
+          'are ',
+          'what ',
+          'which ',
+          'qual ',
+          'quais ',
+          'como ',
+          'quanto ',
+          'que ',
+          'ela ',
+          'ele ',
+        ]);
+    if (!questionLike) return false;
+
+    final explicitAction = _containsAnyPhrase(q, [
+      'turn on',
+      'turn off',
+      'set ',
+      'ligar ',
+      'desligar ',
+      'liga ',
+      'desliga ',
+      'ajuste ',
+      'defina ',
+      'mude ',
+    ]);
+    if (explicitAction) return false;
+
+    return _containsAnyPhrase(q, [
+      'status',
+      'state',
+      'on',
+      'off',
+      'temperature',
+      'temp',
+      'color',
+      'brightness',
+      'position',
+      'opened',
+      'closed',
+      'online',
+      'mode',
+      'lock',
+      'ligado',
+      'desligado',
+      'temperatura',
+      'cor',
+      'brilho',
+      'posicao',
+      'aberto',
+      'fechado',
+      'trancado',
+      'destrancado',
+    ]);
   }
 
   DeviceInfo? _findDeviceFromText(String text, List<DeviceInfo> devices) {
@@ -904,9 +974,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
 
     final asksPositionState = _containsAnyPhrase(q, [
       'position',
-      'open',
       'opened',
-      'close',
       'closed',
       'aberta',
       'fechada',
@@ -1164,6 +1232,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
 
     final text = _normalizeInput(input);
     final hasAction = _containsActionKeyword(text);
+    final isLikelyStateQuestion = _isLikelyStateQuestion(text);
     final greeted = _isGreeting(text);
     final general = _generalResponse(text);
 
@@ -1189,7 +1258,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
 
     final devices = Bridge.listDevices();
     final informational = _informationalDevicesResponse(text, devices);
-    if (!hasAction && informational != null) {
+    if ((isLikelyStateQuestion || !hasAction) && informational != null) {
       _appendAssistantChat(informational);
       return;
     }
@@ -1620,13 +1689,16 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   void _nextAnnotationTile() {
     final total = _annotationModels().length;
     if (total <= 1) return;
-    setState(() => _annotationIndex = (_annotationIndex + 1) % total);
-  }
-
-  void _prevAnnotationTile() {
-    final total = _annotationModels().length;
-    if (total <= 1) return;
-    setState(() => _annotationIndex = (_annotationIndex - 1 + total) % total);
+    final next = (_annotationIndex + 1) % total;
+    if (_annotationPageController.hasClients) {
+      _annotationPageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    setState(() => _annotationIndex = next);
   }
 
   void _startAnnotationRotation() {
@@ -1640,13 +1712,16 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
   void _nextAssistantDataTile() {
     final total = _assistantDataTiles().length;
     if (total <= 1) return;
-    setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
-  }
-
-  void _prevAssistantDataTile() {
-    final total = _assistantDataTiles().length;
-    if (total <= 1) return;
-    setState(() => _assistantDataIndex = (_assistantDataIndex - 1 + total) % total);
+    final next = (_assistantDataIndex + 1) % total;
+    if (_assistantDataPageController.hasClients) {
+      _assistantDataPageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+      );
+      return;
+    }
+    setState(() => _assistantDataIndex = next);
   }
 
   void _startAssistantDataRotation() {
@@ -2214,22 +2289,40 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
       height: panelHeight,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      decoration: BoxDecoration(
-        color: EaColor.back.withValues(alpha: .95),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: EaColor.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black54,
-            blurRadius: 22,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: _chatBorderPulse,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: _OrbitBorderPainter(
+                      progress: _chatBorderPulse.value,
+                      radius: 16,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            decoration: BoxDecoration(
+              color: EaColor.back.withValues(alpha: .95),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.transparent),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 22,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
           Center(
             child: Container(
               width: 44,
@@ -2415,6 +2508,9 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
               ),
             ),
           ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -2462,9 +2558,7 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
     }
 
     final dataTiles = _assistantDataTiles();
-    final currentDataTile = dataTiles[_assistantDataIndex % dataTiles.length];
     final annotations = _annotationModels();
-    final currentAnnotation = annotations[_annotationIndex % annotations.length];
     final screenHeight = MediaQuery.sizeOf(context).height;
     final chatPanelHeight = (screenHeight * 0.34).clamp(270.0, 420.0).toDouble();
 
@@ -2541,24 +2635,15 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
                     ],
                   ),
                   const SizedBox(height: 8),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _nextAssistantDataTile,
-                    onHorizontalDragEnd: (details) {
-                      final vx = details.primaryVelocity ?? 0;
-                      if (vx < 0) {
-                        _nextAssistantDataTile();
-                      } else if (vx > 0) {
-                        _prevAssistantDataTile();
-                      }
-                    },
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 220),
-                      switchInCurve: Curves.easeOut,
-                      switchOutCurve: Curves.easeIn,
-                      child: KeyedSubtree(
-                        key: ValueKey('assistant-data-${_assistantDataIndex % dataTiles.length}'),
-                        child: currentDataTile,
+                  SizedBox(
+                    height: 132,
+                    child: PageView.builder(
+                      controller: _assistantDataPageController,
+                      itemCount: dataTiles.length,
+                      onPageChanged: (i) => setState(() => _assistantDataIndex = i),
+                      itemBuilder: (_, i) => Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        child: dataTiles[i],
                       ),
                     ),
                   ),
@@ -2595,33 +2680,29 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
               ],
             ),
             const SizedBox(height: 4),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _nextAnnotationTile,
-                  onHorizontalDragEnd: (details) {
-                    final vx = details.primaryVelocity ?? 0;
-                    if (vx < 0) {
-                      _nextAnnotationTile();
-                    } else if (vx > 0) {
-                      _prevAnnotationTile();
-                    }
-                  },
-                  child: SizedBox(
-                    height: 122,
-                    child: _card(
-                      icon: currentAnnotation.icon,
-                      title: currentAnnotation.title,
-                      description: currentAnnotation.description,
-                      trailing: currentAnnotation.onApply == null
-                          ? null
-                          : TextButton(
-                              onPressed: currentAnnotation.onApply,
-                              child: Text(
-                                currentAnnotation.actionLabel ?? 'Apply',
-                                style: EaText.accent,
+                SizedBox(
+                  height: 122,
+                  child: PageView.builder(
+                    controller: _annotationPageController,
+                    itemCount: annotations.length,
+                    onPageChanged: (i) => setState(() => _annotationIndex = i),
+                    itemBuilder: (_, i) {
+                      final a = annotations[i];
+                      return _card(
+                        icon: a.icon,
+                        title: a.title,
+                        description: a.description,
+                        trailing: a.onApply == null
+                            ? null
+                            : TextButton(
+                                onPressed: a.onApply,
+                                child: Text(
+                                  a.actionLabel ?? 'Apply',
+                                  style: EaText.accent,
+                                ),
                               ),
-                            ),
-                    ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -2679,6 +2760,51 @@ class _AssistantState extends State<Assistant> with SingleTickerProviderStateMix
         ],
       ),
     );
+  }
+}
+
+class _OrbitBorderPainter extends CustomPainter {
+  final double progress;
+  final double radius;
+
+  const _OrbitBorderPainter({required this.progress, required this.radius});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(.8),
+      Radius.circular(radius),
+    );
+
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = EaColor.fore.withValues(alpha: .2);
+    canvas.drawRRect(rrect, base);
+
+    final metric = (Path()..addRRect(rrect)).computeMetrics().first;
+    final length = metric.length;
+    final segment = length * .23;
+    final head = progress * length;
+    final tail = head - segment;
+
+    final active = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = EaColor.fore;
+
+    if (tail >= 0) {
+      canvas.drawPath(metric.extractPath(tail, head), active);
+    } else {
+      canvas.drawPath(metric.extractPath(length + tail, length), active);
+      canvas.drawPath(metric.extractPath(0, head), active);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbitBorderPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.radius != radius;
   }
 }
 
