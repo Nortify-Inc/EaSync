@@ -345,6 +345,10 @@ class _ProfilesState extends State<Profiles>
         }
       }
 
+      try {
+        Bridge.aiObserveProfileApply(profile.name);
+      } catch (_) {}
+
       _showBottomSnack('Profile ${profile.name} was applied.');
       _pulseAppliedProfile(profile);
     } catch (e) {

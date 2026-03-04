@@ -6,6 +6,8 @@
  * @author Erick Radmann
  */
 
+// ignore_for_file: unused_element, unused_field
+
 import 'dart:convert';
 import 'dart:ui';
 
@@ -76,7 +78,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   double _positionSetSum = 0;
   int _positionSetCount = 0;
   String? _lastReferencedDeviceId;
-  List<DeviceInfo> _pendingTargets = [];
+  final List<DeviceInfo> _pendingTargets = [];
   String? _pendingClause;
   final VoiceRecognition _voiceRecognition = VoiceRecognition();
 
@@ -90,17 +92,19 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   Timer? _chatTypingTimer;
   bool _voiceCommandExecuted = false;
   bool _assistantThinking = false;
+  bool _chatBorderStarted = false;
   late final AnimationController _thinkingController;
   late final AnimationController _chatBorderPulse;
-  final PageController _assistantDataPageController = PageController();
-  final PageController _annotationPageController = PageController();
+  int _annotationSlideDir = 1;
+  double _assistantDataDragAccum = 0;
+  bool _assistantDataDragConsumed = false;
+  double _annotationDragAccum = 0;
+  bool _annotationDragConsumed = false;
   final TextEditingController _commandController = TextEditingController();
   final ScrollController _chatScrollController = ScrollController();
   bool _isRecordingAudio = false;
   final List<String> _commandLog = [];
-  final List<_ChatMessage> _chatMessages = [
-    const _ChatMessage(role: _ChatRole.assistant, text: 'Hello! I can automate your devices from text commands.'),
-  ];
+  final List<_ChatMessage> _chatMessages = [];
 
   @override
   void initState() {
@@ -111,8 +115,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     );
     _chatBorderPulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat();
+      duration: const Duration(seconds: 3),
+    );
     _commandController.addListener(_onCommandTextChanged);
     _initAssistant();
   }
@@ -129,8 +133,6 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     _chatTypingTimer?.cancel();
     _thinkingController.dispose();
     _chatBorderPulse.dispose();
-    _assistantDataPageController.dispose();
-    _annotationPageController.dispose();
     _commandController.removeListener(_onCommandTextChanged);
     _commandController.dispose();
     _chatScrollController.dispose();
@@ -332,6 +334,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   void _recordStatePattern(String uuid, DeviceState? prev, DeviceState next) {
     if (prev == null || !_useUsageHistory) return;
+
+    try {
+      Bridge.aiRecordPattern(uuid, prev, next);
+    } catch (_) {}
 
     var changed = false;
     if (prev.power != next.power) changed = true;
@@ -1230,104 +1236,15 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     _appendUserChat(input);
     _setAssistantThinking(true);
 
-    final text = _normalizeInput(input);
-    final hasAction = _containsActionKeyword(text);
-    final isLikelyStateQuestion = _isLikelyStateQuestion(text);
-    final greeted = _isGreeting(text);
-    final general = _generalResponse(text);
-
-    if (_pendingClause != null && _pendingTargets.isNotEmpty) {
-      final chosen = _resolvePendingChoice(text);
-      if (chosen != null) {
-        final actions = _applyClause(chosen, _pendingClause!);
-        _pendingClause = null;
-        _pendingTargets = [];
-        if (actions.isNotEmpty) {
-          _appendAssistantChat('${_friendlyPrefix()} Applied to ${chosen.name}: ${actions.join(', ')}.');
-        } else {
-          _appendAssistantChat('I got your selection, but this action is not supported by ${chosen.name}.');
-        }
-        return;
-      }
-    }
-
-    if (greeted && !hasAction) {
-      _appendAssistantChat(_greetingResponse());
-      return;
-    }
-
-    final devices = Bridge.listDevices();
-    final informational = _informationalDevicesResponse(text, devices);
-    if ((isLikelyStateQuestion || !hasAction) && informational != null) {
-      _appendAssistantChat(informational);
-      return;
-    }
-
-    if (!hasAction && general != null) {
-      _appendAssistantChat(general);
-      return;
-    }
-
-    if (devices.isEmpty) {
-      _appendAssistantChat('I could not find devices to automate right now.');
-      return;
-    }
-
-    if (!_allowDeviceControl) {
-      _appendAssistantChat(
-        'Device control is disabled. Enable it in Assistant Data to run automation commands.',
-      );
-      return;
-    }
-
     try {
-      final clauses = text
-          .split(RegExp(r',|;|\band\b|\bthen\b|\bafter\b'))
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toList();
-
-      final allActions = <String>[];
-      final unresolved = <String>[];
-      for (final clause in clauses) {
-        final targets = _resolveTargetsForClause(clause, devices);
-        final wantsAll = clause.contains('all ') || clause.contains('every ');
-        if (targets.isEmpty) {
-          unresolved.add('I could not find a ${_targetHint(clause)} for "$clause"');
-          continue;
-        }
-
-        if (!wantsAll && targets.length > 1) {
-          final names = targets.take(4).map((e) => e.name).join(', ');
-          _pendingTargets = targets;
-          _pendingClause = clause;
-          _appendAssistantChat(
-            '${_friendlyPrefix()} I found multiple matches for "$clause": $names. Which one should I use?',
-          );
-          return;
-        }
-
-        for (final t in targets) {
-          allActions.addAll(_applyClause(t, clause));
-        }
+      final backendReply = Bridge.aiExecuteCommand(input).trim();
+      if (backendReply.isNotEmpty) {
+        _appendAssistantChat(backendReply);
+      } else {
+        _appendAssistantChat('${_friendlyPrefix()} I could not process this request right now.');
       }
-
-      if (allActions.isEmpty) {
-        _appendAssistantChat(
-          '${_friendlyPrefix()} I could not map this command safely. Try: "turn on AC and set temperature 23", "set brightness 80 and color blue".',
-        );
-        return;
-      }
-
-      final greetingPrefix = greeted ? '${_greetingResponse()} ' : '';
-      final unresolvedSuffix = unresolved.isEmpty
-          ? ''
-          : ' I skipped ${unresolved.length} request(s): ${unresolved.take(2).join('. ')}${unresolved.length > 2 ? '...' : ''}.';
-      _appendAssistantChat(
-        '$greetingPrefix${_friendlyPrefix()} I executed ${allActions.length} action(s): ${allActions.take(3).join(', ')}${allActions.length > 3 ? '...' : ''}.$unresolvedSuffix',
-      );
     } catch (_) {
-      _appendAssistantChat('${_friendlyPrefix()} I failed to apply the command. Please try again.');
+      _appendAssistantChat('${_friendlyPrefix()} I failed to process the command. Please try again.');
     }
   }
 
@@ -1335,8 +1252,15 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (!_isVoiceSupportedPlatform) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Voice recognition is only available on Android for now.'),
+        SnackBar(
+          duration: Duration(seconds: 2),
+          animation: Animation.fromValueListenable( CurvedAnimation(parent: AlwaysStoppedAnimation(1), curve: Curves.easeOutSine)),
+          backgroundColor: EaColor.back,
+          content: Text(
+            'Voice recognition is only available on Android for now.',
+            style: EaText.secondary,
+            
+            ),
         ),
       );
       return;
@@ -1432,6 +1356,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     try {
       _initError = null;
       await _loadState();
+      _syncAiPermissions();
 
       // Baseline state for edge detection (power OFF -> ON)
       for (final d in Bridge.listDevices()) {
@@ -1568,6 +1493,21 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     await prefs.setInt(_kBrightnessSetCount, _brightnessSetCount);
     await prefs.setDouble(_kPositionSetSum, _positionSetSum);
     await prefs.setInt(_kPositionSetCount, _positionSetCount);
+    _syncAiPermissions();
+  }
+
+  void _syncAiPermissions() {
+    try {
+      Bridge.setAiPermissions(
+        AiPermissions(
+          useLocationData: _useLocationData,
+          useWeatherData: _useWeatherData,
+          useUsageHistory: _useUsageHistory,
+          allowDeviceControl: _allowDeviceControl,
+          allowAutoRoutines: _allowAutoRoutines,
+        ),
+      );
+    } catch (_) {}
   }
 
   Future<void> _loadState() async {
@@ -1619,7 +1559,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   Future<void> _recordPowerOnSignal() async {
     final nowHour = DateTime.now().hour;
     _powerOnByHour[nowHour] = (_powerOnByHour[nowHour] ?? 0) + 1;
-    _observedActions++;
+    _observedActions = (_observedActions + 1).clamp(0, 100).toInt();
     await _persistState();
     if (mounted) setState(() {});
   }
@@ -1627,7 +1567,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   Future<void> _recordAppOpenSignal() async {
     final nowHour = DateTime.now().hour;
     _appOpenByHour[nowHour] = (_appOpenByHour[nowHour] ?? 0) + 1;
-    _observedActions++;
+    _observedActions = (_observedActions + 1).clamp(0, 100).toInt();
+    try {
+      Bridge.aiObserveAppOpen();
+    } catch (_) {}
     await _persistState();
     if (mounted) setState(() {});
   }
@@ -1689,16 +1632,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   void _nextAnnotationTile() {
     final total = _annotationModels().length;
     if (total <= 1) return;
-    final next = (_annotationIndex + 1) % total;
-    if (_annotationPageController.hasClients) {
-      _annotationPageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-      );
-      return;
-    }
-    setState(() => _annotationIndex = next);
+    setState(() {
+      _annotationSlideDir = 1;
+      _annotationIndex = (_annotationIndex + 1) % total;
+    });
   }
 
   void _startAnnotationRotation() {
@@ -1712,16 +1649,64 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   void _nextAssistantDataTile() {
     final total = _assistantDataTiles().length;
     if (total <= 1) return;
-    final next = (_assistantDataIndex + 1) % total;
-    if (_assistantDataPageController.hasClients) {
-      _assistantDataPageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 260),
-        curve: Curves.easeOutCubic,
-      );
-      return;
+    setState(() {
+      _assistantDataIndex = (_assistantDataIndex + 1) % total;
+    });
+  }
+
+  void _onAssistantDataDragStart(DragStartDetails details) {
+    _assistantDataDragAccum = 0;
+    _assistantDataDragConsumed = false;
+  }
+
+  void _onAssistantDataDragUpdate(DragUpdateDetails details) {
+    if (_assistantDataDragConsumed) return;
+    _assistantDataDragAccum += details.delta.dx;
+    if (_assistantDataDragAccum.abs() < 22) return;
+    if (_assistantDataDragAccum < 0) {
+      _nextAssistantDataTile();
+    } else {
+      final total = _assistantDataTiles().length;
+      if (total <= 1) return;
+      final prev = (_assistantDataIndex - 1 + total) % total;
+      setState(() {
+        _assistantDataIndex = prev;
+      });
     }
-    setState(() => _assistantDataIndex = next);
+    _assistantDataDragConsumed = true;
+  }
+
+  void _onAssistantDataDragEnd(DragEndDetails details) {
+    _assistantDataDragAccum = 0;
+    _assistantDataDragConsumed = false;
+  }
+
+  void _onAnnotationDragStart(DragStartDetails details) {
+    _annotationDragAccum = 0;
+    _annotationDragConsumed = false;
+  }
+
+  void _onAnnotationDragUpdate(DragUpdateDetails details) {
+    if (_annotationDragConsumed) return;
+    _annotationDragAccum += details.delta.dx;
+    if (_annotationDragAccum.abs() < 22) return;
+    if (_annotationDragAccum < 0) {
+      _nextAnnotationTile();
+    } else {
+      final total = _annotationModels().length;
+      if (total <= 1) return;
+      final prev = (_annotationIndex - 1 + total) % total;
+      setState(() {
+        _annotationSlideDir = -1;
+        _annotationIndex = prev;
+      });
+    }
+    _annotationDragConsumed = true;
+  }
+
+  void _onAnnotationDragEnd(DragEndDetails details) {
+    _annotationDragAccum = 0;
+    _annotationDragConsumed = false;
   }
 
   void _startAssistantDataRotation() {
@@ -2136,71 +2121,38 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   }
 
   List<_AnnotationModel> _annotationModels() {
-    final devices = Bridge.listDevices();
-    final learnedArrivalHour = _topHour(_powerOnByHour);
-    final openPatternHour = _topHour(_appOpenByHour);
-    final nowHour = DateTime.now().hour;
-    final nearArrival = (nowHour - learnedArrivalHour).abs() <= 1;
-    final arrivalConfidence = (_arrivalConfidence() * 100).round();
-    final preferredTemp = _preferredTemperature();
-    final preferredBrightness = _preferredBrightness();
-    final preferredPosition = _preferredPosition();
-    final topDevice = _topActiveDeviceName(devices);
-
-    final items = <_AnnotationModel>[
-      _AnnotationModel(
-        icon: Icons.psychology_outlined,
-        title: 'Learning your patterns',
-        description: _useUsageHistory
-            ? 'Observed actions: $_observedActions. Typical app-open around ${_hourLabel(openPatternHour)}. Most active device: $topDevice.'
-            : 'Usage-history consumption is disabled in Assistant Data.',
-      ),
-      _AnnotationModel(
-        icon: Icons.schedule,
-        title: 'Arrival behavior',
-        description: _useUsageHistory
-            ? 'The user usually gets home around ${_hourLabel(learnedArrivalHour)}. Learned comfort: ${preferredTemp?.toStringAsFixed(0) ?? '23'}°C, brightness ${preferredBrightness?.toStringAsFixed(0) ?? '45'}%${preferredPosition != null ? ', curtain ${preferredPosition.toStringAsFixed(0)}%' : ''}.'
-            : 'Enable usage history to improve arrival-behavior learning.',
-      ),
-    ];
-
-    if (_outsideTemp >= 27 && _useWeatherData) {
-      items.add(
+    List<String> backend;
+    try {
+      backend = Bridge.aiAnnotations();
+    } catch (_) {
+      backend = const [];
+    }
+    if (backend.isEmpty) {
+      return const [
         _AnnotationModel(
-          icon: Icons.wb_sunny_outlined,
-          title: 'Climate suggestion',
-          description: nearArrival
-              ? 'It is warm and near your typical arrival time. Suggestion: enable AC at ${(preferredTemp ?? 23).toStringAsFixed(0)}°C now.'
-              : 'Warm weather detected. Suggestion: prepare cooling mode before arrival.',
-          onApply: _allowDeviceControl ? _applyClimateSuggestion : null,
-          actionLabel: _allowDeviceControl ? 'Apply' : 'Disabled',
-        ),
-      );
-    }
-
-    items.add(
-      _AnnotationModel(
-        icon: Icons.home_outlined,
-        title: 'Arrival routine',
-        description:
-            'Confidence: $arrivalConfidence%. Learned arrival around ${_hourLabel(learnedArrivalHour)}. Routine: turn on AC and set comfort temperature based on weather.',
-        onApply: (_allowDeviceControl && _allowAutoRoutines) ? _runArrivalRoutine : null,
-        actionLabel: (_allowDeviceControl && _allowAutoRoutines) ? 'Run now' : 'Disabled',
-      ),
-    );
-
-    if (_outsideTemp < 27 || !_useWeatherData) {
-      items.add(
-        const _AnnotationModel(
           icon: Icons.auto_awesome_outlined,
-          title: 'No urgent annotation',
+          title: 'Learning in progress',
           description:
-              'Assistant is still learning your routine. Keep using devices normally to improve suggestions.',
+              'Assistant backend is still collecting behavior signals from app usage, commands and profiles.',
+        ),
+      ];
+    }
+
+    final mapped = <_AnnotationModel>[];
+    final canRun = _allowDeviceControl && _allowAutoRoutines;
+    final lines = backend.take(8).toList();
+    for (var i = 0; i < lines.length; i++) {
+      mapped.add(
+        _AnnotationModel(
+          icon: Icons.psychology_outlined,
+          title: 'Behavior insight',
+          description: lines[i],
+          onApply: (i == 0 && canRun) ? _runArrivalRoutine : null,
+          actionLabel: (i == 0 && canRun) ? 'Run now' : null,
         ),
       );
     }
-
-    return items;
+    return mapped;
   }
 
   void _showAllAnnotationsBottomSheet(List<_AnnotationModel> annotations) {
@@ -2273,6 +2225,91 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     await _executeAssistantCommand(cmd);
   }
 
+  void _startChatTopSweepOnce() {
+    if (_chatBorderStarted) return;
+    _chatBorderStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _chatBorderPulse
+        ..stop()
+        ..reset()
+        ..forward();
+    });
+  }
+
+  Widget _buildChatTopSweepBorder() {
+    return IgnorePointer(
+      child: SizedBox(
+        height: 10,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final inset = 9.0;
+            final radiusCut = 8.0;
+            final left = inset + radiusCut;
+            final right = constraints.maxWidth - inset - radiusCut;
+            final track = (right - left).clamp(0.0, constraints.maxWidth);
+            final segment = track * 0.24;
+
+            return Stack(
+              clipBehavior: Clip.hardEdge,
+              children: [
+                Positioned(
+                  left: left,
+                  right: constraints.maxWidth - right,
+                  top: 0.8,
+                  child: Container(
+                    height: 2.4,
+                    decoration: BoxDecoration(
+                      color: EaColor.back,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                AnimatedBuilder(
+                  animation: _chatBorderPulse,
+                  builder: (context, child) {
+                    if (track <= 0) return const SizedBox.shrink();
+                    final p = Curves.easeOutCubic.transform(_chatBorderPulse.value.clamp(0.0, 1.0));
+                    if (p >= 1) return const SizedBox.shrink();
+
+                    final grow = (p / 0.14).clamp(0.0, 1.0);
+                    final shrink = ((1.0 - p) / 0.18).clamp(0.0, 1.0);
+                    final sizeFactor = (grow < shrink ? grow : shrink).toDouble();
+                    final dynamicSegment = (segment * sizeFactor).clamp(0.0, segment).toDouble();
+                    if (dynamicSegment <= 0.8) return const SizedBox.shrink();
+
+                    final head = p * track;
+                    final segLeft = (head - dynamicSegment).clamp(0.0, track - dynamicSegment);
+
+                    return Positioned(
+                      left: left + segLeft,
+                      top: 0.3,
+                      child: Container(
+                        width: dynamicSegment,
+                        height: 2.0,
+                        decoration: BoxDecoration(
+                          color: EaColor.fore,
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: EaColor.fore,
+                              blurRadius: 6,
+                              spreadRadius: .2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildChatPanel(double panelHeight) {
     final quickPrompts = <String>[
       'Turn on AC and set temperature 23',
@@ -2289,51 +2326,27 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
       height: panelHeight,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _chatBorderPulse,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: _OrbitBorderPainter(
-                      progress: _chatBorderPulse.value,
-                      radius: 16,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-            decoration: BoxDecoration(
-              color: EaColor.back.withValues(alpha: .95),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.transparent),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black54,
-                  blurRadius: 22,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-          Center(
-            child: Container(
-              width: 44,
-              height: 5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               decoration: BoxDecoration(
-                color: EaColor.fore.withValues(alpha: .45),
-                borderRadius: BorderRadius.circular(999),
+                color: EaColor.back.withValues(alpha: .95),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.transparent),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black54,
+                    blurRadius: 22,
+                    offset: Offset(0, 10),
+                  ),
+                ],
               ),
-            ),
-          ),
-          const SizedBox(height: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           Row(
             children: [
               Text('Chat', style: EaText.primary.copyWith(fontSize: 17)),
@@ -2508,10 +2521,17 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               ),
             ),
           ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 0,
+              right: 0,
+              top: 0,
+              child: _buildChatTopSweepBorder(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2557,6 +2577,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       );
     }
 
+    _startChatTopSweepOnce();
+
     final dataTiles = _assistantDataTiles();
     final annotations = _annotationModels();
     final screenHeight = MediaQuery.sizeOf(context).height;
@@ -2581,73 +2603,94 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               ),
               child: Column(
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Outside temperature', style: EaText.secondary),
-                  ),
-                  const SizedBox(height: 8),
                   Row(
                     children: [
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Outside temperature', style: EaText.secondary),
+                      ),
+                      Spacer(),
+                      IconButton(
+                        onPressed: (_useWeatherData && _locationQuery.trim().isNotEmpty)
+                            ? _fetchOutsideTemperature
+                            : null,
+                        icon: const Icon(Icons.refresh_rounded, size: 25),
+                        color: EaColor.fore,
+                      ),
+                   ],
+                  ),
+                  
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [ 
+                      SizedBox(width: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(_weatherIconForTemp(), color: EaColor.fore, size: 20),
+                          const SizedBox(width: 6),
+                          if (_weatherLoading)
+                            const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: EaColor.fore,
+                              ),
+                            )
+                          else
+                            Text(
+                              '${_outsideTemp.toStringAsFixed(0)}°C',
+                              style: EaText.primary.copyWith(
+                                fontSize: 25,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                        ],
+                      ),
+                      SizedBox(width: 18),
                       Flexible(
-                        fit: FlexFit.tight,
+                        fit: FlexFit.loose,
                         child: TextButton.icon(
                           onPressed: _useLocationData ? _promptForLocation : null,
                           icon: const Icon(Icons.place_outlined, size: 18),
                           label: Text(
                             _locationQuery.trim().isEmpty ? 'Set location' : _locationQuery,
                             overflow: TextOverflow.ellipsis,
+                            style: EaText.secondary,
                           ),
                         ),
                       ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(_weatherIconForTemp(), color: EaColor.fore, size: 20),
-                            const SizedBox(width: 6),
-                            if (_weatherLoading)
-                              const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: EaColor.fore,
-                                ),
-                              )
-                            else
-                              Text(
-                                '${_outsideTemp.toStringAsFixed(0)}°C',
-                                style: EaText.primary.copyWith(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: (_useWeatherData && _locationQuery.trim().isNotEmpty)
-                            ? _fetchOutsideTemperature
-                            : null,
-                        icon: const Icon(Icons.refresh, size: 20),
-                        color: EaColor.fore,
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 8),
                   SizedBox(
                     height: 132,
-                    child: PageView.builder(
-                      controller: _assistantDataPageController,
-                      itemCount: dataTiles.length,
-                      onPageChanged: (i) => setState(() => _assistantDataIndex = i),
-                      itemBuilder: (_, i) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: dataTiles[i],
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onHorizontalDragStart: _onAssistantDataDragStart,
+                      onHorizontalDragUpdate: _onAssistantDataDragUpdate,
+                      onHorizontalDragEnd: _onAssistantDataDragEnd,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, anim) {
+                          return FadeTransition(
+                            opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+                            child: child,
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey('assistant-data-${_assistantDataIndex % dataTiles.length}'),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: dataTiles[_assistantDataIndex % dataTiles.length],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(dataTiles.length, (i) {
@@ -2681,28 +2724,53 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 4),
                 SizedBox(
-                  height: 122,
-                  child: PageView.builder(
-                    controller: _annotationPageController,
-                    itemCount: annotations.length,
-                    onPageChanged: (i) => setState(() => _annotationIndex = i),
-                    itemBuilder: (_, i) {
-                      final a = annotations[i];
-                      return _card(
-                        icon: a.icon,
-                        title: a.title,
-                        description: a.description,
-                        trailing: a.onApply == null
-                            ? null
-                            : TextButton(
-                                onPressed: a.onApply,
-                                child: Text(
-                                  a.actionLabel ?? 'Apply',
-                                  style: EaText.accent,
-                                ),
-                              ),
-                      );
-                    },
+                  height: 114,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onHorizontalDragStart: _onAnnotationDragStart,
+                    onHorizontalDragUpdate: _onAnnotationDragUpdate,
+                    onHorizontalDragEnd: _onAnnotationDragEnd,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 260),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, anim) {
+                        final fromRight = _annotationSlideDir > 0;
+                        final begin = Offset(fromRight ? 0.18 : -0.18, 0);
+                        return FadeTransition(
+                          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: begin,
+                              end: Offset.zero,
+                            ).animate(anim),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey('annotation-${_annotationIndex % annotations.length}'),
+                        child: Builder(
+                          builder: (_) {
+                            final a = annotations[_annotationIndex % annotations.length];
+                            return _card(
+                              icon: a.icon,
+                              title: a.title,
+                              description: a.description,
+                              trailing: a.onApply == null
+                                  ? null
+                                  : TextButton(
+                                      onPressed: a.onApply,
+                                      child: Text(
+                                        a.actionLabel ?? 'Apply',
+                                        style: EaText.accent,
+                                      ),
+                                    ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -2760,51 +2828,6 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         ],
       ),
     );
-  }
-}
-
-class _OrbitBorderPainter extends CustomPainter {
-  final double progress;
-  final double radius;
-
-  const _OrbitBorderPainter({required this.progress, required this.radius});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rrect = RRect.fromRectAndRadius(
-      (Offset.zero & size).deflate(.8),
-      Radius.circular(radius),
-    );
-
-    final base = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = EaColor.background;
-    canvas.drawRRect(rrect, base);
-
-    final metric = (Path()..addRRect(rrect)).computeMetrics().first;
-    final length = metric.length;
-    final segment = length * .23;
-    final head = progress * length;
-    final tail = head - segment;
-
-    final active = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round
-      ..color = EaColor.fore;
-
-    if (tail >= 0) {
-      canvas.drawPath(metric.extractPath(tail, head), active);
-    } else {
-      canvas.drawPath(metric.extractPath(length + tail, length), active);
-      canvas.drawPath(metric.extractPath(0, head), active);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _OrbitBorderPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.radius != radius;
   }
 }
 
