@@ -59,7 +59,7 @@ class Profiles extends StatefulWidget {
 }
 
 class _ProfilesState extends State<Profiles>
-    with AutomaticKeepAliveClientMixin {
+  with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   static const _kPowerOnByHour = 'assistant.power_on_by_hour';
   static const _kDeviceActivityById = 'assistant.device_activity_by_id';
   static const _kTempSetSum = 'assistant.temp_set_sum';
@@ -72,6 +72,9 @@ class _ProfilesState extends State<Profiles>
   final List<Profile> profiles = [];
   List<DeviceInfo> devices = [];
   StreamSubscription<CoreEventData>? _eventSub;
+  late final AnimationController _profileApplyPulse;
+  Timer? _profileApplyPulseTimer;
+  String? _highlightedProfileName;
   final Map<String, int> _assistantPowerOnByHour = {};
   final Map<String, int> _assistantDeviceActivityById = {};
   double? _assistantPreferredTemp;
@@ -84,6 +87,10 @@ class _ProfilesState extends State<Profiles>
   @override
   void initState() {
     super.initState();
+    _profileApplyPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 980),
+    );
     _loadDevices();
     _loadAssistantPatterns();
     _eventSub = Bridge.onEvents.listen((event) {
@@ -97,7 +104,22 @@ class _ProfilesState extends State<Profiles>
   @override
   void dispose() {
     _eventSub?.cancel();
+    _profileApplyPulseTimer?.cancel();
+    _profileApplyPulse.dispose();
     super.dispose();
+  }
+
+  void _pulseAppliedProfile(Profile profile) {
+    _profileApplyPulseTimer?.cancel();
+    setState(() => _highlightedProfileName = profile.name);
+    _profileApplyPulse
+      ..stop()
+      ..reset()
+      ..forward();
+    _profileApplyPulseTimer = Timer(const Duration(milliseconds: 1300), () {
+      if (!mounted) return;
+      setState(() => _highlightedProfileName = null);
+    });
   }
 
   void _showTopErrorSnack(String message) {
@@ -246,6 +268,15 @@ class _ProfilesState extends State<Profiles>
 
             Navigator.pop(context);
           },
+          onDelete: profile == null
+              ? null
+              : () {
+                  setState(() {
+                    profiles.remove(profile);
+                  });
+                  Navigator.pop(context);
+                  _showBottomSnack('Profile ${profile.name} was deleted.');
+                },
         );
       },
     );
@@ -315,6 +346,7 @@ class _ProfilesState extends State<Profiles>
       }
 
       _showBottomSnack('Profile ${profile.name} was applied.');
+      _pulseAppliedProfile(profile);
     } catch (e) {
       _showTopErrorSnack(e.toString());
     }
@@ -356,12 +388,12 @@ class _ProfilesState extends State<Profiles>
     return best ?? _firstWithCapability(capability);
   }
 
-  String _assistantRecommendationReason() {
+  String _assistantRecommendationReasonLine1() {
     final hour = _topPowerHour();
     final hh = hour.toString().padLeft(2, '0');
     final temp = (_assistantPreferredTemp ?? 23).toStringAsFixed(0);
     final bright = (_assistantPreferredBrightness ?? 45);
-    return 'Learned comfort near $hh:00 • $temp°C • $bright% brightness';
+    return '$hh:00 • $temp°C • $bright%';
   }
 
   Profile? _assistantRecommendedProfile() {
@@ -436,37 +468,63 @@ class _ProfilesState extends State<Profiles>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         decoration: BoxDecoration(
-          color: EaColor.back,
-          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              EaColor.back,
+              EaColor.back.withValues(alpha: .88),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: EaColor.border),
         ),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 color: EaColor.fore.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.auto_awesome, color: EaColor.fore),
+              child: const Icon(Icons.auto_awesome, color: EaColor.fore, size: 18),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Recommended by your assistant',
-                    style: EaText.secondary.copyWith(fontSize: 12),
+                    'Assistant recommendation',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.secondary.copyWith(
+                      fontSize: 11,
+                      color: EaColor.textSecondary.withValues(alpha: .78),
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(recommended.name, style: EaText.primary),
+                  const SizedBox(height: 1),
                   Text(
-                    _assistantRecommendationReason(),
-                    style: EaText.secondary,
+                    recommended.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.primary.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: EaColor.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    _assistantRecommendationReasonLine1(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.secondary.copyWith(
+                      fontSize: 12,
+                      color: EaColor.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -478,6 +536,10 @@ class _ProfilesState extends State<Profiles>
               style: OutlinedButton.styleFrom(
                 foregroundColor: EaColor.fore,
                 side: const BorderSide(color: EaColor.fore),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                minimumSize: const Size(86, 34),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: EaText.secondary.copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -575,41 +637,61 @@ class _ProfilesState extends State<Profiles>
   }
 
   Widget _row(Profile p) {
+    final highlighted = _highlightedProfileName == p.name;
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: EaColor.back,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: EaColor.border),
-      ),
-      child: Row(
+      child: Stack(
         children: [
-          Icon(p.icon, color: EaColor.fore, size: 26),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          if (highlighted)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _profileApplyPulse,
+                  builder: (context, child) {
+                    return CustomPaint(
+                      painter: _OrbitBorderPainter(progress: _profileApplyPulse.value),
+                    );
+                  },
+                ),
+              ),
+            ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: EaColor.back,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: highlighted ? Colors.transparent : EaColor.border),
+            ),
+            child: Row(
               children: [
-                Text(p.name, style: EaText.primary),
-                Text(
-                  "${p.actions.isNotEmpty ? p.actions.length : "No"} ${p.actions.length > 1 ? "actions" : "action"}",
-                  style: EaText.secondary,
+                Icon(p.icon, color: EaColor.fore, size: 26),
+
+                const SizedBox(width: 14),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(p.name, style: EaText.primary),
+                      Text(
+                        "${p.actions.isNotEmpty ? p.actions.length : "No"} ${p.actions.length > 1 ? "actions" : "action"}",
+                        style: EaText.secondary,
+                      ),
+                    ],
+                  ),
+                ),
+
+                IconButton(
+                  onPressed: () => _applyProfile(p),
+                  icon: const Icon(Icons.play_arrow, color: EaColor.fore),
+                ),
+
+                IconButton(
+                  onPressed: () => _openEditor(profile: p),
+                  icon: const Icon(Icons.edit, size: 15, color: EaColor.fore),
                 ),
               ],
             ),
-          ),
-
-          IconButton(
-            onPressed: () => _applyProfile(p),
-            icon: const Icon(Icons.play_arrow, color: EaColor.fore),
-          ),
-
-          IconButton(
-            onPressed: () => _openEditor(profile: p),
-            icon: const Icon(Icons.edit, size: 15, color: EaColor.fore),
           ),
         ],
       ),
@@ -617,15 +699,61 @@ class _ProfilesState extends State<Profiles>
   }
 }
 
+class _OrbitBorderPainter extends CustomPainter {
+  final double progress;
+
+  const _OrbitBorderPainter({required this.progress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius(
+      (Offset.zero & size).deflate(.8),
+      const Radius.circular(20),
+    );
+
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = EaColor.fore.withValues(alpha: .24);
+    canvas.drawRRect(rrect, base);
+
+    final metric = (Path()..addRRect(rrect)).computeMetrics().first;
+    final length = metric.length;
+    final segment = length * .24;
+    final head = progress * length;
+    final tail = head - segment;
+
+    final active = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = EaColor.fore;
+
+    if (tail >= 0) {
+      canvas.drawPath(metric.extractPath(tail, head), active);
+    } else {
+      canvas.drawPath(metric.extractPath(length + tail, length), active);
+      canvas.drawPath(metric.extractPath(0, head), active);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OrbitBorderPainter oldDelegate) {
+    return oldDelegate.progress != progress;
+  }
+}
+
 class _ProfileEditor extends StatefulWidget {
   final List<DeviceInfo> devices;
   final Profile? profile;
   final Function(Profile) onSaved;
+  final VoidCallback? onDelete;
 
   const _ProfileEditor({
     required this.devices,
     this.profile,
     required this.onSaved,
+    this.onDelete,
   });
 
   @override
@@ -751,6 +879,41 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     widget.onSaved(Profile(name: name, actions: actions, icon: selectedIcon));
   }
 
+  Future<void> _confirmDeleteProfile() async {
+    if (widget.profile == null || widget.onDelete == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: EaColor.back,
+          title: Text('Delete profile?', style: EaText.primary),
+          content: Text(
+            'This will permanently remove "${widget.profile!.name}".',
+            style: EaText.secondary,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel', style: EaText.secondary),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                'Delete',
+                style: EaText.secondary.copyWith(color: Colors.redAccent),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      widget.onDelete?.call();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
@@ -792,7 +955,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
                 const SizedBox(height: 19),
 
-                _saveButton(),
+                _footerButtons(),
               ],
             ),
           ),
@@ -1573,19 +1736,51 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     );
   }
 
-  Widget _saveButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _save,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: EaColor.fore,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+  Widget _footerButtons() {
+    if (widget.profile == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _save,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: EaColor.fore,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
+          ),
+          child: Text("Save Profile", style: EaText.primaryBack),
+        ),
+      );
+    }
+
+    return Row(
+      children: [
+        OutlinedButton.icon(
+          onPressed: _confirmDeleteProfile,
+          icon: const Icon(Icons.delete_outline, size: 18),
+          label: const Text('Delete'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.redAccent,
+            side: const BorderSide(color: Colors.redAccent),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
         ),
-        child: Text("Save Profile", style: EaText.primaryBack),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: _save,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: EaColor.fore,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+            ),
+            child: Text("Save Profile", style: EaText.primaryBack),
+          ),
+        ),
+      ],
     );
   }
 }
