@@ -2211,6 +2211,7 @@ class Bridge {
     calloc.free(outPtr);
 
     final q = input.trim().toLowerCase();
+    final r = response.toLowerCase();
     final questionLike = q.contains('?') ||
         q.contains('what') ||
         q.contains('how') ||
@@ -2218,11 +2219,15 @@ class Bridge {
         q.contains('qual') ||
         q.contains('quais') ||
         q.contains('quanto');
+    final staleOrGeneric = r.contains('i can report status, online devices and possible behavior insights') ||
+      r.contains('i could not identify the target device') ||
+      r.contains('mention the device name');
 
     if (_coreAiProcessChat != null &&
-        (response.toLowerCase().contains('no actionable changes') ||
-            response.toLowerCase().contains('could not map this command')) &&
-        questionLike) {
+      ((r.contains('no actionable changes') ||
+          r.contains('could not map this command')) &&
+        questionLike ||
+        staleOrGeneric)) {
       return aiProcessChat(input);
     }
 

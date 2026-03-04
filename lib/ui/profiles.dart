@@ -445,7 +445,7 @@ class _ProfilesState extends State<Profiles>
     if (actions.isEmpty) return null;
     final hour = _topPowerHour().toString().padLeft(2, '0');
     return Profile(
-      name: 'AI Comfort $hour',
+      name: 'AI Comfort ${hour}h',
       actions: actions,
       icon: Icons.auto_awesome,
     );

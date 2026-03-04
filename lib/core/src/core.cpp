@@ -1810,22 +1810,151 @@ static int firstInteger(const std::string& text)
     return found ? value : -1;
 }
 
-static uint32_t namedColor(const std::string& q)
+static bool tryParseColor(const std::string& q, uint32_t& outColor)
 {
-    if (q.find("blue") != std::string::npos || q.find("azul") != std::string::npos) return 0x0066AAFF;
-    if (q.find("green") != std::string::npos || q.find("verde") != std::string::npos) return 0x0016A34A;
-    if (q.find("red") != std::string::npos || q.find("vermelho") != std::string::npos) return 0x00E53935;
-    if (q.find("purple") != std::string::npos || q.find("roxo") != std::string::npos) return 0x009C27B0;
-    if (q.find("yellow") != std::string::npos || q.find("amarelo") != std::string::npos) return 0x00FFD600;
-    if (q.find("orange") != std::string::npos || q.find("laranja") != std::string::npos) return 0x00FB8C00;
-    if (q.find("white") != std::string::npos || q.find("branco") != std::string::npos) return 0x00F5F5F5;
-    return 0x0066AAFF;
+    std::string s = lowerCopy(q);
+
+    auto set = [&](uint32_t rgb) {
+        outColor = rgb & 0x00FFFFFF;
+        return true;
+    };
+
+    const auto hashPos = s.find('#');
+    if (hashPos != std::string::npos && hashPos + 7 <= s.size()) {
+        const std::string hex = s.substr(hashPos + 1, 6);
+        bool ok = true;
+        for (char c : hex) {
+            if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            try {
+                return set(static_cast<uint32_t>(std::stoul(hex, nullptr, 16)));
+            } catch (...) {}
+        }
+    }
+
+    const auto oxPos = s.find("0x");
+    if (oxPos != std::string::npos && oxPos + 8 <= s.size()) {
+        const std::string hex = s.substr(oxPos + 2, 6);
+        bool ok = true;
+        for (char c : hex) {
+            if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                ok = false;
+                break;
+            }
+        }
+        if (ok) {
+            try {
+                return set(static_cast<uint32_t>(std::stoul(hex, nullptr, 16)));
+            } catch (...) {}
+        }
+    }
+
+    const auto rgbPos = s.find("rgb(");
+    if (rgbPos != std::string::npos) {
+        const auto endPos = s.find(')', rgbPos);
+        if (endPos != std::string::npos && endPos > rgbPos + 4) {
+            std::string inner = s.substr(rgbPos + 4, endPos - (rgbPos + 4));
+            for (char& c : inner) {
+                if (c == ',') c = ' ';
+            }
+            std::stringstream ss(inner);
+            int r = -1, g = -1, b = -1;
+            if (ss >> r >> g >> b) {
+                r = std::clamp(r, 0, 255);
+                g = std::clamp(g, 0, 255);
+                b = std::clamp(b, 0, 255);
+                return set(static_cast<uint32_t>((r << 16) | (g << 8) | b));
+            }
+        }
+    }
+
+    static const std::pair<const char*, uint32_t> kNamed[] = {
+        {"light blue", 0x0000FFFF},
+        {"dark blue", 0x000000FF},
+        {"azul claro", 0x0000FFFF},
+        {"azul escuro", 0x000000FF},
+        {"light green", 0x0090EE90},
+        {"dark green", 0x00008700},
+        {"verde claro", 0x0090EE90},
+        {"verde escuro", 0x00008700},
+        {"light red", 0x00FF6E64},
+        {"dark red", 0x00B71C1C},
+        {"vermelho claro", 0x00FF6E64},
+        {"vermelho escuro", 0x00B71C1C},
+        {"light purple", 0x009932CC},
+        {"dark purple", 0x0065117A},
+        {"roxo claro", 0x009932CC},
+        {"roxo escuro", 0x0065117A},
+        {"light pink", 0x00FF80AB},
+        {"dark pink", 0x00B0003A},
+        {"rosa claro", 0x00FF80AB},
+        {"rosa escuro", 0x00B0003A},
+        {"light yellow", 0x00FFFF99},
+        {"dark yellow", 0x00B2A100},
+        {"amarelo claro", 0x00FFFF99},
+        {"amarelo escuro", 0x00B2A100},
+        {"light orange", 0x00FFA500},
+        {"dark orange", 0x00B26A00},
+        {"laranja claro", 0x00FFA500},
+        {"laranja escuro", 0x00B26A00},
+        {"white", 0x00F5F5F5},
+        {"branco", 0x00F5F5F5},
+        {"blue", 0x000066FF},
+        {"azul", 0x000066FF},
+        {"green", 0x0000C853},
+        {"verde", 0x0000C853},
+        {"red", 0x00E53935},
+        {"vermelho", 0x00E53935},
+        {"purple", 0x009C27B0},
+        {"roxo", 0x009C27B0},
+        {"pink", 0x00EC407A},
+        {"rosa", 0x00EC407A},
+        {"violet", 0x008A2BE2},
+        {"indigo", 0x004B0082},
+        {"brown", 0x008B4513},
+        {"marrom", 0x008B4513},
+        {"black", 0x00000000},
+        {"preto", 0x00000000},
+        {"gray", 0x00808080},
+        {"grey", 0x00808080},
+        {"cinza", 0x00808080},
+        {"silver", 0x00C0C0C0},
+        {"prata", 0x00C0C0C0},
+        {"gold", 0x00FFD700},
+        {"dourado", 0x00FFD700},
+        {"yellow", 0x00FFD600},
+        {"amarelo", 0x00FFD600},
+        {"orange", 0x00FB8C00},
+        {"laranja", 0x00FB8C00},
+        {"cyan", 0x0000BCD4},
+        {"ciano", 0x0000BCD4},
+    };
+
+    for (const auto& item : kNamed) {
+        if (s.find(item.first) != std::string::npos) {
+            return set(item.second);
+        }
+    }
+
+    return false;
 }
 
 static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std::string& clause)
 {
     std::vector<InternalDevice*> targets;
     const std::string q = lowerCopy(clause);
+
+    auto pushUnique = [&](InternalDevice* dev) {
+        if (!dev) return;
+        for (auto* existing : targets) {
+            if (existing == dev) return;
+        }
+        targets.push_back(dev);
+    };
 
     for (auto& kv : core->devices) {
         std::string name = lowerCopy(kv.second.name);
@@ -1845,7 +1974,17 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
     auto collectByCap = [&](CoreCapability cap) {
         for (auto& kv : core->devices) {
             if (hasCapability(kv.second, cap)) {
-                targets.push_back(&kv.second);
+                pushUnique(&kv.second);
+            }
+        }
+    };
+
+    auto collectByAnyThermalCap = [&]() {
+        for (auto& kv : core->devices) {
+            if (hasCapability(kv.second, CORE_CAP_TEMPERATURE) ||
+                hasCapability(kv.second, CORE_CAP_TEMPERATURE_FRIDGE) ||
+                hasCapability(kv.second, CORE_CAP_TEMPERATURE_FREEZER)) {
+                pushUnique(&kv.second);
             }
         }
     };
@@ -1861,7 +2000,7 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
                q.find("temperatura") != std::string::npos || q.find("temp") != std::string::npos ||
                q.find("fridge") != std::string::npos || q.find("freezer") != std::string::npos ||
                q.find("geladeira") != std::string::npos || q.find("congelador") != std::string::npos) {
-        collectByCap(CORE_CAP_TEMPERATURE);
+        collectByAnyThermalCap();
     } else if (q.find("curtain") != std::string::npos || q.find("blind") != std::string::npos ||
                q.find("cortina") != std::string::npos) {
         collectByCap(CORE_CAP_POSITION);
@@ -1905,6 +2044,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
         const bool mentionsStateDomain = containsAny(q, {
             "brightness", "brilho", "temperature", "temperatura", "temp", "tempeature", "thermo", "color", "cor",
             "position", "posicao", "ligad", "power", "online", "status", "estado",
+            "lock", "unlock", "tranca", "fechadura", "mode", "modo", "kelvin", "color temperature",
             "open", "close", "abr", "fech"
         });
 
@@ -1921,7 +2061,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
         const bool explicitAction = containsAny(q, {
             "turn on", "turn off", "liga", "desliga", "set", "ajusta", "mude", "defina",
             "apply", "aplica", "increase", "decrease", "aumenta", "diminui", "reduz",
-            "abre", "abrir", "fecha", "fechar"
+            "abre", "abrir", "fecha", "fechar", "lock", "unlock", "trancar", "destrancar"
         });
 
         const bool hasValueHint = firstInteger(q) >= 0 || containsAny(q, {
@@ -1953,7 +2093,10 @@ CoreResult core_ai_execute_command(CoreContext* core,
                 SetTemperature,
                 SetBrightness,
                 SetColor,
-                SetPosition
+                SetPosition,
+                SetLock,
+                SetMode,
+                SetColorTemperature
             };
 
             struct ActionRecord {
@@ -2008,8 +2151,10 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     }
 
                     if ((clause.find("temperature") != std::string::npos || clause.find("temperatura") != std::string::npos ||
-                        clause.find("temp") != std::string::npos || clause.find("tempeature") != std::string::npos) &&
-                        hasCapability(*dev, CORE_CAP_TEMPERATURE)) {
+                         clause.find("temp") != std::string::npos || clause.find("tempeature") != std::string::npos) &&
+                        (hasCapability(*dev, CORE_CAP_TEMPERATURE) ||
+                         hasCapability(*dev, CORE_CAP_TEMPERATURE_FRIDGE) ||
+                         hasCapability(*dev, CORE_CAP_TEMPERATURE_FREEZER))) {
                         const int v = firstInteger(clause);
                         if (v >= 0) {
                             const std::string devName = lowerCopy(dev->name);
@@ -2017,18 +2162,49 @@ CoreResult core_ai_execute_command(CoreContext* core,
                                                     devName.find("freezer") != std::string::npos ||
                                                     devName.find("geladeira") != std::string::npos ||
                                                     devName.find("congelador") != std::string::npos;
-                            const int minT = coldDevice ? -20 : 16;
-                            const int maxT = coldDevice ? 12 : 30;
-                            const float t = static_cast<float>(std::clamp(v, minT, maxT));
+                            const bool wantsFreezer = clause.find("freezer") != std::string::npos ||
+                                                     clause.find("congelador") != std::string::npos;
+                            const bool wantsFridge = clause.find("fridge") != std::string::npos ||
+                                                    clause.find("geladeira") != std::string::npos ||
+                                                    clause.find("refrigerator") != std::string::npos;
+
+                            const bool hasRoomTemp = hasCapability(*dev, CORE_CAP_TEMPERATURE);
+                            const bool hasFridgeTemp = hasCapability(*dev, CORE_CAP_TEMPERATURE_FRIDGE);
+                            const bool hasFreezerTemp = hasCapability(*dev, CORE_CAP_TEMPERATURE_FREEZER);
+
                             if (hasCapability(*dev, CORE_CAP_POWER) && !dev->state.power) {
                                 dev->driver->setPower(dev->uuid, true);
                                 dev->state.power = true;
                             }
-                            if (dev->driver->setTemperature(dev->uuid, t)) {
-                                dev->state.temperature = t;
-                                changed = true;
-                                actions.push_back("set " + dev->name + " to " + std::to_string(static_cast<int>(t)) + "°C");
-                                records.push_back({ActionKind::SetTemperature, dev->name, static_cast<int>(t)});
+
+                            if ((wantsFreezer && hasFreezerTemp) ||
+                                (!hasRoomTemp && !hasFridgeTemp && hasFreezerTemp)) {
+                                const float t = static_cast<float>(std::clamp(v, -24, -14));
+                                if (dev->driver->setTemperatureFreezer(dev->uuid, t)) {
+                                    dev->state.temperatureFreezer = t;
+                                    changed = true;
+                                    actions.push_back("set freezer temperature " + std::to_string(static_cast<int>(t)) + "°C on " + dev->name);
+                                    records.push_back({ActionKind::SetTemperature, dev->name, static_cast<int>(t)});
+                                }
+                            } else if ((wantsFridge && hasFridgeTemp) ||
+                                       (!hasRoomTemp && hasFridgeTemp)) {
+                                const float t = static_cast<float>(std::clamp(v, 1, 8));
+                                if (dev->driver->setTemperatureFridge(dev->uuid, t)) {
+                                    dev->state.temperatureFridge = t;
+                                    changed = true;
+                                    actions.push_back("set fridge temperature " + std::to_string(static_cast<int>(t)) + "°C on " + dev->name);
+                                    records.push_back({ActionKind::SetTemperature, dev->name, static_cast<int>(t)});
+                                }
+                            } else if (hasRoomTemp) {
+                                const int minT = coldDevice ? -20 : 16;
+                                const int maxT = coldDevice ? 12 : 30;
+                                const float t = static_cast<float>(std::clamp(v, minT, maxT));
+                                if (dev->driver->setTemperature(dev->uuid, t)) {
+                                    dev->state.temperature = t;
+                                    changed = true;
+                                    actions.push_back("set " + dev->name + " to " + std::to_string(static_cast<int>(t)) + "°C");
+                                    records.push_back({ActionKind::SetTemperature, dev->name, static_cast<int>(t)});
+                                }
                             }
                         }
                     }
@@ -2049,12 +2225,55 @@ CoreResult core_ai_execute_command(CoreContext* core,
 
                     if ((clause.find("color") != std::string::npos || clause.find("cor") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_COLOR)) {
-                        const uint32_t c = namedColor(clause);
-                        if (dev->driver->setColor(dev->uuid, c)) {
+                        uint32_t c = 0;
+                        if (tryParseColor(clause, c) && dev->driver->setColor(dev->uuid, c)) {
                             dev->state.color = c;
                             changed = true;
                             actions.push_back("set color on " + dev->name);
                             records.push_back({ActionKind::SetColor, dev->name, -1});
+                        }
+                    }
+
+                    if ((clause.find("color temperature") != std::string::npos ||
+                         clause.find("temperatura de cor") != std::string::npos ||
+                         clause.find("kelvin") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_COLOR_TEMP)) {
+                        const int v = firstInteger(clause);
+                        if (v >= 0) {
+                            const int k = std::clamp(v, 1000, 9000);
+                            if (dev->driver->setColorTemperature(dev->uuid, static_cast<uint32_t>(k))) {
+                                dev->state.colorTemperature = static_cast<uint32_t>(k);
+                                changed = true;
+                                actions.push_back("set color temperature " + std::to_string(k) + "K on " + dev->name);
+                                records.push_back({ActionKind::SetColorTemperature, dev->name, k});
+                            }
+                        }
+                    }
+
+                    if ((clause.find("lock") != std::string::npos || clause.find("tranca") != std::string::npos ||
+                         clause.find("trancar") != std::string::npos || clause.find("fechadura") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_LOCK)) {
+                        const bool unlockCmd = clause.find("unlock") != std::string::npos ||
+                                              clause.find("destrancar") != std::string::npos;
+                        const bool lockValue = !unlockCmd;
+                        if (dev->driver->setLock(dev->uuid, lockValue)) {
+                            dev->state.lock = lockValue;
+                            changed = true;
+                            actions.push_back(std::string(lockValue ? "locked " : "unlocked ") + dev->name);
+                            records.push_back({ActionKind::SetLock, dev->name, lockValue ? 1 : 0});
+                        }
+                    }
+
+                    if ((clause.find("mode") != std::string::npos || clause.find("modo") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_MODE)) {
+                        const int v = firstInteger(clause);
+                        if (v >= 0) {
+                            if (dev->driver->setMode(dev->uuid, static_cast<uint32_t>(v))) {
+                                dev->state.mode = static_cast<uint32_t>(v);
+                                changed = true;
+                                actions.push_back("set mode " + std::to_string(v) + " on " + dev->name);
+                                records.push_back({ActionKind::SetMode, dev->name, v});
+                            }
                         }
                     }
 
@@ -2107,6 +2326,12 @@ CoreResult core_ai_execute_command(CoreContext* core,
                         reply = "Sure! " + r.deviceName + " brightness is now " + std::to_string(r.value) + "%.";
                     } else if (r.kind == ActionKind::SetPosition && r.value >= 0) {
                         reply = "Sure! " + r.deviceName + " position is now " + std::to_string(r.value) + "%.";
+                    } else if (r.kind == ActionKind::SetLock) {
+                        reply = std::string("Done. ") + r.deviceName + (r.value > 0 ? " is locked now." : " is unlocked now.");
+                    } else if (r.kind == ActionKind::SetMode && r.value >= 0) {
+                        reply = "Done. " + r.deviceName + " mode is now " + std::to_string(r.value) + ".";
+                    } else if (r.kind == ActionKind::SetColorTemperature && r.value >= 0) {
+                        reply = "Done. " + r.deviceName + " color temperature is now " + std::to_string(r.value) + "K.";
                     }
                 }
 
