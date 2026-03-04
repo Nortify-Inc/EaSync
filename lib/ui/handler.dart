@@ -22,6 +22,7 @@ export 'splash.dart';
 export 'home.dart';
 
 export 'dashboard.dart';
+export 'assistant.dart';
 export 'profiles.dart';
 export 'manage.dart';
 
