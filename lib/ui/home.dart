@@ -21,7 +21,8 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   static const int fakePages = 10000;
-  static const int startPage = (fakePages ~/ 2) - ((fakePages ~/ 2) % 3);
+  static const int pageCount = 4;
+  static const int startPage = (fakePages ~/ 2) - ((fakePages ~/ 2) % pageCount);
 
   int selectedIndex = 0;
   int currentFakePage = startPage;
@@ -36,10 +37,11 @@ class _HomeState extends State<Home> {
   final List<Widget> pages = [
     const Dashboard(),
     const Profiles(),
+    const Assistant(),
     const Manage(),
   ];
 
-  final List<String> tabs = ["Dashboard", "Profiles", "Manage"];
+  final List<String> tabs = ["Dashboard", "Profiles", "Assistant", "Manage"];
 
   int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
 
