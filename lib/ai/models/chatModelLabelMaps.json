@@ -1,3 +1,79 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:270ed7f72af3520bf4bb6aec6a212d9b33f02f80e6eae41ac398603294a422c9
-size 1475
+{
+  "intentToIndex": {
+    "ambiguous": 0,
+    "applyProfile": 1,
+    "controlDevice": 2,
+    "farewell": 3,
+    "gratitude": 4,
+    "greeting": 5,
+    "listDevices": 6,
+    "listOnline": 7,
+    "queryStatus": 8,
+    "smalltalk": 9
+  },
+  "styleToIndex": {
+    "clarify": 0,
+    "friendly": 1,
+    "helpful": 2,
+    "warm": 3
+  },
+  "capabilityToIndex": {
+    "brightness": 0,
+    "color": 1,
+    "colorTemperature": 2,
+    "lock": 3,
+    "mode": 4,
+    "none": 5,
+    "position": 6,
+    "power": 7,
+    "schedule": 8,
+    "temperature": 9,
+    "temperatureFreezer": 10,
+    "temperatureFridge": 11,
+    "timestamp": 12
+  },
+  "operationToIndex": {
+    "none": 0,
+    "set": 1
+  },
+  "indexToIntent": {
+    "0": "ambiguous",
+    "1": "applyProfile",
+    "2": "controlDevice",
+    "3": "farewell",
+    "4": "gratitude",
+    "5": "greeting",
+    "6": "listDevices",
+    "7": "listOnline",
+    "8": "queryStatus",
+    "9": "smalltalk"
+  },
+  "indexToStyle": {
+    "0": "clarify",
+    "1": "friendly",
+    "2": "helpful",
+    "3": "warm"
+  },
+  "indexToCapability": {
+    "0": "brightness",
+    "1": "color",
+    "2": "colorTemperature",
+    "3": "lock",
+    "4": "mode",
+    "5": "none",
+    "6": "position",
+    "7": "power",
+    "8": "schedule",
+    "9": "temperature",
+    "10": "temperatureFreezer",
+    "11": "temperatureFridge",
+    "12": "timestamp"
+  },
+  "indexToOperation": {
+    "0": "none",
+    "1": "set"
+  },
+  "maxLen": 40,
+  "embedDim": 128,
+  "hiddenDim": 192
+}

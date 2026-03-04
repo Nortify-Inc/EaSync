@@ -1,3 +1,22 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:73c131ed8df7abcf6b7d6b7948c2395af014331eac8ad5bbf9aa5e7a8bb75181
-size 550
+#pragma once
+
+#include <string>
+
+namespace easync::ai {
+
+struct ChatModelPrediction {
+    std::string intent = "unknown";
+    std::string responseStyle = "helpful";
+    std::string predictedCapability = "none";
+    std::string predictedOperation = "none";
+    std::string generatedResponse;
+    bool needsClarification = false;
+    float intentConfidence = 0.0f;
+    int numericValue = -1;
+    std::string time;
+    std::string hexColor;
+};
+
+bool runChatModelPrediction(const std::string& input, ChatModelPrediction& out);
+
+} // namespace easync::ai
