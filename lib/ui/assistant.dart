@@ -174,7 +174,12 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       ];
       return '${_friendlyPrefix()} ${replies[_rng.nextInt(replies.length)]}';
     }
-    if (_containsAny(q, ['how are you', 'how is it going', 'how\'s it going', 'you good'])) {
+    if (_containsAny(q, [
+      'how are you',
+      'how is it going',
+      'how\'s it going',
+      'you good',
+    ])) {
       const replies = [
         'I\'m doing great and ready to help.',
         'I\'m excellent — systems online and focused.',
@@ -182,7 +187,13 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       ];
       return replies[_rng.nextInt(replies.length)];
     }
-    if (_containsAny(q, ['good morning', 'good afternoon', 'good evening', 'hello', 'hi'])) {
+    if (_containsAny(q, [
+      'good morning',
+      'good afternoon',
+      'good evening',
+      'hello',
+      'hi',
+    ])) {
       return _greetingResponse();
     }
     if (_containsAny(q, ['bye', 'good night', 'see you', 'talk later'])) {
@@ -205,10 +216,18 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (_containsAny(q, ['outside temperature', 'weather', 'how hot'])) {
       return 'Outside is around ${_outsideTemp.toStringAsFixed(0)}°C near ${_locationQuery.isEmpty ? 'your saved area' : _locationQuery}.';
     }
-    if (_containsAny(q, ['what should i do', 'any suggestion', 'recommend something'])) {
+    if (_containsAny(q, [
+      'what should i do',
+      'any suggestion',
+      'recommend something',
+    ])) {
       return 'I suggest enabling Auto-arrival and running a comfort profile before your usual arrival hour.';
     }
-    if (_containsAny(q, ['what did you learn', 'what have you learned', 'learning summary'])) {
+    if (_containsAny(q, [
+      'what did you learn',
+      'what have you learned',
+      'learning summary',
+    ])) {
       return 'I\'m learning that your activity peaks around ${_hourLabel(_topHour(_appOpenByHour))} and arrival-like usage is around ${_hourLabel(_topHour(_powerOnByHour))}.';
     }
     if (_containsAny(q, ['good job', 'nice', 'great'])) {
@@ -252,7 +271,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     }
 
     setState(() {
-      _chatMessages.add(const _ChatMessage(role: _ChatRole.assistant, text: ''));
+      _chatMessages.add(
+        const _ChatMessage(role: _ChatRole.assistant, text: ''),
+      );
     });
     _scrollChatToBottom();
 
@@ -439,7 +460,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   bool _isLikelyStateQuestion(String text) {
     final q = _normalizeInput(text);
-    final questionLike = q.contains('?') ||
+    final questionLike =
+        q.contains('?') ||
         _containsAnyPhrase(q, [
           'is ',
           'are ',
@@ -712,13 +734,16 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   Set<int> _requiredCapabilitiesForClause(String clause) {
     final caps = <int>{};
-    if (clause.contains('brightness')) caps.add(CoreCapability.CORE_CAP_BRIGHTNESS);
+    if (clause.contains('brightness'))
+      caps.add(CoreCapability.CORE_CAP_BRIGHTNESS);
     if (clause.contains('color')) caps.add(CoreCapability.CORE_CAP_COLOR);
     if (clause.contains('temperature') || clause.contains('temp')) {
       caps.add(CoreCapability.CORE_CAP_TEMPERATURE);
     }
     if (clause.contains('mode')) caps.add(CoreCapability.CORE_CAP_MODE);
-    if (clause.contains('position') || clause.contains('open') || clause.contains('close')) {
+    if (clause.contains('position') ||
+        clause.contains('open') ||
+        clause.contains('close')) {
       caps.add(CoreCapability.CORE_CAP_POSITION);
     }
     if (clause.contains('turn on') || clause.contains('turn off')) {
@@ -727,12 +752,27 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     return caps;
   }
 
-  List<DeviceInfo> _resolveTargetsForClause(String clause, List<DeviceInfo> devices) {
+  List<DeviceInfo> _resolveTargetsForClause(
+    String clause,
+    List<DeviceInfo> devices,
+  ) {
     final q = clause.toLowerCase();
     final wantsAll = q.contains('all ') || q.contains('every ');
-    final mentionsAc = _containsAny(q, [' ac', 'air conditioner', 'climate', 'hvac', 'cooling']);
+    final mentionsAc = _containsAny(q, [
+      ' ac',
+      'air conditioner',
+      'climate',
+      'hvac',
+      'cooling',
+    ]);
     final mentionsLight = _containsAny(q, ['lamp', 'light', 'lights']);
-    final mentionsCurtain = _containsAny(q, ['curtain', 'curtains', 'blind', 'blinds', 'shade']);
+    final mentionsCurtain = _containsAny(q, [
+      'curtain',
+      'curtains',
+      'blind',
+      'blinds',
+      'shade',
+    ]);
 
     final explicitByName = devices.where((d) {
       final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
@@ -749,9 +789,13 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (mentionsAc) {
       final acs = devices.where((d) {
         final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
-        final capOk = d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) ||
+        final capOk =
+            d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) ||
             d.capabilities.contains(CoreCapability.CORE_CAP_MODE);
-        return capOk || hay.contains('ac') || hay.contains('air') || hay.contains('climate');
+        return capOk ||
+            hay.contains('ac') ||
+            hay.contains('air') ||
+            hay.contains('climate');
       }).toList();
       return acs;
     }
@@ -769,7 +813,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
     if (mentionsCurtain) {
       final curtains = devices
-          .where((d) => d.capabilities.contains(CoreCapability.CORE_CAP_POSITION))
+          .where(
+            (d) => d.capabilities.contains(CoreCapability.CORE_CAP_POSITION),
+          )
           .toList();
       return curtains;
     }
@@ -819,7 +865,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   String _targetHint(String clause) {
     final q = clause.toLowerCase();
-    if (_containsAny(q, [' ac', 'air conditioner', 'climate', 'hvac'])) return 'AC';
+    if (_containsAny(q, [' ac', 'air conditioner', 'climate', 'hvac']))
+      return 'AC';
     if (_containsAny(q, ['lamp', 'light', 'lights'])) return 'light';
     if (_containsAny(q, ['curtain', 'blind', 'shade'])) return 'curtain';
     return 'matching device';
@@ -836,10 +883,12 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (_containsAny(q, ['first', '1st', 'one', '1'])) {
       return _pendingTargets.first;
     }
-    if (_pendingTargets.length > 1 && _containsAny(q, ['second', '2nd', 'two', '2'])) {
+    if (_pendingTargets.length > 1 &&
+        _containsAny(q, ['second', '2nd', 'two', '2'])) {
       return _pendingTargets[1];
     }
-    if (_pendingTargets.length > 2 && _containsAny(q, ['third', '3rd', 'three', '3'])) {
+    if (_pendingTargets.length > 2 &&
+        _containsAny(q, ['third', '3rd', 'three', '3'])) {
       return _pendingTargets[2];
     }
 
@@ -1070,7 +1119,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       }
 
       if (asksTempState) {
-        if (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+        if (!target.capabilities.contains(
+          CoreCapability.CORE_CAP_TEMPERATURE,
+        )) {
           return '${target.name} does not expose temperature.';
         }
         return '${target.name} temperature is ${state.temperature.toStringAsFixed(0)}°C.';
@@ -1114,13 +1165,23 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       return '${target.name} is currently ${state.power ? 'ON' : 'OFF'}.';
     }
 
-    if (_containsAny(q, ['what devices', 'list devices', 'which devices', 'devices available'])) {
+    if (_containsAny(q, [
+      'what devices',
+      'list devices',
+      'which devices',
+      'devices available',
+    ])) {
       if (devices.isEmpty) return 'No devices are registered right now.';
       final names = devices.take(8).map((d) => d.name).join(', ');
       return 'You currently have ${devices.length} device(s): $names${devices.length > 8 ? '...' : ''}.';
     }
 
-    if (_containsAny(q, ['capability', 'capabilities', 'which supports', 'which have'])) {
+    if (_containsAny(q, [
+      'capability',
+      'capabilities',
+      'which supports',
+      'which have',
+    ])) {
       final askedCaps = _capabilitiesFromQuery(q);
       if (askedCaps.isEmpty) {
         return 'Ask me like: "which devices support temperature" or "which devices have brightness".';
@@ -1211,8 +1272,12 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       final rawInt = _extractFirstInt(clause) ?? 23;
       final temp = rawInt.clamp(16, 30).toDouble();
       Bridge.setTemperature(target.uuid, temp);
-      actions.add('set temperature to ${temp.toStringAsFixed(0)}°C on ${target.name}');
-      _pushCommandLog('Temperature ${temp.toStringAsFixed(0)}°C → ${target.name}');
+      actions.add(
+        'set temperature to ${temp.toStringAsFixed(0)}°C on ${target.name}',
+      );
+      _pushCommandLog(
+        'Temperature ${temp.toStringAsFixed(0)}°C → ${target.name}',
+      );
     }
 
     if (clause.contains('mode') &&
@@ -1236,7 +1301,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         target.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) {
       final pos = (_extractFirstInt(clause) ?? 50).clamp(0, 100).toDouble();
       Bridge.setPosition(target.uuid, pos);
-      actions.add('set position to ${pos.toStringAsFixed(0)}% on ${target.name}');
+      actions.add(
+        'set position to ${pos.toStringAsFixed(0)}% on ${target.name}',
+      );
       _pushCommandLog('Position ${pos.toStringAsFixed(0)}% → ${target.name}');
     }
 
@@ -1244,14 +1311,19 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         target.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) {
       final pos = clause.contains('close') ? 0.0 : 100.0;
       Bridge.setPosition(target.uuid, pos);
-      actions.add('${clause.contains('close') ? 'closed' : 'opened'} ${target.name}');
+      actions.add(
+        '${clause.contains('close') ? 'closed' : 'opened'} ${target.name}',
+      );
       _pushCommandLog('Position ${pos.toStringAsFixed(0)}% → ${target.name}');
     }
 
     return actions;
   }
 
-  DeviceInfo? _temperatureTargetFromText(String input, List<DeviceInfo> devices) {
+  DeviceInfo? _temperatureTargetFromText(
+    String input,
+    List<DeviceInfo> devices,
+  ) {
     if (devices.isEmpty) return null;
 
     bool hasAnyTempCap(DeviceInfo d) {
@@ -1274,9 +1346,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       'refrigerator',
     ]);
 
-    final tempDevices = devices
-      .where(hasAnyTempCap)
-        .toList();
+    final tempDevices = devices.where(hasAnyTempCap).toList();
     if (tempDevices.isEmpty) return null;
 
     if (asksColdDevice) {
@@ -1332,7 +1402,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (asksPosition) {
       final rows = <String>[];
       for (final d in devices) {
-        if (!d.capabilities.contains(CoreCapability.CORE_CAP_POSITION)) continue;
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_POSITION))
+          continue;
         final s = Bridge.getState(d.uuid);
         rows.add('${d.name} ${s.position.toStringAsFixed(0)}%');
       }
@@ -1345,7 +1416,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (asksBrightness) {
       final rows = <String>[];
       for (final d in devices) {
-        if (!d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)) continue;
+        if (!d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS))
+          continue;
         final s = Bridge.getState(d.uuid);
         rows.add('${d.name} ${s.brightness}%');
       }
@@ -1354,10 +1426,18 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       }
     }
 
-    final asksPower = _containsAny(q, [' power', 'turned on', 'is on', 'is off', 'ligado', 'desligado']);
+    final asksPower = _containsAny(q, [
+      ' power',
+      'turned on',
+      'is on',
+      'is off',
+      'ligado',
+      'desligado',
+    ]);
     if (asksPower) {
       final target = _findDeviceFromText(q, devices);
-      if (target != null && target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
+      if (target != null &&
+          target.capabilities.contains(CoreCapability.CORE_CAP_POWER)) {
         final s = Bridge.getState(target.uuid);
         return s.power
             ? 'Yes. ${target.name} is ON.'
@@ -1414,30 +1494,40 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final value = _extractFirstInt(q);
     if (setIntent && value != null) {
       final n = target.name.toLowerCase();
-      final coldDevice = n.contains('fridge') ||
+      final coldDevice =
+          n.contains('fridge') ||
           n.contains('freezer') ||
           n.contains('geladeira') ||
           n.contains('congelador') ||
           n.contains('refrigerator');
       final asksFreezer = _containsAny(q, ['freezer', 'congelador']);
-      final asksFridge = _containsAny(q, ['fridge', 'geladeira', 'refrigerator']);
+      final asksFridge = _containsAny(q, [
+        'fridge',
+        'geladeira',
+        'refrigerator',
+      ]);
 
       double temp;
       if ((asksFreezer &&
-              target.capabilities
-                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) ||
+              target.capabilities.contains(
+                CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+              )) ||
           (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) &&
-              !target.capabilities
-                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE) &&
-              target.capabilities
-                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER))) {
+              !target.capabilities.contains(
+                CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+              ) &&
+              target.capabilities.contains(
+                CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+              ))) {
         temp = value.clamp(-24, -14).toDouble();
       } else if ((asksFridge &&
-              target.capabilities
-                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) ||
+              target.capabilities.contains(
+                CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+              )) ||
           (!target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) &&
-              target.capabilities
-                  .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE))) {
+              target.capabilities.contains(
+                CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+              ))) {
         temp = value.clamp(1, 8).toDouble();
       } else {
         final minT = coldDevice ? -20 : 16;
@@ -1453,18 +1543,26 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       }
 
       if (asksFreezer &&
-          target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+          target.capabilities.contains(
+            CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+          )) {
         Bridge.setTemperatureFreezer(target.uuid, temp);
       } else if (asksFridge &&
-          target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+          target.capabilities.contains(
+            CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+          )) {
         Bridge.setTemperatureFridge(target.uuid, temp);
-      } else if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
+      } else if (target.capabilities.contains(
+        CoreCapability.CORE_CAP_TEMPERATURE,
+      )) {
         Bridge.setTemperature(target.uuid, temp);
-      } else if (target.capabilities
-          .contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+      } else if (target.capabilities.contains(
+        CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+      )) {
         Bridge.setTemperatureFridge(target.uuid, temp);
-      } else if (target.capabilities
-          .contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+      } else if (target.capabilities.contains(
+        CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+      )) {
         Bridge.setTemperatureFreezer(target.uuid, temp);
       }
       return 'Sure! Now ${target.name} is running at ${temp.toStringAsFixed(0)}°C.';
@@ -1472,20 +1570,28 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
     final state = Bridge.getState(target.uuid);
     if (_containsAny(q, ['freezer', 'congelador']) &&
-        target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+        target.capabilities.contains(
+          CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+        )) {
       return '${target.name} freezer temperature is ${state.temperatureFreezer.toStringAsFixed(0)}°C.';
     }
     if (_containsAny(q, ['fridge', 'geladeira', 'refrigerator']) &&
-        target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+        target.capabilities.contains(
+          CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+        )) {
       return '${target.name} fridge temperature is ${state.temperatureFridge.toStringAsFixed(0)}°C.';
     }
     if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
       return '${target.name} temperature is ${state.temperature.toStringAsFixed(0)}°C.';
     }
-    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
+    if (target.capabilities.contains(
+      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+    )) {
       return '${target.name} fridge temperature is ${state.temperatureFridge.toStringAsFixed(0)}°C.';
     }
-    if (target.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
+    if (target.capabilities.contains(
+      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+    )) {
       return '${target.name} freezer temperature is ${state.temperatureFreezer.toStringAsFixed(0)}°C.';
     }
     return '${target.name} temperature is unavailable right now.';
@@ -1495,46 +1601,26 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final input = raw.trim();
     if (input.isEmpty) return;
 
+    if (_assistantThinking) {
+      _appendAssistantChat(
+        'I am still processing the previous command. Please wait a moment.',
+        animate: false,
+      );
+      return;
+    }
+
     _appendUserChat(input);
     _setAssistantThinking(true);
 
     try {
       final backendReply = (await Bridge.aiExecuteCommandAsync(input)).trim();
-      final lower = backendReply.toLowerCase();
-      final unavailableReply = lower.contains('i could not process this request right now') ||
-          lower.contains('ai backend unavailable in current native library');
-      final genericOrStale = backendReply.isEmpty ||
-          lower.contains('i can report status, online devices and possible behavior insights') ||
-          lower.contains('i could not identify the target device') ||
-          lower.contains('mention the device name');
-
-      if (unavailableReply) {
-        final local = _localNlpFallback(input) ?? _generalResponse(input);
-        if (local != null && local.trim().isNotEmpty) {
-          _appendAssistantChat(local, animate: false);
-        } else {
-          _appendAssistantChat(
-            '${_friendlyPrefix()} I could not process this request right now.',
-            animate: false,
-          );
-        }
-        return;
-      }
-
-      if (genericOrStale) {
-        final local = _localNlpFallback(input) ?? _generalResponse(input);
-        if (local != null && local.trim().isNotEmpty) {
-          _appendAssistantChat(local, animate: false);
-        } else if (backendReply.isNotEmpty) {
-          _appendAssistantChat(backendReply, animate: false);
-        } else {
-          _appendAssistantChat(
-            '${_friendlyPrefix()} I could not process this request right now.',
-            animate: false,
-          );
-        }
-      } else {
+      if (backendReply.isNotEmpty) {
         _appendAssistantChat(backendReply, animate: false);
+      } else {
+        _appendAssistantChat(
+          '${_friendlyPrefix()} I could not process this request right now.',
+          animate: false,
+        );
       }
     } catch (_) {
       _appendAssistantChat(
@@ -1550,13 +1636,17 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           duration: Duration(seconds: 2),
-          animation: Animation.fromValueListenable( CurvedAnimation(parent: AlwaysStoppedAnimation(1), curve: Curves.easeOutSine)),
+          animation: Animation.fromValueListenable(
+            CurvedAnimation(
+              parent: AlwaysStoppedAnimation(1),
+              curve: Curves.easeOutSine,
+            ),
+          ),
           backgroundColor: EaColor.back,
           content: Text(
             'Voice recognition is only available on Android for now.',
             style: EaText.secondary,
-            
-            ),
+          ),
         ),
       );
       return;
@@ -1575,7 +1665,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     _voiceCommandExecuted = false;
     try {
       await _voiceEventSub?.cancel();
-      _voiceEventSub = VoiceRecognitionPlatform.instance.listenResult().listen((event) {
+      _voiceEventSub = VoiceRecognitionPlatform.instance.listenResult().listen((
+        event,
+      ) {
         final eventName = event.event;
 
         if (eventName == 'onPartialResultsEvent') {
@@ -1618,7 +1710,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       if (!mounted) return;
       setState(() => _isRecordingAudio = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Voice recognition is not available right now.')),
+        const SnackBar(
+          content: Text('Voice recognition is not available right now.'),
+        ),
       );
     }
   }
@@ -1672,7 +1766,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         final next = event.state.power;
         _lastPowerByDevice[event.uuid] = next;
 
-        _recordStatePattern(event.uuid, _lastStateByDevice[event.uuid], event.state);
+        _recordStatePattern(
+          event.uuid,
+          _lastStateByDevice[event.uuid],
+          event.state,
+        );
         _lastStateByDevice[event.uuid] = _copyState(event.state);
 
         if (!prev && next) {
@@ -1719,7 +1817,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   void _startRoundHourWeatherLoop() {
     _roundHourWeatherTimer?.cancel();
-    _roundHourWeatherTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+    _roundHourWeatherTimer = Timer.periodic(const Duration(seconds: 30), (
+      _,
+    ) async {
       if (!_shouldAutoRefreshNow()) return;
       final now = DateTime.now();
       final key = '${now.year}-${now.month}-${now.day}-${now.hour}';
@@ -1770,8 +1870,14 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
 
   Future<void> _persistState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kPowerOnByHour, jsonEncode(_encodeHourMap(_powerOnByHour)));
-    await prefs.setString(_kAppOpenByHour, jsonEncode(_encodeHourMap(_appOpenByHour)));
+    await prefs.setString(
+      _kPowerOnByHour,
+      jsonEncode(_encodeHourMap(_powerOnByHour)),
+    );
+    await prefs.setString(
+      _kAppOpenByHour,
+      jsonEncode(_encodeHourMap(_appOpenByHour)),
+    );
     await prefs.setInt(_kObservedActions, _observedActions);
     await prefs.setDouble(_kOutsideTemp, _outsideTemp);
     await prefs.setString(_kLocationQuery, _locationQuery);
@@ -1782,7 +1888,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     await prefs.setBool(_kUseUsageHistory, _useUsageHistory);
     await prefs.setBool(_kAllowDeviceControl, _allowDeviceControl);
     await prefs.setBool(_kAllowAutoRoutines, _allowAutoRoutines);
-    await prefs.setString(_kDeviceActivityById, jsonEncode(_deviceActivityById));
+    await prefs.setString(
+      _kDeviceActivityById,
+      jsonEncode(_deviceActivityById),
+    );
     await prefs.setDouble(_kTempSetSum, _tempSetSum);
     await prefs.setInt(_kTempSetCount, _tempSetCount);
     await prefs.setDouble(_kBrightnessSetSum, _brightnessSetSum);
@@ -2028,10 +2137,15 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         if (permission == LocationPermission.always ||
             permission == LocationPermission.whileInUse) {
           final pos = await Geolocator.getCurrentPosition(
-            locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+            locationSettings: const LocationSettings(
+              accuracy: LocationAccuracy.low,
+            ),
           ).timeout(const Duration(seconds: 4));
 
-          final viaReverse = await _reverseGeocodeLocation(pos.latitude, pos.longitude);
+          final viaReverse = await _reverseGeocodeLocation(
+            pos.latitude,
+            pos.longitude,
+          );
           if (viaReverse.trim().isNotEmpty) {
             _locationQuery = viaReverse;
           } else {
@@ -2056,17 +2170,24 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
   Future<String> _reverseGeocodeLocation(double lat, double lon) async {
     HttpClient? client;
     try {
-      final uri = Uri.parse('https://geocode.maps.co/reverse?lat=$lat&lon=$lon');
+      final uri = Uri.parse(
+        'https://geocode.maps.co/reverse?lat=$lat&lon=$lon',
+      );
       client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
       final res = await req.close().timeout(const Duration(seconds: 4));
-      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
+      final raw = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 4));
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return '';
       final address = decoded['address'];
       if (address is! Map) return '';
-      final city = (address['city'] ?? address['town'] ?? address['village'] ?? '').toString();
+      final city =
+          (address['city'] ?? address['town'] ?? address['village'] ?? '')
+              .toString();
       final country = (address['country_code'] ?? '').toString().toUpperCase();
       if (city.isEmpty) return '';
       return country.isEmpty ? city : '$city,$country';
@@ -2085,7 +2206,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
       final res = await req.close().timeout(const Duration(seconds: 4));
-      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
+      final raw = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 4));
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return '';
       final city = (decoded['city'] ?? '').toString();
@@ -2111,7 +2235,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       final req = await client.getUrl(uri);
       req.headers.set(HttpHeaders.userAgentHeader, 'easync-assistant/1.0');
       final res = await req.close().timeout(const Duration(seconds: 4));
-      final raw = await res.transform(utf8.decoder).join().timeout(const Duration(seconds: 4));
+      final raw = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 4));
 
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
@@ -2138,7 +2265,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (!_allowDeviceControl) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Device control is disabled in Assistant Data.')),
+        const SnackBar(
+          content: Text('Device control is disabled in Assistant Data.'),
+        ),
       );
       return;
     }
@@ -2186,22 +2315,22 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final ratio = (peak / total).clamp(0.0, 1.0);
     return (0.35 + ratio * 0.60).clamp(0.35, 0.95);
   }
-  
+
   double? _preferredTemperature() {
     if (_tempSetCount < 2) return null;
     return (_tempSetSum / _tempSetCount).clamp(16, 30);
   }
-  
+
   double? _preferredBrightness() {
     if (_brightnessSetCount < 2) return null;
     return (_brightnessSetSum / _brightnessSetCount).clamp(0, 100);
   }
-  
+
   double? _preferredPosition() {
     if (_positionSetCount < 2) return null;
     return (_positionSetSum / _positionSetCount).clamp(0, 100);
   }
-  
+
   String _topActiveDeviceName(List<DeviceInfo> list) {
     if (_deviceActivityById.isEmpty) return 'none yet';
     String? bestId;
@@ -2300,10 +2429,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               ],
             ),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            trailing,
-          ],
+          if (trailing != null) ...[const SizedBox(width: 8), trailing],
         ],
       ),
     );
@@ -2342,7 +2468,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
             await _fetchOutsideTemperature();
           }
         },
-        title: Text('Allow AI to consume weather data', style: EaText.secondary),
+        title: Text(
+          'Allow AI to consume weather data',
+          style: EaText.secondary,
+        ),
         subtitle: Text(
           'Weather informs climate and arrival suggestions.',
           style: EaText.secondaryTranslucent,
@@ -2358,7 +2487,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           setState(() => _useUsageHistory = v);
           _persistState();
         },
-        title: Text('Allow AI to consume usage history', style: EaText.secondary),
+        title: Text(
+          'Allow AI to consume usage history',
+          style: EaText.secondary,
+        ),
         subtitle: Text(
           'Lets Assistant learn open/arrival patterns over time.',
           style: EaText.secondaryTranslucent,
@@ -2390,7 +2522,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           setState(() => _allowAutoRoutines = v);
           _persistState();
         },
-        title: Text('Allow AI to run automatic routines', style: EaText.secondary),
+        title: Text(
+          'Allow AI to run automatic routines',
+          style: EaText.secondary,
+        ),
         subtitle: Text(
           'Allows periodic auto-arrival automation near learned time.',
           style: EaText.secondaryTranslucent,
@@ -2468,7 +2603,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               children: [
                 Row(
                   children: [
-                    Text('All annotations', style: EaText.primary.copyWith(fontSize: 17)),
+                    Text(
+                      'All annotations',
+                      style: EaText.primary.copyWith(fontSize: 17),
+                    ),
                     const Spacer(),
                     IconButton(
                       onPressed: () => Navigator.pop(ctx),
@@ -2495,7 +2633,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                                   Navigator.pop(ctx);
                                   a.onApply?.call();
                                 },
-                                child: Text(a.actionLabel ?? 'Apply', style: EaText.accent),
+                                child: Text(
+                                  a.actionLabel ?? 'Apply',
+                                  style: EaText.accent,
+                                ),
                               ),
                       );
                     },
@@ -2565,17 +2706,25 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                   animation: _chatBorderPulse,
                   builder: (context, child) {
                     if (track <= 0) return const SizedBox.shrink();
-                    final p = Curves.easeOutCubic.transform(_chatBorderPulse.value.clamp(0.0, 1.0));
+                    final p = Curves.easeOutCubic.transform(
+                      _chatBorderPulse.value.clamp(0.0, 1.0),
+                    );
                     if (p >= 1) return const SizedBox.shrink();
 
                     final grow = (p / 0.14).clamp(0.0, 1.0);
                     final shrink = ((1.0 - p) / 0.18).clamp(0.0, 1.0);
-                    final sizeFactor = (grow < shrink ? grow : shrink).toDouble();
-                    final dynamicSegment = (segment * sizeFactor).clamp(0.0, segment).toDouble();
+                    final sizeFactor = (grow < shrink ? grow : shrink)
+                        .toDouble();
+                    final dynamicSegment = (segment * sizeFactor)
+                        .clamp(0.0, segment)
+                        .toDouble();
                     if (dynamicSegment <= 0.8) return const SizedBox.shrink();
 
                     final head = p * track;
-                    final segLeft = (head - dynamicSegment).clamp(0.0, track - dynamicSegment);
+                    final segLeft = (head - dynamicSegment).clamp(
+                      0.0,
+                      track - dynamicSegment,
+                    );
 
                     return Positioned(
                       left: left + segLeft,
@@ -2617,7 +2766,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final query = _typedCommand.trim().toLowerCase();
     final filteredPrompts = query.isEmpty
         ? const <String>[]
-        : quickPrompts.where((p) => p.toLowerCase().contains(query)).take(4).toList();
+        : quickPrompts
+              .where((p) => p.toLowerCase().contains(query))
+              .take(4)
+              .toList();
     return AnimatedContainer(
       duration: const Duration(milliseconds: 260),
       curve: Curves.easeOut,
@@ -2643,181 +2795,210 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-          Row(
-            children: [
-              Text('Chat', style: EaText.primary.copyWith(fontSize: 17)),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: _assistantThinking
-                    ? RotationTransition(
-                        turns: _thinkingController,
-                        child: const Icon(Icons.autorenew, size: 15, color: EaColor.fore),
-                      )
-                    : AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: _isRecordingAudio ? 9 : 7,
-                        height: _isRecordingAudio ? 9 : 7,
-                        decoration: BoxDecoration(
-                          color: _isRecordingAudio ? Colors.redAccent : EaColor.fore,
-                          shape: BoxShape.circle,
-                        ),
+                  Row(
+                    children: [
+                      Text(
+                        'Chat',
+                        style: EaText.primary.copyWith(fontSize: 17),
                       ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _assistantThinking
-                    ? 'Thinking...'
-                    : (_isRecordingAudio ? 'Listening...' : 'Online'),
-                style: EaText.secondaryTranslucent,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: filteredPrompts.isEmpty
-                ? const SizedBox.shrink()
-                : Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: filteredPrompts
-                            .map(
-                              (p) => Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: ActionChip(
-                                  label: Text(p, style: EaText.secondaryTranslucent),
-                                  onPressed: () => _runQuickPrompt(p),
-                                  side: const BorderSide(color: EaColor.border),
-                                  backgroundColor: EaColor.secondaryBack,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                      ),
-                    ),
-                  ),
-          ),
-          TextField(
-            controller: _commandController,
-            minLines: 1,
-            maxLines: 1,
-            textInputAction: TextInputAction.send,
-            cursorColor: EaColor.fore,
-            onSubmitted: (_) => _submitCurrentCommand(),
-            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
-            decoration: InputDecoration(
-              hintText: _isRecordingAudio
-                  ? 'Listening... speak now'
-                  : 'Ask anything about your home…',
-              hintStyle: EaText.secondaryTranslucent,
-              filled: true,
-              fillColor: EaColor.secondaryBack,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: EaColor.border),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: EaColor.border),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: EaColor.fore),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _submitCurrentCommand,
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('Send'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: EaColor.fore,
-                    foregroundColor: Colors.black,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: _toggleAudioCapture,
-                icon: Icon(_isRecordingAudio ? Icons.stop_circle : Icons.mic),
-                label: Text(_isRecordingAudio ? 'Stop' : 'Rec'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: EaColor.fore,
-                  side: const BorderSide(color: EaColor.fore),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
-              decoration: BoxDecoration(
-                color: EaColor.secondaryBack,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: EaColor.border),
-              ),
-              child: ListView.builder(
-                controller: _chatScrollController,
-                itemCount: _chatMessages.length,
-                itemBuilder: (_, i) {
-                  final m = _chatMessages[i];
-                  final isUser = m.role == _ChatRole.user;
-                  final isTypingTail = !isUser &&
-                      i == _chatMessages.length - 1 &&
-                      (_chatTypingTimer?.isActive ?? false);
-
-                  return Align(
-                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      constraints: const BoxConstraints(maxWidth: 290),
-                      decoration: BoxDecoration(
-                        color: isUser
-                            ? EaColor.fore.withValues(alpha: .88)
-                            : EaColor.back.withValues(alpha: .85),
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(12),
-                          topRight: const Radius.circular(12),
-                          bottomLeft: Radius.circular(isUser ? 12 : 4),
-                          bottomRight: Radius.circular(isUser ? 4 : 12),
-                        ),
-                      ),
-                      child: RichText(
-                        text: TextSpan(
-                          style: EaText.secondary.copyWith(
-                            color: isUser ? Colors.black : EaColor.textSecondary,
-                            fontSize: 12,
-                          ),
-                          children: [
-                            TextSpan(text: m.text),
-                            if (isTypingTail)
-                              TextSpan(
-                                text: ' ▌',
-                                style: EaText.secondary.copyWith(
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: _assistantThinking
+                            ? RotationTransition(
+                                turns: _thinkingController,
+                                child: const Icon(
+                                  Icons.autorenew,
+                                  size: 15,
                                   color: EaColor.fore,
-                                  fontSize: 12,
+                                ),
+                              )
+                            : AnimatedContainer(
+                                duration: const Duration(milliseconds: 220),
+                                width: _isRecordingAudio ? 9 : 7,
+                                height: _isRecordingAudio ? 9 : 7,
+                                decoration: BoxDecoration(
+                                  color: _isRecordingAudio
+                                      ? Colors.redAccent
+                                      : EaColor.fore,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                          ],
-                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _assistantThinking
+                            ? 'Thinking...'
+                            : (_isRecordingAudio ? 'Listening...' : 'Online'),
+                        style: EaText.secondaryTranslucent,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    child: filteredPrompts.isEmpty
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: filteredPrompts
+                                    .map(
+                                      (p) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 6,
+                                        ),
+                                        child: ActionChip(
+                                          label: Text(
+                                            p,
+                                            style: EaText.secondaryTranslucent,
+                                          ),
+                                          onPressed: () => _runQuickPrompt(p),
+                                          side: const BorderSide(
+                                            color: EaColor.border,
+                                          ),
+                                          backgroundColor:
+                                              EaColor.secondaryBack,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ),
+                          ),
+                  ),
+                  TextField(
+                    controller: _commandController,
+                    minLines: 1,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.send,
+                    cursorColor: EaColor.fore,
+                    onSubmitted: (_) => _submitCurrentCommand(),
+                    style: EaText.secondary.copyWith(
+                      color: EaColor.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: _isRecordingAudio
+                          ? 'Listening... speak now'
+                          : 'Ask anything about your home…',
+                      hintStyle: EaText.secondaryTranslucent,
+                      filled: true,
+                      fillColor: EaColor.secondaryBack,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: EaColor.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: EaColor.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: EaColor.fore),
                       ),
                     ),
-                  );
-                },
-              ),
-            ),
-          ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _submitCurrentCommand,
+                          icon: const Icon(Icons.send_rounded),
+                          label: const Text('Send'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: EaColor.fore,
+                            foregroundColor: Colors.black,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: _toggleAudioCapture,
+                        icon: Icon(
+                          _isRecordingAudio ? Icons.stop_circle : Icons.mic,
+                        ),
+                        label: Text(_isRecordingAudio ? 'Stop' : 'Rec'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: EaColor.fore,
+                          side: const BorderSide(color: EaColor.fore),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+                      decoration: BoxDecoration(
+                        color: EaColor.secondaryBack,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: EaColor.border),
+                      ),
+                      child: ListView.builder(
+                        controller: _chatScrollController,
+                        itemCount: _chatMessages.length,
+                        itemBuilder: (_, i) {
+                          final m = _chatMessages[i];
+                          final isUser = m.role == _ChatRole.user;
+                          final isTypingTail =
+                              !isUser &&
+                              i == _chatMessages.length - 1 &&
+                              (_chatTypingTimer?.isActive ?? false);
+
+                          return Align(
+                            alignment: isUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                              constraints: const BoxConstraints(maxWidth: 290),
+                              decoration: BoxDecoration(
+                                color: isUser
+                                    ? EaColor.fore.withValues(alpha: .88)
+                                    : EaColor.back.withValues(alpha: .85),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(12),
+                                  topRight: const Radius.circular(12),
+                                  bottomLeft: Radius.circular(isUser ? 12 : 4),
+                                  bottomRight: Radius.circular(isUser ? 4 : 12),
+                                ),
+                              ),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: EaText.secondary.copyWith(
+                                    color: isUser
+                                        ? Colors.black
+                                        : EaColor.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                  children: [
+                                    TextSpan(text: m.text),
+                                    if (isTypingTail)
+                                      TextSpan(
+                                        text: ' ▌',
+                                        style: EaText.secondary.copyWith(
+                                          color: EaColor.fore,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -2848,7 +3029,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: Colors.redAccent, size: 34),
+              const Icon(
+                Icons.error_outline,
+                color: Colors.redAccent,
+                size: 34,
+              ),
               const SizedBox(height: 10),
               Text(
                 _initError!,
@@ -2879,7 +3064,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     final dataTiles = _assistantDataTiles();
     final annotations = _annotationModels();
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final chatPanelHeight = (screenHeight * 0.34).clamp(270.0, 420.0).toDouble();
+    final chatPanelHeight = (screenHeight * 0.34)
+        .clamp(270.0, 420.0)
+        .toDouble();
 
     return SafeArea(
       child: Stack(
@@ -2889,137 +3076,172 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-            Text('Assistant Data', style: EaText.primary.copyWith(fontSize: 18)),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: EaColor.back,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: EaColor.border),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Outside temperature', style: EaText.secondary),
-                      ),
-                      Spacer(),
-                      IconButton(
-                        onPressed: (_useWeatherData && _locationQuery.trim().isNotEmpty)
-                            ? _fetchOutsideTemperature
-                            : null,
-                        icon: const Icon(Icons.refresh_rounded, size: 25),
-                        color: EaColor.fore,
-                      ),
-                   ],
+                Text(
+                  'Assistant Data',
+                  style: EaText.primary.copyWith(fontSize: 18),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: EaColor.back,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: EaColor.border),
                   ),
-                  
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [ 
-                      SizedBox(width: 10),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Outside temperature',
+                              style: EaText.secondary,
+                            ),
+                          ),
+                          Spacer(),
+                          IconButton(
+                            onPressed:
+                                (_useWeatherData &&
+                                    _locationQuery.trim().isNotEmpty)
+                                ? _fetchOutsideTemperature
+                                : null,
+                            icon: const Icon(Icons.refresh_rounded, size: 25),
+                            color: EaColor.fore,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(_weatherIconForTemp(), color: EaColor.fore, size: 20),
-                          const SizedBox(width: 6),
-                          if (_weatherLoading)
-                            const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
+                          SizedBox(width: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _weatherIconForTemp(),
                                 color: EaColor.fore,
+                                size: 20,
                               ),
-                            )
-                          else
-                            Text(
-                              '${_outsideTemp.toStringAsFixed(0)}°C',
-                              style: EaText.primary.copyWith(
-                                fontSize: 25,
-                                fontWeight: FontWeight.w700,
+                              const SizedBox(width: 6),
+                              if (_weatherLoading)
+                                const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: EaColor.fore,
+                                  ),
+                                )
+                              else
+                                Text(
+                                  '${_outsideTemp.toStringAsFixed(0)}°C',
+                                  style: EaText.primary.copyWith(
+                                    fontSize: 25,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          SizedBox(width: 18),
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: TextButton.icon(
+                              onPressed: _useLocationData
+                                  ? _promptForLocation
+                                  : null,
+                              icon: const Icon(Icons.place_outlined, size: 18),
+                              label: Text(
+                                _locationQuery.trim().isEmpty
+                                    ? 'Set location'
+                                    : _locationQuery,
+                                overflow: TextOverflow.ellipsis,
+                                style: EaText.secondary,
                               ),
                             ),
+                          ),
                         ],
                       ),
-                      SizedBox(width: 18),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: TextButton.icon(
-                          onPressed: _useLocationData ? _promptForLocation : null,
-                          icon: const Icon(Icons.place_outlined, size: 18),
-                          label: Text(
-                            _locationQuery.trim().isEmpty ? 'Set location' : _locationQuery,
-                            overflow: TextOverflow.ellipsis,
-                            style: EaText.secondary,
+                      SizedBox(
+                        height: 132,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onHorizontalDragStart: _onAssistantDataDragStart,
+                          onHorizontalDragUpdate: _onAssistantDataDragUpdate,
+                          onHorizontalDragEnd: _onAssistantDataDragEnd,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOut,
+                            switchOutCurve: Curves.easeIn,
+                            transitionBuilder: (child, anim) {
+                              return FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: anim,
+                                  curve: Curves.easeOut,
+                                ),
+                                child: child,
+                              );
+                            },
+                            child: KeyedSubtree(
+                              key: ValueKey(
+                                'assistant-data-${_assistantDataIndex % dataTiles.length}',
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2,
+                                ),
+                                child:
+                                    dataTiles[_assistantDataIndex %
+                                        dataTiles.length],
+                              ),
+                            ),
                           ),
                         ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(dataTiles.length, (i) {
+                          final active =
+                              i == (_assistantDataIndex % dataTiles.length);
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 220),
+                            width: active ? 18 : 6,
+                            height: 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            decoration: BoxDecoration(
+                              color: active
+                                  ? EaColor.fore
+                                  : EaColor.fore.withValues(alpha: .22),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                          );
+                        }),
                       ),
                     ],
                   ),
-                  SizedBox(
-                    height: 132,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onHorizontalDragStart: _onAssistantDataDragStart,
-                      onHorizontalDragUpdate: _onAssistantDataDragUpdate,
-                      onHorizontalDragEnd: _onAssistantDataDragEnd,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        switchInCurve: Curves.easeOut,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, anim) {
-                          return FadeTransition(
-                            opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
-                            child: child,
-                          );
-                        },
-                        child: KeyedSubtree(
-                          key: ValueKey('assistant-data-${_assistantDataIndex % dataTiles.length}'),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: dataTiles[_assistantDataIndex % dataTiles.length],
-                          ),
-                        ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Annotations',
+                        style: EaText.primary.copyWith(fontSize: 18),
                       ),
                     ),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(dataTiles.length, (i) {
-                      final active = i == (_assistantDataIndex % dataTiles.length);
-                      return AnimatedContainer(
-                        duration: const Duration(milliseconds: 220),
-                        width: active ? 18 : 6,
-                        height: 6,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Annotations', style: EaText.primary.copyWith(fontSize: 18)),
+                    TextButton(
+                      onPressed: () =>
+                          _showAllAnnotationsBottomSheet(annotations),
+                      child: Text(
+                        'View details',
+                        style: EaText.secondary.copyWith(fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => _showAllAnnotationsBottomSheet(annotations),
-                  child: Text('View details', style: EaText.secondary.copyWith(fontSize: 12)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
+                const SizedBox(height: 4),
                 SizedBox(
                   height: 114,
                   child: GestureDetector(
@@ -3035,7 +3257,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                         final fromRight = _annotationSlideDir > 0;
                         final begin = Offset(fromRight ? 0.18 : -0.18, 0);
                         return FadeTransition(
-                          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+                          opacity: CurvedAnimation(
+                            parent: anim,
+                            curve: Curves.easeOut,
+                          ),
                           child: SlideTransition(
                             position: Tween<Offset>(
                               begin: begin,
@@ -3046,10 +3271,14 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                         );
                       },
                       child: KeyedSubtree(
-                        key: ValueKey('annotation-${_annotationIndex % annotations.length}'),
+                        key: ValueKey(
+                          'annotation-${_annotationIndex % annotations.length}',
+                        ),
                         child: Builder(
                           builder: (_) {
-                            final a = annotations[_annotationIndex % annotations.length];
+                            final a =
+                                annotations[_annotationIndex %
+                                    annotations.length];
                             return _card(
                               icon: a.icon,
                               title: a.title,
@@ -3081,7 +3310,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                       height: 6,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
-                        color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
+                        color: active
+                            ? EaColor.fore
+                            : EaColor.fore.withValues(alpha: .22),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     );
@@ -3099,7 +3330,9 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
                   child: Container(
-                    height: (chatPanelHeight * 0.62).clamp(140.0, 230.0).toDouble(),
+                    height: (chatPanelHeight * 0.62)
+                        .clamp(140.0, 230.0)
+                        .toDouble(),
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,

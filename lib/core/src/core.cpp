@@ -50,6 +50,7 @@
 extern "C" {
 
 static std::atomic<uint64_t> g_aiAsyncTokenCounter{1};
+static thread_local bool g_suppressCoreCallbacks = false;
 
 /**
  * @brief Internal representation of a device.
@@ -1721,14 +1722,16 @@ CoreResult core_ai_process_chat(CoreContext* core,
     const bool modelOk = easync::ai::runChatModelPrediction(raw, prediction);
 
     std::string response;
-    if (modelOk && prediction.intent == "greeting") {
-        response = "Hello. I can control devices, list status and execute your commands.";
-    } else if (modelOk && prediction.intent == "farewell") {
-        response = "See you soon. I will keep your devices ready.";
-    } else if (modelOk && prediction.intent == "gratitude") {
-        response = "You are welcome. Happy to help.";
-    } else if (modelOk && prediction.intent == "smalltalk") {
-        response = "I am active and ready. You can ask me to control devices or check status.";
+    if (modelOk && (prediction.intent == "greeting" ||
+                    prediction.intent == "farewell" ||
+                    prediction.intent == "gratitude" ||
+                    prediction.intent == "smalltalk" ||
+                    prediction.intent == "ambiguous" ||
+                    prediction.needsClarification ||
+                    prediction.intentConfidence < 0.45f)) {
+        response = prediction.generatedResponse.empty()
+            ? "I interpreted the message, but I still need more context to proceed safely."
+            : prediction.generatedResponse;
     } else {
         std::lock_guard<std::mutex> lock(core->mutex);
         const auto snapshots = collectSnapshots(core);
@@ -2074,11 +2077,19 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
     };
 
     if (q.find("light") != std::string::npos || q.find("lamp") != std::string::npos ||
-        q.find("luz") != std::string::npos || q.find("lampada") != std::string::npos) {
+        q.find("luz") != std::string::npos || q.find("lampada") != std::string::npos ||
+        q.find("strip") != std::string::npos || q.find("led") != std::string::npos) {
         collectByCap(CORE_CAP_BRIGHTNESS);
         if (targets.empty()) {
             collectByCap(CORE_CAP_COLOR);
         }
+    } else if (q.find("color") != std::string::npos || q.find("cor") != std::string::npos) {
+        collectByCap(CORE_CAP_COLOR);
+        if (targets.empty()) {
+            collectByCap(CORE_CAP_BRIGHTNESS);
+        }
+    } else if (q.find("brightness") != std::string::npos || q.find("brilho") != std::string::npos) {
+        collectByCap(CORE_CAP_BRIGHTNESS);
     } else if (q.find("ac") != std::string::npos || q.find("climate") != std::string::npos ||
                q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos ||
                q.find("temperatura") != std::string::npos || q.find("temp") != std::string::npos ||
@@ -2151,8 +2162,54 @@ CoreResult core_ai_execute_command(CoreContext* core,
         const bool explicitAction = containsAny(q, {
             "turn on", "turn off", "liga", "desliga", "set", "ajusta", "mude", "defina",
             "apply", "aplica", "increase", "decrease", "aumenta", "diminui", "reduz",
-            "abre", "abrir", "fecha", "fechar", "lock", "unlock", "trancar", "destrancar"
+            "open", "close", "abre", "abrir", "fecha", "fechar", "lock", "unlock", "trancar", "destrancar"
         });
+
+        const bool socialGreeting = containsAny(q, {
+            "hello", "hi", "hey", "oi", "ola", "olá", "bom dia", "boa tarde", "boa noite"
+        });
+        const bool socialThanks = containsAny(q, {
+            "thanks", "thank you", "thx", "obrigado", "obrigada", "valeu"
+        });
+        const bool socialFarewell = containsAny(q, {
+            "bye", "see you", "good night", "talk later", "tchau", "ate mais", "até mais"
+        });
+        const bool socialHowAreYou = containsAny(q, {
+            "how are you", "how is it going", "how's it going", "how you doing", "you good", "tudo bem", "como voce", "como você"
+        });
+
+        const bool socialOnly = !explicitAction && !mentionsStateDomain;
+        if (socialOnly) {
+            if (socialThanks || (modelOk && prediction.intent == "gratitude")) {
+                reply = prediction.generatedResponse.empty()
+                    ? "You are welcome. Happy to help."
+                    : prediction.generatedResponse;
+            } else if (socialFarewell || (modelOk && prediction.intent == "farewell")) {
+                reply = prediction.generatedResponse.empty()
+                    ? "See you soon. I will keep your devices ready."
+                    : prediction.generatedResponse;
+            } else if (socialHowAreYou || (modelOk && prediction.intent == "smalltalk")) {
+                reply = prediction.generatedResponse.empty()
+                    ? "I am active and ready. You can ask me to control devices or check status."
+                    : prediction.generatedResponse;
+            } else if (socialGreeting || (modelOk && prediction.intent == "greeting")) {
+                reply = prediction.generatedResponse.empty()
+                    ? "Hello. I can control devices, list status and execute your commands."
+                    : prediction.generatedResponse;
+            }
+        }
+
+        const bool clarificationLike = modelOk &&
+            (prediction.needsClarification || prediction.intent == "ambiguous" || prediction.intentConfidence < 0.45f);
+        if (reply.empty() && clarificationLike && !explicitAction && !mentionsStateDomain) {
+            reply = prediction.generatedResponse.empty()
+                ? "I could not fully understand this request yet. Please provide more context."
+                : prediction.generatedResponse;
+        }
+
+        if (!reply.empty()) {
+            // Social intents should not go through command/action routing.
+        } else {
 
         const bool hasValueHint = hasAnyDigit(q) || containsAny(q, {
             "blue", "azul", "green", "verde", "red", "vermelho", "purple", "roxo",
@@ -2456,16 +2513,19 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     reply = oss.str();
                 }
             } else if (!unresolved.empty()) {
-                reply = "I could not map this command to known devices or capabilities.";
+                reply = "I could not map this request to a known device or capability. Please mention the device name and the exact change (for example: set bedroom curtains to 100%).";
             } else {
-                reply = "No actionable changes were detected for this command.";
+                reply = "I understood the message but found no actionable change. Please clarify what should be changed and include a value when applicable.";
             }
+        }
         }
     }
 
-    for (const auto& item : pendingEvents) {
-        if (item.cb) {
-            item.cb(&item.ev, item.userdata);
+    if (!g_suppressCoreCallbacks) {
+        for (const auto& item : pendingEvents) {
+            if (item.cb) {
+                item.cb(&item.ev, item.userdata);
+            }
         }
     }
 
@@ -2535,7 +2595,10 @@ CoreResult core_ai_model_execute_command_async_start(CoreContext* core,
 
     std::thread([core, raw, token]() {
         char out[4096] = {0};
+        const bool previousSuppress = g_suppressCoreCallbacks;
+        g_suppressCoreCallbacks = true;
         CoreResult rc = core_ai_execute_command(core, raw.c_str(), out, sizeof(out));
+        g_suppressCoreCallbacks = previousSuppress;
         std::string response = (rc == CORE_OK) ? std::string(out) : std::string("I could not process this request right now.");
 
         std::lock_guard<std::mutex> lock(core->aiAsyncMutex);

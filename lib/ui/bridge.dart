@@ -11,8 +11,26 @@ import 'handler.dart';
 bool _hasAiBackendSymbols(DynamicLibrary lib) {
   try {
     lib.lookup<NativeFunction<Void Function()>>('core_ai_model_process_chat');
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_model_execute_command');
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_set_chat_model_script');
+    lib.lookup<NativeFunction<Void Function()>>(
+      'core_ai_model_execute_command',
+    );
+    lib.lookup<NativeFunction<Void Function()>>(
+      'core_ai_set_chat_model_script',
+    );
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+bool _hasAsyncAiBackendSymbols(DynamicLibrary lib) {
+  try {
+    lib.lookup<NativeFunction<Void Function()>>(
+      'core_ai_model_execute_command_async_start',
+    );
+    lib.lookup<NativeFunction<Void Function()>>(
+      'core_ai_model_execute_command_async_poll',
+    );
     return true;
   } catch (_) {
     return false;
@@ -81,7 +99,7 @@ DynamicLibrary _openCoreLibrary() {
       try {
         final lib = DynamicLibrary.open(path);
         firstLoadable ??= lib;
-        if (_hasAiBackendSymbols(lib)) {
+        if (_hasAiBackendSymbols(lib) && _hasAsyncAiBackendSymbols(lib)) {
           _loadedCoreLibraryPath = path;
           return lib;
         }
@@ -275,9 +293,9 @@ typedef _coreGetStateDart =
     int Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>);
 
 typedef _coreIsDeviceAvailableC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
 typedef _coreIsDeviceAvailableDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Bool>);
 
 typedef _coreRegisterDeviceC =
     Int32 Function(
@@ -371,80 +389,90 @@ typedef _coreSetPositionDart =
     int Function(Pointer<Void>, Pointer<Utf8>, double);
 
 typedef _coreProvisionWifiC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 typedef _coreProvisionWifiDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
 typedef _coreAiSetPermissionsC =
-  Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+    Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
 typedef _coreAiSetPermissionsDart =
-  int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+    int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
 
 typedef _coreAiGetPermissionsC =
-  Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+    Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
 typedef _coreAiGetPermissionsDart =
-  int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+    int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
 
 typedef _coreAiRecordPatternC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>, Pointer<CoreDeviceState>);
+    Int32 Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<CoreDeviceState>,
+      Pointer<CoreDeviceState>,
+    );
 typedef _coreAiRecordPatternDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>, Pointer<CoreDeviceState>);
+    int Function(
+      Pointer<Void>,
+      Pointer<Utf8>,
+      Pointer<CoreDeviceState>,
+      Pointer<CoreDeviceState>,
+    );
 
 typedef _coreAiObserveAppOpenC = Int32 Function(Pointer<Void>, Uint64);
 typedef _coreAiObserveAppOpenDart = int Function(Pointer<Void>, int);
 
 typedef _coreAiObserveProfileApplyC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
 typedef _coreAiObserveProfileApplyDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, int);
+    int Function(Pointer<Void>, Pointer<Utf8>, int);
 
 typedef _coreAiProcessChatC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _coreAiProcessChatDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
 typedef _coreAiModelProcessChatC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _coreAiModelProcessChatDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
 typedef _coreAiGetAnnotationsC =
-  Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
 typedef _coreAiGetAnnotationsDart =
-  int Function(Pointer<Void>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Int8>, int);
 
 typedef _coreAiExecuteCommandC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _coreAiExecuteCommandDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
 typedef _coreAiModelExecuteCommandC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _coreAiModelExecuteCommandDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
 typedef _coreAiSetChatModelScriptC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreAiSetChatModelScriptDart =
-  int Function(Pointer<Void>, Pointer<Utf8>);
+    int Function(Pointer<Void>, Pointer<Utf8>);
 
 typedef _coreAiModelExecuteCommandAsyncStartC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
 typedef _coreAiModelExecuteCommandAsyncStartDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
 
 typedef _coreAiModelExecuteCommandAsyncPollC =
-  Int32 Function(Pointer<Void>, Uint64, Pointer<Bool>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Uint64, Pointer<Bool>, Pointer<Int8>, Uint32);
 typedef _coreAiModelExecuteCommandAsyncPollDart =
-  int Function(Pointer<Void>, int, Pointer<Bool>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, int, Pointer<Bool>, Pointer<Int8>, int);
 
 typedef _coreAiLearningSnapshotC =
-  Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
+    Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
 typedef _coreAiLearningSnapshotDart =
-  int Function(Pointer<Void>, Pointer<Int8>, int);
+    int Function(Pointer<Void>, Pointer<Int8>, int);
 
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
@@ -636,10 +664,9 @@ final _coreAiObserveProfileApplyDart? _coreAiObserveProfileApply = (() {
 
 final _coreAiProcessChatDart? _coreAiProcessChat = (() {
   try {
-    return coreLib
-        .lookupFunction<_coreAiProcessChatC, _coreAiProcessChatDart>(
-          'core_ai_process_chat',
-        );
+    return coreLib.lookupFunction<_coreAiProcessChatC, _coreAiProcessChatDart>(
+      'core_ai_process_chat',
+    );
   } catch (_) {
     return null;
   }
@@ -1045,7 +1072,10 @@ class Bridge {
 
     final scriptPath = _resolveChatInferenceScriptPath();
     if (scriptPath == null || scriptPath.trim().isEmpty) {
-      _log('ai', 'Chat inference script path not found; using native auto-discovery');
+      _log(
+        'ai',
+        'Chat inference script path not found; using native auto-discovery',
+      );
       return;
     }
 
@@ -1360,7 +1390,9 @@ class Bridge {
     try {
       snapshot = getState(uuid);
     } catch (_) {
-      snapshot = _stateCache[uuid] == null ? null : _cloneState(_stateCache[uuid]!);
+      snapshot = _stateCache[uuid] == null
+          ? null
+          : _cloneState(_stateCache[uuid]!);
     }
 
     removeDevice(uuid);
@@ -1412,8 +1444,10 @@ class Bridge {
     final value = model.trim();
     if (value.isEmpty) return null;
 
-    final withoutHttp = value
-        .replaceFirst(RegExp(r'^https?://', caseSensitive: false), '');
+    final withoutHttp = value.replaceFirst(
+      RegExp(r'^https?://', caseSensitive: false),
+      '',
+    );
     final hostPort = withoutHttp.split('/').first.trim();
 
     if (hostPort.isEmpty) return null;
@@ -1479,7 +1513,9 @@ class Bridge {
     if (_coreProvisionWifi == null) {
       markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
       _log('wifi', 'Provision API unavailable', uuid: uuid);
-      throw Exception('Core provisioning API unavailable. Rebuild native core.');
+      throw Exception(
+        'Core provisioning API unavailable. Rebuild native core.',
+      );
     }
 
     final uuidPtr = uuid.toNativeUtf8();
@@ -1511,7 +1547,11 @@ class Bridge {
     if (!connected) {
       markWifiFailed(uuid);
       _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
-      _log('wifi', 'Provision submitted but device did not come online', uuid: uuid);
+      _log(
+        'wifi',
+        'Provision submitted but device did not come online',
+        uuid: uuid,
+      );
       throw Exception('Provisioning sent, but device is still offline.');
     }
 
@@ -1529,7 +1569,8 @@ class Bridge {
   }
 
   static String wifiProvisioningState(String uuid) {
-    return _wifiProvisioningByDevice[uuid] ?? WifiProvisioningState.unprovisioned;
+    return _wifiProvisioningByDevice[uuid] ??
+        WifiProvisioningState.unprovisioned;
   }
 
   static String? wifiProvisioningSsid(String uuid) {
@@ -1591,7 +1632,9 @@ class Bridge {
         lastSeen: available ? DateTime.now() : current.lastSeen,
         lastLatencyMs: latency,
         consecutiveFailures: available ? 0 : current.consecutiveFailures + 1,
-        totalFailures: available ? current.totalFailures : current.totalFailures + 1,
+        totalFailures: available
+            ? current.totalFailures
+            : current.totalFailures + 1,
       );
 
       return available;
@@ -1658,7 +1701,8 @@ class Bridge {
     }
 
     if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
-      final provisioned = wifiProvisioningState(uuid) == WifiProvisioningState.online;
+      final provisioned =
+          wifiProvisioningState(uuid) == WifiProvisioningState.online;
       final ok = provisioned && refreshDeviceConnection(uuid);
       _protocolConnectionByDevice[uuid] = ok
           ? ProtocolConnectionState.connected
@@ -1683,17 +1727,19 @@ class Bridge {
     }
   }
 
-  static Future<bool> _checkHttp(String host, String path, {int port = 80}) async {
+  static Future<bool> _checkHttp(
+    String host,
+    String path, {
+    int port = 80,
+  }) async {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 1);
     try {
       final req = await client.getUrl(Uri.parse('http://$host:$port$path'));
       final res = await req.close().timeout(const Duration(seconds: 1));
       await res.drain();
       return res.statusCode >= 200 && res.statusCode < 500;
-
     } catch (_) {
       return false;
-      
     } finally {
       client.close(force: true);
     }
@@ -1759,7 +1805,9 @@ class Bridge {
     final out = <T>[];
 
     for (var i = 0; i < tasks.length; i += batchSize) {
-      final end = (i + batchSize) > tasks.length ? tasks.length : (i + batchSize);
+      final end = (i + batchSize) > tasks.length
+          ? tasks.length
+          : (i + batchSize);
       final chunk = tasks.sublist(i, end).map((t) => t());
       out.addAll(await Future.wait(chunk));
     }
@@ -1884,7 +1932,8 @@ class Bridge {
 
     final probeTasks = hosts
         .map<Future<List<DiscoveredDevice>> Function()>(
-          (host) => () => _probeHost(host),
+          (host) =>
+              () => _probeHost(host),
         )
         .toList();
 
@@ -1919,15 +1968,24 @@ class Bridge {
 
     discovered.sort((a, b) => b.confidence.compareTo(a.confidence));
 
-    _log('discovery', 'Discovery finished with ${discovered.length} candidates');
+    _log(
+      'discovery',
+      'Discovery finished with ${discovered.length} candidates',
+    );
     return discovered;
   }
 
-  static List<BridgeDiagnosticEntry> diagnostics({String? uuid, int limit = 120}) {
-    final reversed = _diagnostics.reversed.where((entry) {
-      if (uuid == null || uuid.trim().isEmpty) return true;
-      return entry.uuid == uuid;
-    }).take(limit).toList();
+  static List<BridgeDiagnosticEntry> diagnostics({
+    String? uuid,
+    int limit = 120,
+  }) {
+    final reversed = _diagnostics.reversed
+        .where((entry) {
+          if (uuid == null || uuid.trim().isEmpty) return true;
+          return entry.uuid == uuid;
+        })
+        .take(limit)
+        .toList();
 
     return reversed.reversed.toList();
   }
@@ -2394,22 +2452,26 @@ class Bridge {
 
     final q = input.trim().toLowerCase();
     final r = response.toLowerCase();
-    final questionLike = q.contains('?') ||
+    final questionLike =
+        q.contains('?') ||
         q.contains('what') ||
         q.contains('how') ||
         q.contains('which') ||
         q.contains('qual') ||
         q.contains('quais') ||
         q.contains('quanto');
-    final staleOrGeneric = r.contains('i can report status, online devices and possible behavior insights') ||
-      r.contains('i could not identify the target device') ||
-      r.contains('mention the device name');
+    final staleOrGeneric =
+        r.contains(
+          'i can report status, online devices and possible behavior insights',
+        ) ||
+        r.contains('i could not identify the target device') ||
+        r.contains('mention the device name');
 
     if (processFn != null &&
-      ((r.contains('no actionable changes') ||
-          r.contains('could not map this command')) &&
-        questionLike ||
-        staleOrGeneric)) {
+        ((r.contains('no actionable changes') ||
+                    r.contains('could not map this command')) &&
+                questionLike ||
+            staleOrGeneric)) {
       return aiProcessChat(input);
     }
 
@@ -2422,7 +2484,7 @@ class Bridge {
     final startFn = _coreAiModelExecuteCommandAsyncStart;
     final pollFn = _coreAiModelExecuteCommandAsyncPoll;
     if (startFn == null || pollFn == null) {
-      return aiExecuteCommand(input);
+      return 'AI async backend unavailable in current native library.';
     }
 
     final inPtr = input.toNativeUtf8();
@@ -2433,7 +2495,7 @@ class Bridge {
     if (startRes != 0) {
       calloc.free(tokenPtr);
       if (startRes == CoreResult.CORE_ERROR) {
-        return aiExecuteCommand(input);
+        return 'Assistant is still processing your previous command. Please wait a moment.';
       }
       _throwLastError(startRes);
     }
@@ -2443,6 +2505,7 @@ class Bridge {
 
     final readyPtr = calloc<Bool>();
     final outPtr = calloc<Int8>(4096);
+    final timeoutAt = DateTime.now().millisecondsSinceEpoch + 20000;
     try {
       while (true) {
         final pollRes = pollFn(_ctx!, token, readyPtr, outPtr, 4096);
@@ -2455,6 +2518,10 @@ class Bridge {
           return response.trim().isEmpty
               ? 'I could not process this request right now.'
               : response;
+        }
+
+        if (DateTime.now().millisecondsSinceEpoch > timeoutAt) {
+          return 'I am still processing this command. Please try again in a moment.';
         }
 
         await Future.delayed(const Duration(milliseconds: 24));
@@ -2507,7 +2574,11 @@ class Bridge {
     }
   }
 
-  static void aiRecordPattern(String uuid, DeviceState previous, DeviceState next) {
+  static void aiRecordPattern(
+    String uuid,
+    DeviceState previous,
+    DeviceState next,
+  ) {
     _ensureReady();
     if (_coreAiRecordPattern == null) return;
 
