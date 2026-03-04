@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -Deasync_core_EXPORTS
 
-CXX_INCLUDES = -I/home/radmann/easync/lib/core/include -I/home/radmann/easync/lib/core/drivers -I/home/radmann/easync/lib/core
+CXX_INCLUDES = -I/home/radmann/easync/lib/core/include -I/home/radmann/easync/lib/core/drivers -I/home/radmann/easync/lib/core/../ai/include -I/home/radmann/easync/lib/core
 
 CXX_FLAGS = -std=gnu++20 -fPIC
 

@@ -25,6 +25,7 @@
 #include "zigbee.hpp"
 #include "ble.hpp"
 #include "payload_utility.hpp"
+#include "aiEngine.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -39,6 +40,8 @@
 #include <random>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
+#include <chrono>
 
 extern "C" {
 
@@ -75,6 +78,7 @@ struct CoreContext {
     std::string lastError;                                                         /**< Last error string */
     CoreEventCallback callback = nullptr;                                          /**< Event callback */
     void* callbackUserdata = nullptr;                                              /**< User data for callback */
+    easync::ai::AiEngine ai;                                                       /**< Native AI backend */
 };
 
 
@@ -192,6 +196,30 @@ static bool isHalfStep(float value) {
     return std::fabs(scaled - std::round(scaled)) < 0.0001f;
 }
 
+static std::vector<easync::ai::DeviceSnapshot> collectSnapshots(CoreContext* core)
+{
+    std::vector<easync::ai::DeviceSnapshot> out;
+    if (!core) {
+        return out;
+    }
+
+    out.reserve(core->devices.size());
+    for (const auto& kv : core->devices) {
+        const InternalDevice& dev = kv.second;
+
+        easync::ai::DeviceSnapshot snapshot;
+        snapshot.uuid = dev.uuid;
+        snapshot.name = dev.name;
+        snapshot.state = dev.state;
+        snapshot.capabilities = dev.capabilities;
+        snapshot.online = dev.driver ? dev.driver->isAvailable(dev.uuid) : false;
+
+        out.push_back(snapshot);
+    }
+
+    return out;
+}
+
 static void driverEventForwarder(const std::string& uuid,
                                  const CoreDeviceState& newState,
                                  void* userData)
@@ -212,8 +240,15 @@ static void driverEventForwarder(const std::string& uuid,
             return;
 
         if (std::memcmp(&it->second.state, &newState, sizeof(CoreDeviceState)) != 0) {
+            const CoreDeviceState previous = it->second.state;
             it->second.state = newState;
             changed = true;
+
+            const uint64_t nowTs = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch()).count());
+            const auto p = core->ai.permissions();
+            core->ai.recordPattern(uuid, previous, newState, p.useUsageHistory, nowTs);
 
             ev.type = CORE_EVENT_STATE_CHANGED;
             std::strncpy(ev.uuid, uuid.c_str(), CORE_MAX_UUID - 1);
@@ -1585,6 +1620,515 @@ static void logDriverError(CoreContext* core, const char* driverName, const char
     oss << "Driver '" << driverName << "' error: " << message;
 
     setError(core, oss.str().c_str());
+}
+
+CoreResult core_ai_set_permissions(CoreContext* core, const CoreAiPermissions* permissions)
+{
+    if (!core || !permissions)
+        return CORE_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    easync::ai::Permissions p;
+    p.useLocationData = permissions->useLocationData;
+    p.useWeatherData = permissions->useWeatherData;
+    p.useUsageHistory = permissions->useUsageHistory;
+    p.allowDeviceControl = permissions->allowDeviceControl;
+    p.allowAutoRoutines = permissions->allowAutoRoutines;
+    core->ai.setPermissions(p);
+
+    return CORE_OK;
+}
+
+CoreResult core_ai_get_permissions(CoreContext* core, CoreAiPermissions* outPermissions)
+{
+    if (!core || !outPermissions)
+        return CORE_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    const easync::ai::Permissions p = core->ai.permissions();
+
+    outPermissions->useLocationData = p.useLocationData;
+    outPermissions->useWeatherData = p.useWeatherData;
+    outPermissions->useUsageHistory = p.useUsageHistory;
+    outPermissions->allowDeviceControl = p.allowDeviceControl;
+    outPermissions->allowAutoRoutines = p.allowAutoRoutines;
+
+    return CORE_OK;
+}
+
+CoreResult core_ai_record_pattern(CoreContext* core,
+                                  const char* uuid,
+                                  const CoreDeviceState* previous,
+                                  const CoreDeviceState* next)
+{
+    if (!core || !uuid || !previous || !next)
+        return CORE_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    const auto p = core->ai.permissions();
+    const uint64_t nowTs = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
+    core->ai.recordPattern(uuid, *previous, *next, p.useUsageHistory, nowTs);
+    return CORE_OK;
+}
+
+CoreResult core_ai_observe_app_open(CoreContext* core, uint64_t timestampMs)
+{
+    if (!core)
+        return CORE_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    core->ai.observeAppOpen(timestampMs);
+    return CORE_OK;
+}
+
+CoreResult core_ai_observe_profile_apply(CoreContext* core,
+                                         const char* profileName,
+                                         uint64_t timestampMs)
+{
+    if (!core || !profileName)
+        return CORE_INVALID_ARGUMENT;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    core->ai.observeProfileApply(profileName, timestampMs);
+    return CORE_OK;
+}
+
+CoreResult core_ai_process_chat(CoreContext* core,
+                                const char* input,
+                                char* outResponse,
+                                uint32_t outResponseSize)
+{
+    if (!core || !input || !outResponse || outResponseSize == 0)
+        return CORE_INVALID_ARGUMENT;
+
+    std::string response;
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        const auto snapshots = collectSnapshots(core);
+        response = core->ai.processChat(input, snapshots);
+    }
+
+    if (response.size() + 1 > outResponseSize)
+        return CORE_ERROR;
+
+    std::strncpy(outResponse, response.c_str(), outResponseSize - 1);
+    outResponse[outResponseSize - 1] = '\0';
+    return CORE_OK;
+}
+
+CoreResult core_ai_learning_snapshot(CoreContext* core,
+                                     char* outSummary,
+                                     uint32_t outSummarySize)
+{
+    if (!core || !outSummary || outSummarySize == 0)
+        return CORE_INVALID_ARGUMENT;
+
+    std::string summary;
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        summary = core->ai.learningSnapshot();
+    }
+
+    if (summary.size() + 1 > outSummarySize)
+        return CORE_ERROR;
+
+    std::strncpy(outSummary, summary.c_str(), outSummarySize - 1);
+    outSummary[outSummarySize - 1] = '\0';
+    return CORE_OK;
+}
+
+CoreResult core_ai_get_annotations(CoreContext* core,
+                                   char* outAnnotations,
+                                   uint32_t outAnnotationsSize)
+{
+    if (!core || !outAnnotations || outAnnotationsSize == 0)
+        return CORE_INVALID_ARGUMENT;
+
+    std::string packed;
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        const auto items = core->ai.annotations(8);
+        std::ostringstream oss;
+        for (size_t i = 0; i < items.size(); ++i) {
+            if (i > 0) {
+                oss << "\n";
+            }
+            oss << items[i];
+        }
+        packed = oss.str();
+    }
+
+    if (packed.size() + 1 > outAnnotationsSize)
+        return CORE_ERROR;
+
+    std::strncpy(outAnnotations, packed.c_str(), outAnnotationsSize - 1);
+    outAnnotations[outAnnotationsSize - 1] = '\0';
+    return CORE_OK;
+}
+
+static std::string lowerCopy(const std::string& input)
+{
+    std::string s = input;
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return s;
+}
+
+static bool containsAny(const std::string& text,
+                        std::initializer_list<const char*> needles)
+{
+    for (const char* needle : needles) {
+        if (needle && text.find(needle) != std::string::npos) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static int firstInteger(const std::string& text)
+{
+    int value = -1;
+    bool found = false;
+    for (char c : text) {
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            if (!found) {
+                value = 0;
+                found = true;
+            }
+            value = value * 10 + (c - '0');
+            if (value > 1000) {
+                break;
+            }
+        } else if (found) {
+            break;
+        }
+    }
+    return found ? value : -1;
+}
+
+static uint32_t namedColor(const std::string& q)
+{
+    if (q.find("blue") != std::string::npos || q.find("azul") != std::string::npos) return 0x0066AAFF;
+    if (q.find("green") != std::string::npos || q.find("verde") != std::string::npos) return 0x0016A34A;
+    if (q.find("red") != std::string::npos || q.find("vermelho") != std::string::npos) return 0x00E53935;
+    if (q.find("purple") != std::string::npos || q.find("roxo") != std::string::npos) return 0x009C27B0;
+    if (q.find("yellow") != std::string::npos || q.find("amarelo") != std::string::npos) return 0x00FFD600;
+    if (q.find("orange") != std::string::npos || q.find("laranja") != std::string::npos) return 0x00FB8C00;
+    if (q.find("white") != std::string::npos || q.find("branco") != std::string::npos) return 0x00F5F5F5;
+    return 0x0066AAFF;
+}
+
+static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std::string& clause)
+{
+    std::vector<InternalDevice*> targets;
+    const std::string q = lowerCopy(clause);
+
+    for (auto& kv : core->devices) {
+        std::string name = lowerCopy(kv.second.name);
+        std::string brand = lowerCopy(kv.second.brand);
+        std::string model = lowerCopy(kv.second.model);
+        if ((!name.empty() && q.find(name) != std::string::npos) ||
+            (!brand.empty() && q.find(brand) != std::string::npos) ||
+            (!model.empty() && q.find(model) != std::string::npos)) {
+            targets.push_back(&kv.second);
+        }
+    }
+
+    if (!targets.empty()) {
+        return targets;
+    }
+
+    auto collectByCap = [&](CoreCapability cap) {
+        for (auto& kv : core->devices) {
+            if (hasCapability(kv.second, cap)) {
+                targets.push_back(&kv.second);
+            }
+        }
+    };
+
+    if (q.find("light") != std::string::npos || q.find("lamp") != std::string::npos ||
+        q.find("luz") != std::string::npos || q.find("lampada") != std::string::npos) {
+        collectByCap(CORE_CAP_BRIGHTNESS);
+        if (targets.empty()) {
+            collectByCap(CORE_CAP_COLOR);
+        }
+    } else if (q.find("ac") != std::string::npos || q.find("climate") != std::string::npos ||
+               q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos) {
+        collectByCap(CORE_CAP_TEMPERATURE);
+    } else if (q.find("curtain") != std::string::npos || q.find("blind") != std::string::npos ||
+               q.find("cortina") != std::string::npos) {
+        collectByCap(CORE_CAP_POSITION);
+    }
+
+    if (targets.empty() && core->devices.size() == 1) {
+        targets.push_back(&core->devices.begin()->second);
+    }
+
+    return targets;
+}
+
+CoreResult core_ai_execute_command(CoreContext* core,
+                                   const char* input,
+                                   char* outResponse,
+                                   uint32_t outResponseSize)
+{
+    if (!core || !input || !outResponse || outResponseSize == 0)
+        return CORE_INVALID_ARGUMENT;
+
+    struct PendingDispatch {
+        CoreEvent ev;
+        CoreEventCallback cb;
+        void* userdata;
+    };
+
+    std::vector<PendingDispatch> pendingEvents;
+    std::string reply;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        const auto perms = core->ai.permissions();
+        const std::string raw = input;
+        const std::string q = lowerCopy(raw);
+
+        const uint64_t nowTs = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count());
+        core->ai.observeCommand(raw, nowTs);
+
+        const bool mentionsStateDomain = containsAny(q, {
+            "brightness", "brilho", "temperature", "temperatura", "color", "cor",
+            "position", "posicao", "ligad", "power", "online", "status", "estado",
+            "open", "close", "abr", "fech"
+        });
+
+        const bool questionLike = q.find('?') != std::string::npos || containsAny(q, {
+            "what", "which", "how", "quanto", "qual", "quais", "como", "status", "estado"
+        });
+
+        const bool informationalCue = containsAny(q, {
+            "diz", "diga", "fale", "informe", "mostra", "mostrar", "me fala", "me diga",
+            "quero saber", "lista", "listar", "list", "devices", "dispositivos", "dispositivo",
+            "status", "estado", "online", "hello", "hi", "oi", "ola", "olá", "ajuda", "help"
+        });
+
+        const bool explicitAction = containsAny(q, {
+            "turn on", "turn off", "liga", "desliga", "set", "ajusta", "mude", "defina",
+            "apply", "aplica", "increase", "decrease", "aumenta", "diminui", "reduz",
+            "abre", "abrir", "fecha", "fechar"
+        });
+
+        const bool hasValueHint = firstInteger(q) >= 0 || containsAny(q, {
+            "blue", "azul", "green", "verde", "red", "vermelho", "purple", "roxo",
+            "yellow", "amarelo", "orange", "laranja", "white", "branco"
+        });
+
+        const bool informationalLike = informationalCue || (questionLike && !explicitAction) ||
+                                       (mentionsStateDomain && questionLike);
+        const bool actionLike = explicitAction ||
+                                (mentionsStateDomain && hasValueHint && !informationalLike);
+
+        if (!actionLike || informationalLike) {
+            const auto snapshots = collectSnapshots(core);
+            reply = core->ai.processChat(raw, snapshots);
+        } else if (!perms.allowDeviceControl) {
+            reply = "Device control is disabled in assistant permissions.";
+        } else {
+            enum class ActionKind {
+                Unknown,
+                PowerOn,
+                PowerOff,
+                SetTemperature,
+                SetBrightness,
+                SetColor,
+                SetPosition
+            };
+
+            struct ActionRecord {
+                ActionKind kind = ActionKind::Unknown;
+                std::string deviceName;
+                int value = -1;
+            };
+
+            std::vector<std::string> actions;
+            std::vector<ActionRecord> records;
+            std::vector<std::string> unresolved;
+
+            std::string normalized = q;
+            size_t pos = 0;
+            while ((pos = normalized.find(" and ", pos)) != std::string::npos) {
+                normalized.replace(pos, 5, ";");
+                pos += 1;
+            }
+
+            std::stringstream ss(normalized);
+            std::string clause;
+            while (std::getline(ss, clause, ';')) {
+                if (clause.empty()) continue;
+                auto targets = resolveTargets(core, clause);
+                if (targets.empty()) {
+                    unresolved.push_back(clause);
+                    continue;
+                }
+
+                for (auto* dev : targets) {
+                    CoreDeviceState before = dev->state;
+                    bool changed = false;
+
+                    if ((clause.find("turn on") != std::string::npos || clause.find("liga") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_POWER)) {
+                        if (dev->driver->setPower(dev->uuid, true)) {
+                            dev->state.power = true;
+                            changed = true;
+                            actions.push_back("turned on " + dev->name);
+                            records.push_back({ActionKind::PowerOn, dev->name, 1});
+                        }
+                    }
+
+                    if ((clause.find("turn off") != std::string::npos || clause.find("desliga") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_POWER)) {
+                        if (dev->driver->setPower(dev->uuid, false)) {
+                            dev->state.power = false;
+                            changed = true;
+                            actions.push_back("turned off " + dev->name);
+                            records.push_back({ActionKind::PowerOff, dev->name, 0});
+                        }
+                    }
+
+                    if ((clause.find("temperature") != std::string::npos || clause.find("temperatura") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_TEMPERATURE)) {
+                        const int v = firstInteger(clause);
+                        if (v >= 0) {
+                            const float t = static_cast<float>(std::clamp(v, 16, 30));
+                            if (hasCapability(*dev, CORE_CAP_POWER) && !dev->state.power) {
+                                dev->driver->setPower(dev->uuid, true);
+                                dev->state.power = true;
+                            }
+                            if (dev->driver->setTemperature(dev->uuid, t)) {
+                                dev->state.temperature = t;
+                                changed = true;
+                                actions.push_back("set " + dev->name + " to " + std::to_string(static_cast<int>(t)) + "°C");
+                                records.push_back({ActionKind::SetTemperature, dev->name, static_cast<int>(t)});
+                            }
+                        }
+                    }
+
+                    if ((clause.find("brightness") != std::string::npos || clause.find("brilho") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_BRIGHTNESS)) {
+                        const int v = firstInteger(clause);
+                        if (v >= 0) {
+                            const uint32_t b = static_cast<uint32_t>(std::clamp(v, 0, 100));
+                            if (dev->driver->setBrightness(dev->uuid, b)) {
+                                dev->state.brightness = b;
+                                changed = true;
+                                actions.push_back("set brightness " + std::to_string(b) + "% on " + dev->name);
+                                records.push_back({ActionKind::SetBrightness, dev->name, static_cast<int>(b)});
+                            }
+                        }
+                    }
+
+                    if ((clause.find("color") != std::string::npos || clause.find("cor") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_COLOR)) {
+                        const uint32_t c = namedColor(clause);
+                        if (dev->driver->setColor(dev->uuid, c)) {
+                            dev->state.color = c;
+                            changed = true;
+                            actions.push_back("set color on " + dev->name);
+                            records.push_back({ActionKind::SetColor, dev->name, -1});
+                        }
+                    }
+
+                    if ((clause.find("position") != std::string::npos || clause.find("posicao") != std::string::npos ||
+                         clause.find("open") != std::string::npos || clause.find("close") != std::string::npos) &&
+                        hasCapability(*dev, CORE_CAP_POSITION)) {
+                        float p = dev->state.position;
+                        if (clause.find("open") != std::string::npos) {
+                            p = 100.f;
+                        } else if (clause.find("close") != std::string::npos) {
+                            p = 0.f;
+                        } else {
+                            const int v = firstInteger(clause);
+                            if (v >= 0) {
+                                p = static_cast<float>(std::clamp(v, 0, 100));
+                            }
+                        }
+                        if (dev->driver->setPosition(dev->uuid, p)) {
+                            dev->state.position = p;
+                            changed = true;
+                            actions.push_back("set position " + std::to_string(static_cast<int>(p)) + "% on " + dev->name);
+                            records.push_back({ActionKind::SetPosition, dev->name, static_cast<int>(p)});
+                        }
+                    }
+
+                    if (changed) {
+                        const auto pp = core->ai.permissions();
+                        core->ai.recordPattern(dev->uuid, before, dev->state, pp.useUsageHistory, nowTs);
+
+                        CoreEvent ev{};
+                        ev.type = CORE_EVENT_STATE_CHANGED;
+                        std::strncpy(ev.uuid, dev->uuid.c_str(), CORE_MAX_UUID - 1);
+                        ev.uuid[CORE_MAX_UUID - 1] = '\0';
+                        ev.state = dev->state;
+                        pendingEvents.push_back({ev, core->callback, core->callbackUserdata});
+                    }
+                }
+            }
+
+            if (!actions.empty()) {
+                if (records.size() == 1) {
+                    const auto& r = records.front();
+                    if (r.kind == ActionKind::SetTemperature && r.value >= 0) {
+                        reply = "Sure! Now " + r.deviceName + " is running at " + std::to_string(r.value) + "°C.";
+                    } else if (r.kind == ActionKind::PowerOn) {
+                        reply = "Done. " + r.deviceName + " is ON now.";
+                    } else if (r.kind == ActionKind::PowerOff) {
+                        reply = "Done. " + r.deviceName + " is OFF now.";
+                    } else if (r.kind == ActionKind::SetBrightness && r.value >= 0) {
+                        reply = "Sure! " + r.deviceName + " brightness is now " + std::to_string(r.value) + "%.";
+                    } else if (r.kind == ActionKind::SetPosition && r.value >= 0) {
+                        reply = "Sure! " + r.deviceName + " position is now " + std::to_string(r.value) + "%.";
+                    }
+                }
+
+                if (reply.empty()) {
+                    std::ostringstream oss;
+                    oss << "Done: ";
+                    for (size_t i = 0; i < actions.size(); ++i) {
+                        if (i > 0) oss << ", ";
+                        oss << actions[i];
+                    }
+                    if (!unresolved.empty()) {
+                        oss << ". Some clauses were not resolved.";
+                    }
+                    reply = oss.str();
+                }
+            } else if (!unresolved.empty()) {
+                reply = "I could not map this command to known devices or capabilities.";
+            } else {
+                reply = "No actionable changes were detected for this command.";
+            }
+        }
+    }
+
+    for (const auto& item : pendingEvents) {
+        if (item.cb) {
+            item.cb(&item.ev, item.userdata);
+        }
+    }
+
+    if (reply.empty()) {
+        reply = "I could not process this command.";
+    }
+
+    if (reply.size() + 1 > outResponseSize)
+        return CORE_ERROR;
+
+    std::strncpy(outResponse, reply.c_str(), outResponseSize - 1);
+    outResponse[outResponseSize - 1] = '\0';
+    return CORE_OK;
 }
 
 }

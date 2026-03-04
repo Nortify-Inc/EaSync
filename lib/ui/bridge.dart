@@ -8,6 +8,17 @@
 
 import 'handler.dart';
 
+bool _hasAiBackendSymbols(DynamicLibrary lib) {
+  try {
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_process_chat');
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_execute_command');
+    lib.lookup<NativeFunction<Void Function()>>('core_ai_get_annotations');
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 DynamicLibrary _openCoreLibrary() {
   if (Platform.isWindows) {
     return DynamicLibrary.open('core.dll');
@@ -16,20 +27,31 @@ DynamicLibrary _openCoreLibrary() {
   if (Platform.isLinux) {
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final cwd = Directory.current.path;
+    DynamicLibrary? firstLoadable;
 
     final candidates = <String>[
       '$cwd/lib/core/build/libeasync_core.so',
       '$executableDir/lib/libeasync_core.so',
       '$cwd/build/linux/x64/debug/bundle/lib/libeasync_core.so',
       '$cwd/build/linux/x64/release/bundle/lib/libeasync_core.so',
+      '/usr/lib/libeasync_core.so',
+      '/usr/local/lib/libeasync_core.so',
     ];
 
     for (final path in candidates) {
       if (!File(path).existsSync()) continue;
 
       try {
-        return DynamicLibrary.open(path);
+        final lib = DynamicLibrary.open(path);
+        firstLoadable ??= lib;
+        if (_hasAiBackendSymbols(lib)) {
+          return lib;
+        }
       } catch (_) {}
+    }
+
+    if (firstLoadable != null) {
+      return firstLoadable;
     }
   }
 
@@ -155,6 +177,23 @@ base class CoreDeviceInfo extends Struct {
 
   @Array(CORE_MAX_CAPS)
   external Array<Int32> capabilities;
+}
+
+base class CoreAiPermissionsNative extends Struct {
+  @Bool()
+  external bool useLocationData;
+
+  @Bool()
+  external bool useWeatherData;
+
+  @Bool()
+  external bool useUsageHistory;
+
+  @Bool()
+  external bool allowDeviceControl;
+
+  @Bool()
+  external bool allowAutoRoutines;
 }
 
 typedef _coreCreateC = Pointer<Void> Function();
@@ -290,6 +329,49 @@ typedef _coreProvisionWifiDart =
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
+typedef _coreAiSetPermissionsC =
+  Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+typedef _coreAiSetPermissionsDart =
+  int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+
+typedef _coreAiGetPermissionsC =
+  Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+typedef _coreAiGetPermissionsDart =
+  int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
+
+typedef _coreAiRecordPatternC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>, Pointer<CoreDeviceState>);
+typedef _coreAiRecordPatternDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<CoreDeviceState>, Pointer<CoreDeviceState>);
+
+typedef _coreAiObserveAppOpenC = Int32 Function(Pointer<Void>, Uint64);
+typedef _coreAiObserveAppOpenDart = int Function(Pointer<Void>, int);
+
+typedef _coreAiObserveProfileApplyC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
+typedef _coreAiObserveProfileApplyDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, int);
+
+typedef _coreAiProcessChatC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _coreAiProcessChatDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
+typedef _coreAiGetAnnotationsC =
+  Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
+typedef _coreAiGetAnnotationsDart =
+  int Function(Pointer<Void>, Pointer<Int8>, int);
+
+typedef _coreAiExecuteCommandC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _coreAiExecuteCommandDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
+typedef _coreAiLearningSnapshotC =
+  Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
+typedef _coreAiLearningSnapshotDart =
+  int Function(Pointer<Void>, Pointer<Int8>, int);
+
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
 
@@ -423,6 +505,105 @@ final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
 final _coreSimulateDart _coreSimulate = coreLib
     .lookupFunction<_coreSimulateC, _coreSimulateDart>('core_simulate');
 
+final _coreAiSetPermissionsDart? _coreAiSetPermissions = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiSetPermissionsC, _coreAiSetPermissionsDart>(
+          'core_ai_set_permissions',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiGetPermissionsDart? _coreAiGetPermissions = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiGetPermissionsC, _coreAiGetPermissionsDart>(
+          'core_ai_get_permissions',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiRecordPatternDart? _coreAiRecordPattern = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiRecordPatternC, _coreAiRecordPatternDart>(
+          'core_ai_record_pattern',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiObserveAppOpenDart? _coreAiObserveAppOpen = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiObserveAppOpenC, _coreAiObserveAppOpenDart>(
+          'core_ai_observe_app_open',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiObserveProfileApplyDart? _coreAiObserveProfileApply = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreAiObserveProfileApplyC,
+      _coreAiObserveProfileApplyDart
+    >('core_ai_observe_profile_apply');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiProcessChatDart? _coreAiProcessChat = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiProcessChatC, _coreAiProcessChatDart>(
+          'core_ai_process_chat',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiGetAnnotationsDart? _coreAiGetAnnotations = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiGetAnnotationsC, _coreAiGetAnnotationsDart>(
+          'core_ai_get_annotations',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiExecuteCommandDart? _coreAiExecuteCommand = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiExecuteCommandC, _coreAiExecuteCommandDart>(
+          'core_ai_execute_command',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreAiLearningSnapshotDart? _coreAiLearningSnapshot = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreAiLearningSnapshotC, _coreAiLearningSnapshotDart>(
+          'core_ai_learning_snapshot',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
 class DeviceInfo {
   final String uuid;
   final String name;
@@ -537,6 +718,22 @@ class ProtocolConnectionState {
   static const String connected = 'connected';
   static const String disconnected = 'disconnected';
   static const String failed = 'failed';
+}
+
+class AiPermissions {
+  final bool useLocationData;
+  final bool useWeatherData;
+  final bool useUsageHistory;
+  final bool allowDeviceControl;
+  final bool allowAutoRoutines;
+
+  const AiPermissions({
+    required this.useLocationData,
+    required this.useWeatherData,
+    required this.useUsageHistory,
+    required this.allowDeviceControl,
+    required this.allowAutoRoutines,
+  });
 }
 
 String _readFixedString(Array<Int8> array, int maxLen) {
@@ -1916,6 +2113,226 @@ class Bridge {
     if (res != 0) {
       _throwLastError(res);
     }
+  }
+
+  static void setAiPermissions(AiPermissions permissions) {
+    _ensureReady();
+    if (_coreAiSetPermissions == null) return;
+
+    final ptr = calloc<CoreAiPermissionsNative>();
+    ptr.ref.useLocationData = permissions.useLocationData;
+    ptr.ref.useWeatherData = permissions.useWeatherData;
+    ptr.ref.useUsageHistory = permissions.useUsageHistory;
+    ptr.ref.allowDeviceControl = permissions.allowDeviceControl;
+    ptr.ref.allowAutoRoutines = permissions.allowAutoRoutines;
+
+    final res = _coreAiSetPermissions!(_ctx!, ptr);
+    calloc.free(ptr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
+  static AiPermissions getAiPermissions() {
+    _ensureReady();
+    if (_coreAiGetPermissions == null) {
+      return const AiPermissions(
+        useLocationData: true,
+        useWeatherData: true,
+        useUsageHistory: true,
+        allowDeviceControl: true,
+        allowAutoRoutines: true,
+      );
+    }
+
+    final ptr = calloc<CoreAiPermissionsNative>();
+    final res = _coreAiGetPermissions!(_ctx!, ptr);
+    if (res != 0) {
+      calloc.free(ptr);
+      _throwLastError(res);
+    }
+
+    final result = AiPermissions(
+      useLocationData: ptr.ref.useLocationData,
+      useWeatherData: ptr.ref.useWeatherData,
+      useUsageHistory: ptr.ref.useUsageHistory,
+      allowDeviceControl: ptr.ref.allowDeviceControl,
+      allowAutoRoutines: ptr.ref.allowAutoRoutines,
+    );
+    calloc.free(ptr);
+    return result;
+  }
+
+  static String aiProcessChat(String input) {
+    _ensureReady();
+    if (_coreAiProcessChat == null) {
+      return 'AI backend unavailable in current native library.';
+    }
+
+    final inPtr = input.toNativeUtf8();
+    final outPtr = calloc<Int8>(2048);
+
+    final res = _coreAiProcessChat!(_ctx!, inPtr, outPtr, 2048);
+
+    calloc.free(inPtr);
+
+    if (res != 0) {
+      calloc.free(outPtr);
+      _throwLastError(res);
+    }
+
+    final response = outPtr.cast<Utf8>().toDartString();
+    calloc.free(outPtr);
+    return response;
+  }
+
+  static String aiExecuteCommand(String input) {
+    _ensureReady();
+    if (_coreAiExecuteCommand == null) {
+      if (_coreAiProcessChat != null) {
+        return aiProcessChat(input);
+      }
+      return 'I could not process this request right now.';
+    }
+
+    final inPtr = input.toNativeUtf8();
+    final outPtr = calloc<Int8>(4096);
+    final res = _coreAiExecuteCommand!(_ctx!, inPtr, outPtr, 4096);
+
+    calloc.free(inPtr);
+
+    if (res != 0) {
+      calloc.free(outPtr);
+      _throwLastError(res);
+    }
+
+    final response = outPtr.cast<Utf8>().toDartString();
+    calloc.free(outPtr);
+
+    final q = input.trim().toLowerCase();
+    final questionLike = q.contains('?') ||
+        q.contains('what') ||
+        q.contains('how') ||
+        q.contains('which') ||
+        q.contains('qual') ||
+        q.contains('quais') ||
+        q.contains('quanto');
+
+    if (_coreAiProcessChat != null &&
+        (response.toLowerCase().contains('no actionable changes') ||
+            response.toLowerCase().contains('could not map this command')) &&
+        questionLike) {
+      return aiProcessChat(input);
+    }
+
+    return response;
+  }
+
+  static List<String> aiAnnotations() {
+    _ensureReady();
+    if (_coreAiGetAnnotations == null) return const [];
+
+    final outPtr = calloc<Int8>(4096);
+    final res = _coreAiGetAnnotations!(_ctx!, outPtr, 4096);
+    if (res != 0) {
+      calloc.free(outPtr);
+      _throwLastError(res);
+    }
+
+    final raw = outPtr.cast<Utf8>().toDartString();
+    calloc.free(outPtr);
+    return raw
+        .split('\n')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  static void aiObserveAppOpen({int? timestampMs}) {
+    _ensureReady();
+    if (_coreAiObserveAppOpen == null) return;
+    final ts = timestampMs ?? DateTime.now().millisecondsSinceEpoch;
+    final res = _coreAiObserveAppOpen!(_ctx!, ts);
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
+  static void aiObserveProfileApply(String profileName, {int? timestampMs}) {
+    _ensureReady();
+    if (_coreAiObserveProfileApply == null) return;
+    final namePtr = profileName.toNativeUtf8();
+    final ts = timestampMs ?? DateTime.now().millisecondsSinceEpoch;
+    final res = _coreAiObserveProfileApply!(_ctx!, namePtr, ts);
+    calloc.free(namePtr);
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
+  static void aiRecordPattern(String uuid, DeviceState previous, DeviceState next) {
+    _ensureReady();
+    if (_coreAiRecordPattern == null) return;
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final prevPtr = calloc<CoreDeviceState>();
+    final nextPtr = calloc<CoreDeviceState>();
+
+    prevPtr.ref
+      ..power = previous.power
+      ..brightness = previous.brightness
+      ..color = previous.color
+      ..temperature = previous.temperature
+      ..temperatureFridge = previous.temperatureFridge
+      ..temperatureFreezer = previous.temperatureFreezer
+      ..timestamp = previous.timestamp
+      ..colorTemperature = previous.colorTemperature
+      ..lock = previous.lock
+      ..mode = previous.mode
+      ..position = previous.position;
+
+    nextPtr.ref
+      ..power = next.power
+      ..brightness = next.brightness
+      ..color = next.color
+      ..temperature = next.temperature
+      ..temperatureFridge = next.temperatureFridge
+      ..temperatureFreezer = next.temperatureFreezer
+      ..timestamp = next.timestamp
+      ..colorTemperature = next.colorTemperature
+      ..lock = next.lock
+      ..mode = next.mode
+      ..position = next.position;
+
+    final res = _coreAiRecordPattern!(_ctx!, uuidPtr, prevPtr, nextPtr);
+
+    calloc.free(uuidPtr);
+    calloc.free(prevPtr);
+    calloc.free(nextPtr);
+
+    if (res != 0) {
+      _throwLastError(res);
+    }
+  }
+
+  static String aiLearningSnapshot() {
+    _ensureReady();
+    if (_coreAiLearningSnapshot == null) {
+      return 'AI backend unavailable in current native library.';
+    }
+
+    final outPtr = calloc<Int8>(1024);
+    final res = _coreAiLearningSnapshot!(_ctx!, outPtr, 1024);
+
+    if (res != 0) {
+      calloc.free(outPtr);
+      _throwLastError(res);
+    }
+
+    final summary = outPtr.cast<Utf8>().toDartString();
+    calloc.free(outPtr);
+    return summary;
   }
 
   static void _onCoreEvent(
