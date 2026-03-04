@@ -648,8 +648,16 @@ class _ProfilesState extends State<Profiles>
                 child: AnimatedBuilder(
                   animation: _profileApplyPulse,
                   builder: (context, child) {
+                    final t = _profileApplyPulse.value;
+                    final fadeStart = 0.72;
+                    final opacity = t < fadeStart
+                        ? 1.0
+                        : (1 - ((t - fadeStart) / (1 - fadeStart))).clamp(0.0, 1.0);
                     return CustomPaint(
-                      painter: _OrbitBorderPainter(progress: _profileApplyPulse.value),
+                      painter: _OrbitBorderPainter(
+                        progress: t,
+                        opacity: opacity,
+                      ),
                     );
                   },
                 ),
@@ -701,8 +709,9 @@ class _ProfilesState extends State<Profiles>
 
 class _OrbitBorderPainter extends CustomPainter {
   final double progress;
+  final double opacity;
 
-  const _OrbitBorderPainter({required this.progress});
+  const _OrbitBorderPainter({required this.progress, this.opacity = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -714,7 +723,7 @@ class _OrbitBorderPainter extends CustomPainter {
     final base = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4
-      ..color = EaColor.fore.withValues(alpha: .24);
+      ..color = EaColor.fore.withValues(alpha: .24 * opacity);
     canvas.drawRRect(rrect, base);
 
     final metric = (Path()..addRRect(rrect)).computeMetrics().first;
@@ -725,9 +734,9 @@ class _OrbitBorderPainter extends CustomPainter {
 
     final active = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
-      ..color = EaColor.fore;
+      ..color = EaColor.fore.withValues(alpha: opacity);
 
     if (tail >= 0) {
       canvas.drawPath(metric.extractPath(tail, head), active);
@@ -739,7 +748,7 @@ class _OrbitBorderPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _OrbitBorderPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+    return oldDelegate.progress != progress || oldDelegate.opacity != opacity;
   }
 }
 

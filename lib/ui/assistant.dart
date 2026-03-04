@@ -2779,7 +2779,7 @@ class _OrbitBorderPainter extends CustomPainter {
     final base = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4
-      ..color = EaColor.fore.withValues(alpha: .2);
+      ..color = EaColor.background;
     canvas.drawRRect(rrect, base);
 
     final metric = (Path()..addRRect(rrect)).computeMetrics().first;
@@ -2790,7 +2790,7 @@ class _OrbitBorderPainter extends CustomPainter {
 
     final active = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
       ..color = EaColor.fore;
 
