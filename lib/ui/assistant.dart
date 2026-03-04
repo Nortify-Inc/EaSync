@@ -7,9 +7,13 @@
  */
 
 import 'dart:convert';
+import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:voice_recognition_flutter/voice_recognition.dart';
+import 'package:voice_recognition_flutter/voice_recognition_platform_interface.dart';
 
 import 'handler.dart';
 
@@ -20,7 +24,7 @@ class Assistant extends StatefulWidget {
   State<Assistant> createState() => _AssistantState();
 }
 
-class _AssistantState extends State<Assistant> {
+class _AssistantState extends State<Assistant> with SingleTickerProviderStateMixin {
   static const _kPowerOnByHour = 'assistant.power_on_by_hour';
   static const _kAppOpenByHour = 'assistant.app_open_by_hour';
   static const _kObservedActions = 'assistant.observed_actions';
@@ -49,24 +53,44 @@ class _AssistantState extends State<Assistant> {
   bool _allowAutoRoutines = true;
   int _assistantDataIndex = 0;
   int _annotationIndex = 0;
+  String _typedCommand = '';
+  String _lastRoundRefreshKey = '';
+  final Random _rng = Random();
 
   final Map<int, int> _powerOnByHour = {};
   final Map<int, int> _appOpenByHour = {};
   final Map<String, bool> _lastPowerByDevice = {};
+  List<DeviceInfo> _pendingTargets = [];
+  String? _pendingClause;
+  final VoiceRecognition _voiceRecognition = VoiceRecognition();
 
   StreamSubscription<CoreEventData>? _eventSub;
   Timer? _automationTimer;
   Timer? _assistantDataTimer;
+  Timer? _roundHourWeatherTimer;
   Timer? _annotationTimer;
+  StreamSubscription<dynamic>? _voiceEventSub;
+  Timer? _voiceSilenceTimer;
+  Timer? _chatTypingTimer;
+  bool _voiceCommandExecuted = false;
+  bool _assistantThinking = false;
+  late final AnimationController _thinkingController;
   final TextEditingController _commandController = TextEditingController();
-  bool _useAudioInput = false;
+  final ScrollController _chatScrollController = ScrollController();
   bool _isRecordingAudio = false;
   final List<String> _commandLog = [];
-  String _assistantReply = 'Hello! I can automate your devices from text commands.';
+  final List<_ChatMessage> _chatMessages = [
+    const _ChatMessage(role: _ChatRole.assistant, text: 'Hello! I can automate your devices from text commands.'),
+  ];
 
   @override
   void initState() {
     super.initState();
+    _thinkingController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 950),
+    );
+    _commandController.addListener(_onCommandTextChanged);
     _initAssistant();
   }
 
@@ -75,9 +99,74 @@ class _AssistantState extends State<Assistant> {
     _eventSub?.cancel();
     _automationTimer?.cancel();
     _assistantDataTimer?.cancel();
+    _roundHourWeatherTimer?.cancel();
     _annotationTimer?.cancel();
+    _voiceEventSub?.cancel();
+    _voiceSilenceTimer?.cancel();
+    _chatTypingTimer?.cancel();
+    _thinkingController.dispose();
+    _commandController.removeListener(_onCommandTextChanged);
     _commandController.dispose();
+    _chatScrollController.dispose();
     super.dispose();
+  }
+
+  void _onCommandTextChanged() {
+    final next = _commandController.text;
+    if (next == _typedCommand) return;
+    setState(() => _typedCommand = next);
+  }
+
+  bool get _isVoiceSupportedPlatform {
+    if (kIsWeb) return false;
+    return defaultTargetPlatform == TargetPlatform.android;
+  }
+
+  void _setAssistantThinking(bool value) {
+    if (_assistantThinking == value) return;
+    _assistantThinking = value;
+    if (value) {
+      _thinkingController.repeat();
+    } else {
+      _thinkingController.stop();
+      _thinkingController.reset();
+    }
+    if (mounted) setState(() {});
+  }
+
+  String? _generalResponse(String text) {
+    final q = text.toLowerCase();
+
+    if (_containsAny(q, ['thanks', 'thank you', 'thx'])) {
+      return '${_friendlyPrefix()} You\'re welcome — happy to help!';
+    }
+    if (_containsAny(q, ['how are you', 'how is it going', 'how\'s it going'])) {
+      return '${_friendlyPrefix()} I\'m doing great and fully ready to automate your home.';
+    }
+    if (_containsAny(q, ['who are you', 'what are you'])) {
+      return 'I\'m your EaSync Assistant. I can automate devices, apply scenes, and learn your routine patterns.';
+    }
+    if (_containsAny(q, ['what can you do', 'help', 'capabilities'])) {
+      return 'I can control power, temperature, brightness, color, mode and position. Example: "turn on AC and set temperature 23".';
+    }
+    if (_containsAny(q, ['what time', 'time now'])) {
+      final now = DateTime.now();
+      return 'Current time is ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}.';
+    }
+    if (_containsAny(q, ['what day', 'today date', 'date today'])) {
+      final now = DateTime.now();
+      return 'Today is ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}.';
+    }
+    if (_containsAny(q, ['outside temperature', 'weather', 'how hot'])) {
+      return 'Outside is around ${_outsideTemp.toStringAsFixed(0)}°C near ${_locationQuery.isEmpty ? 'your saved area' : _locationQuery}.';
+    }
+    if (_containsAny(q, ['good job', 'nice', 'great'])) {
+      return 'That\'s great! I appreciate it. Want me to run a quick home optimization?';
+    }
+    if (q.endsWith('?')) {
+      return 'Of course! I can help with that. If this is about devices, tell me the room/device and what you want to change.';
+    }
+    return null;
   }
 
   void _pushCommandLog(String line) {
@@ -85,6 +174,69 @@ class _AssistantState extends State<Assistant> {
     if (_commandLog.length > 6) {
       _commandLog.removeRange(6, _commandLog.length);
     }
+  }
+
+  void _appendUserChat(String text) {
+    final msg = text.trim();
+    if (msg.isEmpty) return;
+    setState(() {
+      _chatMessages.add(_ChatMessage(role: _ChatRole.user, text: msg));
+    });
+    _scrollChatToBottom();
+  }
+
+  void _appendAssistantChat(String text, {bool animate = true}) {
+    final msg = text.trim();
+    if (msg.isEmpty) return;
+
+    _chatTypingTimer?.cancel();
+
+    if (!animate) {
+      setState(() {
+        _chatMessages.add(_ChatMessage(role: _ChatRole.assistant, text: msg));
+      });
+      _scrollChatToBottom();
+      _setAssistantThinking(false);
+      return;
+    }
+
+    setState(() {
+      _chatMessages.add(const _ChatMessage(role: _ChatRole.assistant, text: ''));
+    });
+    _scrollChatToBottom();
+
+    var i = 0;
+    _chatTypingTimer = Timer.periodic(const Duration(milliseconds: 14), (t) {
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
+      i++;
+      final end = i.clamp(0, msg.length);
+      setState(() {
+        final idx = _chatMessages.length - 1;
+        _chatMessages[idx] = _ChatMessage(
+          role: _ChatRole.assistant,
+          text: msg.substring(0, end),
+        );
+      });
+      _scrollChatToBottom();
+      if (end >= msg.length) {
+        t.cancel();
+        _setAssistantThinking(false);
+      }
+    });
+  }
+
+  void _scrollChatToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_chatScrollController.hasClients) return;
+      _chatScrollController.animateTo(
+        _chatScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   int? _extractFirstInt(String text) {
@@ -149,25 +301,215 @@ class _AssistantState extends State<Assistant> {
     return 'Good evening! I can prepare your home with a quick command.';
   }
 
-  DeviceInfo? _findBestDevice(String raw) {
-    final query = raw.toLowerCase();
-    final devices = Bridge.listDevices();
-
-    for (final d in devices) {
-      final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
-      if (query.contains(d.name.toLowerCase()) || hay.contains(query)) {
-        return d;
-      }
+  bool _containsAny(String text, List<String> words) {
+    for (final w in words) {
+      if (text.contains(w)) return true;
     }
+    return false;
+  }
 
-    for (final d in devices) {
+  Set<int> _requiredCapabilitiesForClause(String clause) {
+    final caps = <int>{};
+    if (clause.contains('brightness')) caps.add(CoreCapability.CORE_CAP_BRIGHTNESS);
+    if (clause.contains('color')) caps.add(CoreCapability.CORE_CAP_COLOR);
+    if (clause.contains('temperature') || clause.contains('temp')) {
+      caps.add(CoreCapability.CORE_CAP_TEMPERATURE);
+    }
+    if (clause.contains('mode')) caps.add(CoreCapability.CORE_CAP_MODE);
+    if (clause.contains('position') || clause.contains('open') || clause.contains('close')) {
+      caps.add(CoreCapability.CORE_CAP_POSITION);
+    }
+    if (clause.contains('turn on') || clause.contains('turn off')) {
+      caps.add(CoreCapability.CORE_CAP_POWER);
+    }
+    return caps;
+  }
+
+  List<DeviceInfo> _resolveTargetsForClause(String clause, List<DeviceInfo> devices) {
+    final q = clause.toLowerCase();
+    final wantsAll = q.contains('all ') || q.contains('every ');
+    final mentionsAc = _containsAny(q, [' ac', 'air conditioner', 'climate', 'hvac', 'cooling']);
+    final mentionsLight = _containsAny(q, ['lamp', 'light', 'lights']);
+    final mentionsCurtain = _containsAny(q, ['curtain', 'curtains', 'blind', 'blinds', 'shade']);
+
+    final explicitByName = devices.where((d) {
       final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
-      final words = query.split(RegExp(r'\s+')).where((e) => e.isNotEmpty);
+      if (q.contains(d.name.toLowerCase())) return true;
+      final words = q.split(RegExp(r'\s+')).where((e) => e.length > 2);
       final score = words.where((w) => hay.contains(w)).length;
-      if (score >= 2) return d;
+      return score >= 2;
+    }).toList();
+
+    if (explicitByName.isNotEmpty) {
+      return wantsAll ? explicitByName : [explicitByName.first];
     }
 
-    return devices.isEmpty ? null : devices.first;
+    if (mentionsAc) {
+      final acs = devices.where((d) {
+        final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
+        final capOk = d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) ||
+            d.capabilities.contains(CoreCapability.CORE_CAP_MODE);
+        return capOk || hay.contains('ac') || hay.contains('air') || hay.contains('climate');
+      }).toList();
+      return acs;
+    }
+
+    if (mentionsLight) {
+      final lights = devices.where((d) {
+        final hay = '${d.name} ${d.brand} ${d.model}'.toLowerCase();
+        return d.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS) ||
+            d.capabilities.contains(CoreCapability.CORE_CAP_COLOR) ||
+            hay.contains('lamp') ||
+            hay.contains('light');
+      }).toList();
+      return lights;
+    }
+
+    if (mentionsCurtain) {
+      final curtains = devices
+          .where((d) => d.capabilities.contains(CoreCapability.CORE_CAP_POSITION))
+          .toList();
+      return curtains;
+    }
+
+    final required = _requiredCapabilitiesForClause(q);
+    if (required.isNotEmpty) {
+      final matches = devices.where((d) {
+        for (final cap in required) {
+          if (!d.capabilities.contains(cap)) return false;
+        }
+        return true;
+      }).toList();
+      if (matches.isNotEmpty) return matches;
+
+      // Relax when no full match exists.
+      final soft = devices.where((d) {
+        for (final cap in required) {
+          if (d.capabilities.contains(cap)) return true;
+        }
+        return false;
+      }).toList();
+      if (soft.isNotEmpty) return soft;
+
+      return [];
+    }
+
+    if (wantsAll) {
+      final powerDevices = devices
+          .where((d) => d.capabilities.contains(CoreCapability.CORE_CAP_POWER))
+          .toList();
+      return powerDevices;
+    }
+
+    return devices.isEmpty ? [] : [devices.first];
+  }
+
+  String _friendlyPrefix() {
+    const options = [
+      'Of course!',
+      'That\'s great!',
+      'Absolutely!',
+      'Done nicely!',
+      'Perfect, on it!',
+    ];
+    return options[_rng.nextInt(options.length)];
+  }
+
+  String _targetHint(String clause) {
+    final q = clause.toLowerCase();
+    if (_containsAny(q, [' ac', 'air conditioner', 'climate', 'hvac'])) return 'AC';
+    if (_containsAny(q, ['lamp', 'light', 'lights'])) return 'light';
+    if (_containsAny(q, ['curtain', 'blind', 'shade'])) return 'curtain';
+    return 'matching device';
+  }
+
+  DeviceInfo? _resolvePendingChoice(String text) {
+    if (_pendingTargets.isEmpty) return null;
+    final q = text.toLowerCase();
+
+    for (final d in _pendingTargets) {
+      if (q.contains(d.name.toLowerCase())) return d;
+    }
+
+    if (_containsAny(q, ['first', '1st', 'one', '1'])) {
+      return _pendingTargets.first;
+    }
+    if (_pendingTargets.length > 1 && _containsAny(q, ['second', '2nd', 'two', '2'])) {
+      return _pendingTargets[1];
+    }
+    if (_pendingTargets.length > 2 && _containsAny(q, ['third', '3rd', 'three', '3'])) {
+      return _pendingTargets[2];
+    }
+
+    return null;
+  }
+
+  IconData _weatherIconForTemp() {
+    if (_outsideTemp >= 31) return Icons.wb_sunny;
+    if (_outsideTemp >= 26) return Icons.wb_sunny_outlined;
+    if (_outsideTemp >= 20) return Icons.cloud_outlined;
+    return Icons.ac_unit;
+  }
+
+  List<int> _capabilitiesFromQuery(String q) {
+    final out = <int>[];
+    if (_containsAny(q, ['power', 'on/off', 'turn on', 'turn off'])) {
+      out.add(CoreCapability.CORE_CAP_POWER);
+    }
+    if (_containsAny(q, ['temperature', 'temp', 'climate'])) {
+      out.add(CoreCapability.CORE_CAP_TEMPERATURE);
+    }
+    if (_containsAny(q, ['brightness', 'dimmer'])) {
+      out.add(CoreCapability.CORE_CAP_BRIGHTNESS);
+    }
+    if (_containsAny(q, ['color', 'colour'])) {
+      out.add(CoreCapability.CORE_CAP_COLOR);
+    }
+    if (_containsAny(q, ['mode'])) {
+      out.add(CoreCapability.CORE_CAP_MODE);
+    }
+    if (_containsAny(q, ['position', 'open', 'close', 'curtain', 'blind'])) {
+      out.add(CoreCapability.CORE_CAP_POSITION);
+    }
+    return out;
+  }
+
+  String _capabilityName(int cap) {
+    if (cap == CoreCapability.CORE_CAP_POWER) return 'power';
+    if (cap == CoreCapability.CORE_CAP_TEMPERATURE) return 'temperature';
+    if (cap == CoreCapability.CORE_CAP_BRIGHTNESS) return 'brightness';
+    if (cap == CoreCapability.CORE_CAP_COLOR) return 'color';
+    if (cap == CoreCapability.CORE_CAP_MODE) return 'mode';
+    if (cap == CoreCapability.CORE_CAP_POSITION) return 'position';
+    return 'unknown';
+  }
+
+  String? _informationalDevicesResponse(String text, List<DeviceInfo> devices) {
+    final q = text.toLowerCase();
+
+    if (_containsAny(q, ['what devices', 'list devices', 'which devices', 'devices available'])) {
+      if (devices.isEmpty) return 'No devices are registered right now.';
+      final names = devices.take(8).map((d) => d.name).join(', ');
+      return 'You currently have ${devices.length} device(s): $names${devices.length > 8 ? '...' : ''}.';
+    }
+
+    if (_containsAny(q, ['capability', 'capabilities', 'which supports', 'which have'])) {
+      final askedCaps = _capabilitiesFromQuery(q);
+      if (askedCaps.isEmpty) {
+        return 'Ask me like: "which devices support temperature" or "which devices have brightness".';
+      }
+      final cap = askedCaps.first;
+      final matches = devices
+          .where((d) => d.capabilities.contains(cap))
+          .map((d) => d.name)
+          .toList();
+      if (matches.isEmpty) {
+        return 'No device with ${_capabilityName(cap)} capability was found.';
+      }
+      return 'Devices with ${_capabilityName(cap)}: ${matches.join(', ')}.';
+    }
+
+    return null;
   }
 
   int _resolveModeIndex(DeviceInfo device, String query) {
@@ -274,32 +616,55 @@ class _AssistantState extends State<Assistant> {
     final input = raw.trim();
     if (input.isEmpty) return;
 
+    _appendUserChat(input);
+    _setAssistantThinking(true);
+
     final text = _normalizeInput(input);
     final hasAction = _containsActionKeyword(text);
     final greeted = _isGreeting(text);
+    final general = _generalResponse(text);
+
+    if (_pendingClause != null && _pendingTargets.isNotEmpty) {
+      final chosen = _resolvePendingChoice(text);
+      if (chosen != null) {
+        final actions = _applyClause(chosen, _pendingClause!);
+        _pendingClause = null;
+        _pendingTargets = [];
+        if (actions.isNotEmpty) {
+          _appendAssistantChat('${_friendlyPrefix()} Applied to ${chosen.name}: ${actions.join(', ')}.');
+        } else {
+          _appendAssistantChat('I got your selection, but this action is not supported by ${chosen.name}.');
+        }
+        return;
+      }
+    }
 
     if (greeted && !hasAction) {
-      setState(() {
-        _assistantReply = _greetingResponse();
-      });
+      _appendAssistantChat(_greetingResponse());
+      return;
+    }
+
+    if (!hasAction && general != null) {
+      _appendAssistantChat(general);
       return;
     }
 
     final devices = Bridge.listDevices();
-    final fallbackTarget = _findBestDevice(text);
+    final informational = _informationalDevicesResponse(text, devices);
+    if (!hasAction && informational != null) {
+      _appendAssistantChat(informational);
+      return;
+    }
 
-    if (devices.isEmpty || fallbackTarget == null) {
-      setState(() {
-        _assistantReply = 'I could not find devices to automate right now.';
-      });
+    if (devices.isEmpty) {
+      _appendAssistantChat('I could not find devices to automate right now.');
       return;
     }
 
     if (!_allowDeviceControl) {
-      setState(() {
-        _assistantReply =
-            'Device control is disabled. Enable it in Assistant Data to run automation commands.';
-      });
+      _appendAssistantChat(
+        'Device control is disabled. Enable it in Assistant Data to run automation commands.',
+      );
       return;
     }
 
@@ -311,45 +676,144 @@ class _AssistantState extends State<Assistant> {
           .toList();
 
       final allActions = <String>[];
+      final unresolved = <String>[];
       for (final clause in clauses) {
-        final target = _findBestDevice(clause) ?? fallbackTarget;
-        allActions.addAll(_applyClause(target, clause));
+        final targets = _resolveTargetsForClause(clause, devices);
+        final wantsAll = clause.contains('all ') || clause.contains('every ');
+        if (targets.isEmpty) {
+          unresolved.add('I could not find a ${_targetHint(clause)} for "$clause"');
+          continue;
+        }
+
+        if (!wantsAll && targets.length > 1) {
+          final names = targets.take(4).map((e) => e.name).join(', ');
+          _pendingTargets = targets;
+          _pendingClause = clause;
+          _appendAssistantChat(
+            '${_friendlyPrefix()} I found multiple matches for "$clause": $names. Which one should I use?',
+          );
+          return;
+        }
+
+        for (final t in targets) {
+          allActions.addAll(_applyClause(t, clause));
+        }
       }
 
       if (allActions.isEmpty) {
-        setState(() {
-          _assistantReply =
-              'I could not map this command. Try: "turn on AC and set temperature 23", "set brightness 80 and color blue".';
-        });
+        _appendAssistantChat(
+          '${_friendlyPrefix()} I could not map this command safely. Try: "turn on AC and set temperature 23", "set brightness 80 and color blue".',
+        );
         return;
       }
 
       final greetingPrefix = greeted ? '${_greetingResponse()} ' : '';
-      setState(() {
-        _assistantReply =
-            '${greetingPrefix}Done. I executed ${allActions.length} action(s): ${allActions.take(3).join(', ')}${allActions.length > 3 ? '...' : ''}.';
-      });
+      final unresolvedSuffix = unresolved.isEmpty
+          ? ''
+          : ' I skipped ${unresolved.length} request(s): ${unresolved.take(2).join('. ')}${unresolved.length > 2 ? '...' : ''}.';
+      _appendAssistantChat(
+        '$greetingPrefix${_friendlyPrefix()} I executed ${allActions.length} action(s): ${allActions.take(3).join(', ')}${allActions.length > 3 ? '...' : ''}.$unresolvedSuffix',
+      );
     } catch (_) {
-      setState(() {
-        _assistantReply = 'I failed to apply the command. Please try again.';
-      });
+      _appendAssistantChat('${_friendlyPrefix()} I failed to apply the command. Please try again.');
     }
   }
 
   Future<void> _toggleAudioCapture() async {
-    if (!_isRecordingAudio) {
-      setState(() => _isRecordingAudio = true);
+    if (!_isVoiceSupportedPlatform) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Voice recognition is only available on Android for now.'),
+        ),
+      );
       return;
     }
 
-    setState(() => _isRecordingAudio = false);
-
-    // Minimal audio placeholder transcript until ASR is wired.
-    if (_commandController.text.trim().isEmpty) {
-      _commandController.text = 'turn on AC and set temperature 23';
+    if (!_isRecordingAudio) {
+      await _startVoiceRecognition();
+      return;
     }
 
-    await _executeAssistantCommand(_commandController.text);
+    await _finishVoiceRecognition();
+  }
+
+  Future<void> _startVoiceRecognition() async {
+    if (!_isVoiceSupportedPlatform) return;
+    _voiceCommandExecuted = false;
+    try {
+      await _voiceEventSub?.cancel();
+      _voiceEventSub = VoiceRecognitionPlatform.instance.listenResult().listen((event) {
+        final eventName = event.event;
+
+        if (eventName == 'onPartialResultsEvent') {
+          final partial = (event.data ?? '').toString().trim();
+          if (partial.isNotEmpty) {
+            _commandController.text = partial;
+          }
+          _armVoiceSilenceTimer();
+          return;
+        }
+
+        if (eventName == 'onResultsEvent') {
+          final finalText = (event.data ?? '').toString().trim();
+          if (finalText.isNotEmpty) {
+            _commandController.text = finalText;
+          }
+          _finishVoiceRecognition();
+          return;
+        }
+
+        if (eventName == 'onRmsChangedEvent') {
+          final rms = double.tryParse((event.data ?? '0').toString()) ?? 0;
+          if (rms > 1.5) {
+            _armVoiceSilenceTimer();
+          }
+          return;
+        }
+
+        if (eventName == 'onErrorEvent') {
+          _finishVoiceRecognition();
+        }
+      });
+
+      await _voiceRecognition.setLanguages('en-US');
+      await _voiceRecognition.startVoice();
+      if (!mounted) return;
+      setState(() => _isRecordingAudio = true);
+      _armVoiceSilenceTimer();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isRecordingAudio = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Voice recognition is not available right now.')),
+      );
+    }
+  }
+
+  void _armVoiceSilenceTimer() {
+    _voiceSilenceTimer?.cancel();
+    _voiceSilenceTimer = Timer(const Duration(seconds: 2), () {
+      if (!_isRecordingAudio) return;
+      _finishVoiceRecognition();
+    });
+  }
+
+  Future<void> _finishVoiceRecognition() async {
+    _voiceSilenceTimer?.cancel();
+
+    if (_isRecordingAudio && mounted) {
+      setState(() => _isRecordingAudio = false);
+    }
+
+    try {
+      await _voiceRecognition.stopVoice();
+    } catch (_) {}
+
+    final text = _commandController.text.trim();
+    if (_voiceCommandExecuted || text.isEmpty) return;
+    _voiceCommandExecuted = true;
+    await _executeAssistantCommand(text);
   }
 
   Future<void> _initAssistant() async {
@@ -381,6 +845,7 @@ class _AssistantState extends State<Assistant> {
       _startAutomationLoop();
       _startAssistantDataRotation();
       _startAnnotationRotation();
+      _startRoundHourWeatherLoop();
 
       if (mounted) {
         setState(() => _loading = false);
@@ -401,9 +866,29 @@ class _AssistantState extends State<Assistant> {
       await _resolveLocationFromDeviceOrNetwork();
     }
 
-    if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
+    if (_shouldAutoRefreshNow()) {
+      final now = DateTime.now();
+      _lastRoundRefreshKey = '${now.year}-${now.month}-${now.day}-${now.hour}';
       await _fetchOutsideTemperature();
     }
+  }
+
+  bool _shouldAutoRefreshNow() {
+    if (!_useWeatherData) return false;
+    if (_locationQuery.trim().isEmpty) return false;
+    return DateTime.now().minute == 0;
+  }
+
+  void _startRoundHourWeatherLoop() {
+    _roundHourWeatherTimer?.cancel();
+    _roundHourWeatherTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      if (!_shouldAutoRefreshNow()) return;
+      final now = DateTime.now();
+      final key = '${now.year}-${now.month}-${now.day}-${now.hour}';
+      if (_lastRoundRefreshKey == key) return;
+      _lastRoundRefreshKey = key;
+      await _fetchOutsideTemperature();
+    });
   }
 
   void _startAutomationLoop() {
@@ -565,29 +1050,6 @@ class _AssistantState extends State<Assistant> {
     if (next.isEmpty) return;
     setState(() => _locationQuery = next);
     await _persistState();
-    await _fetchOutsideTemperature();
-  }
-
-  void _startAssistantDataRotation() {
-    _assistantDataTimer?.cancel();
-    _assistantDataTimer = Timer.periodic(const Duration(seconds: 8), (_) {
-      if (!mounted) return;
-      final total = _assistantDataTiles().length;
-      if (total <= 1) return;
-      setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
-    });
-  }
-
-  void _nextAssistantDataTile() {
-    final total = _assistantDataTiles().length;
-    if (total <= 1) return;
-    setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
-  }
-
-  void _prevAssistantDataTile() {
-    final total = _assistantDataTiles().length;
-    if (total <= 1) return;
-    setState(() => _assistantDataIndex = (_assistantDataIndex - 1 + total) % total);
   }
 
   void _nextAnnotationTile() {
@@ -607,6 +1069,26 @@ class _AssistantState extends State<Assistant> {
     _annotationTimer = Timer.periodic(const Duration(seconds: 8), (_) {
       if (!mounted) return;
       _nextAnnotationTile();
+    });
+  }
+
+  void _nextAssistantDataTile() {
+    final total = _assistantDataTiles().length;
+    if (total <= 1) return;
+    setState(() => _assistantDataIndex = (_assistantDataIndex + 1) % total);
+  }
+
+  void _prevAssistantDataTile() {
+    final total = _assistantDataTiles().length;
+    if (total <= 1) return;
+    setState(() => _assistantDataIndex = (_assistantDataIndex - 1 + total) % total);
+  }
+
+  void _startAssistantDataRotation() {
+    _assistantDataTimer?.cancel();
+    _assistantDataTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+      if (!mounted) return;
+      _nextAssistantDataTile();
     });
   }
 
@@ -871,45 +1353,86 @@ class _AssistantState extends State<Assistant> {
     return [
       CheckboxListTile(
         contentPadding: EdgeInsets.zero,
-        value: _useLocationData && _useWeatherData && _useUsageHistory,
+        value: _useLocationData,
         activeColor: EaColor.fore,
         onChanged: (v) async {
           if (v == null) return;
-          setState(() {
-            _useLocationData = v;
-            _useWeatherData = v;
-            _useUsageHistory = v;
-          });
+          setState(() => _useLocationData = v);
           if (v) {
             await _resolveLocationFromDeviceOrNetwork();
-            if (_locationQuery.trim().isNotEmpty && _useWeatherData) {
-              await _fetchOutsideTemperature();
-            }
           }
           await _persistState();
         },
-        title: Text('Allow AI to consume insights data', style: EaText.secondary),
+        title: Text('Allow AI to consume location', style: EaText.secondary),
         subtitle: Text(
-          'Includes location, weather and usage history for better annotations.',
+          'Use device GPS when available, otherwise network-based location.',
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
       ),
       CheckboxListTile(
         contentPadding: EdgeInsets.zero,
-        value: _allowDeviceControl && _allowAutoRoutines,
+        value: _useWeatherData,
         activeColor: EaColor.fore,
         onChanged: (v) async {
           if (v == null) return;
-          setState(() {
-            _allowDeviceControl = v;
-            _allowAutoRoutines = v;
-          });
+          setState(() => _useWeatherData = v);
           await _persistState();
+          if (_shouldAutoRefreshNow()) {
+            await _fetchOutsideTemperature();
+          }
         },
-        title: Text('Allow AI to run automations', style: EaText.secondary),
+        title: Text('Allow AI to consume weather data', style: EaText.secondary),
         subtitle: Text(
-          'Includes device control and automatic routines.',
+          'Weather informs climate and arrival suggestions.',
+          style: EaText.secondaryTranslucent,
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _useUsageHistory,
+        activeColor: EaColor.fore,
+        onChanged: (v) {
+          if (v == null) return;
+          setState(() => _useUsageHistory = v);
+          _persistState();
+        },
+        title: Text('Allow AI to consume usage history', style: EaText.secondary),
+        subtitle: Text(
+          'Lets Assistant learn open/arrival patterns over time.',
+          style: EaText.secondaryTranslucent,
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _allowDeviceControl,
+        activeColor: EaColor.fore,
+        onChanged: (v) {
+          if (v == null) return;
+          setState(() => _allowDeviceControl = v);
+          _persistState();
+        },
+        title: Text('Allow AI to control devices', style: EaText.secondary),
+        subtitle: Text(
+          'Enables command execution and suggestion apply buttons.',
+          style: EaText.secondaryTranslucent,
+        ),
+        controlAffinity: ListTileControlAffinity.leading,
+      ),
+      CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: _allowAutoRoutines,
+        activeColor: EaColor.fore,
+        onChanged: (v) {
+          if (v == null) return;
+          setState(() => _allowAutoRoutines = v);
+          _persistState();
+        },
+        title: Text('Allow AI to run automatic routines', style: EaText.secondary),
+        subtitle: Text(
+          'Allows periodic auto-arrival automation near learned time.',
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1054,6 +1577,240 @@ class _AssistantState extends State<Assistant> {
     );
   }
 
+  Future<void> _runQuickPrompt(String prompt) async {
+    _commandController.text = prompt;
+    await _submitCurrentCommand();
+  }
+
+  Future<void> _submitCurrentCommand() async {
+    final cmd = _commandController.text.trim();
+    if (cmd.isEmpty) return;
+    _commandController.clear();
+    await _executeAssistantCommand(cmd);
+  }
+
+  Widget _buildChatPanel() {
+    final quickPrompts = <String>[
+      'Turn on AC and set temperature 23',
+      'Set brightness 65 and color blue',
+      'Turn off all lights',
+      'Set curtains position 40',
+      'Turn on living room lamp',
+    ];
+    final query = _typedCommand.trim().toLowerCase();
+    final filteredPrompts = query.isEmpty
+        ? const <String>[]
+        : quickPrompts.where((p) => p.toLowerCase().contains(query)).take(4).toList();
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOut,
+      height: 392,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: EaColor.back.withValues(alpha: .95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: EaColor.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 22,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 44,
+              height: 5,
+              decoration: BoxDecoration(
+                color: EaColor.fore.withValues(alpha: .45),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text('Chat', style: EaText.primary.copyWith(fontSize: 17)),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: _assistantThinking
+                    ? RotationTransition(
+                        turns: _thinkingController,
+                        child: const Icon(Icons.autorenew, size: 15, color: EaColor.fore),
+                      )
+                    : AnimatedContainer(
+                        duration: const Duration(milliseconds: 220),
+                        width: _isRecordingAudio ? 9 : 7,
+                        height: _isRecordingAudio ? 9 : 7,
+                        decoration: BoxDecoration(
+                          color: _isRecordingAudio ? Colors.redAccent : EaColor.fore,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _assistantThinking
+                    ? 'Thinking...'
+                    : (_isRecordingAudio ? 'Listening...' : 'Ready'),
+                style: EaText.secondaryTranslucent,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: filteredPrompts.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: filteredPrompts
+                            .map(
+                              (p) => Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: ActionChip(
+                                  label: Text(p, style: EaText.secondaryTranslucent),
+                                  onPressed: () => _runQuickPrompt(p),
+                                  side: const BorderSide(color: EaColor.border),
+                                  backgroundColor: EaColor.secondaryBack,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+          ),
+          TextField(
+            controller: _commandController,
+            minLines: 1,
+            maxLines: 2,
+            cursorColor: EaColor.fore,
+            onSubmitted: (_) => _submitCurrentCommand(),
+            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+            decoration: InputDecoration(
+              hintText: _isRecordingAudio
+                  ? 'Listening... speak now'
+                  : 'Ask anything about your home…',
+              hintStyle: EaText.secondaryTranslucent,
+              filled: true,
+              fillColor: EaColor.secondaryBack,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: EaColor.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: EaColor.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: EaColor.fore),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _submitCurrentCommand,
+                  icon: const Icon(Icons.send_rounded),
+                  label: const Text('Send'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: EaColor.fore,
+                    foregroundColor: Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: _toggleAudioCapture,
+                icon: Icon(_isRecordingAudio ? Icons.stop_circle : Icons.mic),
+                label: Text(_isRecordingAudio ? 'Stop' : 'Rec'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: EaColor.fore,
+                  side: const BorderSide(color: EaColor.fore),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+              decoration: BoxDecoration(
+                color: EaColor.secondaryBack,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: EaColor.border),
+              ),
+              child: ListView.builder(
+                controller: _chatScrollController,
+                itemCount: _chatMessages.length,
+                itemBuilder: (_, i) {
+                  final m = _chatMessages[i];
+                  final isUser = m.role == _ChatRole.user;
+                  final isTypingTail = !isUser &&
+                      i == _chatMessages.length - 1 &&
+                      (_chatTypingTimer?.isActive ?? false);
+
+                  return Align(
+                    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      constraints: const BoxConstraints(maxWidth: 290),
+                      decoration: BoxDecoration(
+                        color: isUser
+                            ? EaColor.fore.withValues(alpha: .88)
+                            : EaColor.back.withValues(alpha: .85),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(12),
+                          topRight: const Radius.circular(12),
+                          bottomLeft: Radius.circular(isUser ? 12 : 4),
+                          bottomRight: Radius.circular(isUser ? 4 : 12),
+                        ),
+                      ),
+                      child: RichText(
+                        text: TextSpan(
+                          style: EaText.secondary.copyWith(
+                            color: isUser ? Colors.black : EaColor.textSecondary,
+                            fontSize: 12,
+                          ),
+                          children: [
+                            TextSpan(text: m.text),
+                            if (isTypingTail)
+                              TextSpan(
+                                text: ' ▌',
+                                style: EaText.secondary.copyWith(
+                                  color: EaColor.fore,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -1101,11 +1858,13 @@ class _AssistantState extends State<Assistant> {
     final currentAnnotation = annotations[_annotationIndex % annotations.length];
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 300),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             Text('Assistant Data', style: EaText.primary.copyWith(fontSize: 18)),
             const SizedBox(height: 10),
             Container(
@@ -1117,44 +1876,60 @@ class _AssistantState extends State<Assistant> {
               ),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      Text('Outside temperature', style: EaText.secondary),
-                      const Spacer(),
-                      if (_weatherLoading)
-                        const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: EaColor.fore),
-                        )
-                      else
-                        Text('${_outsideTemp.toStringAsFixed(0)}°C', style: EaText.accent),
-                    ],
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Outside temperature', style: EaText.secondary),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      TextButton.icon(
-                        onPressed: _useLocationData ? _promptForLocation : null,
-                        icon: const Icon(Icons.place_outlined, size: 18),
-                        label: Text(
-                          _locationQuery.trim().isEmpty
-                              ? 'Set location'
-                              : _locationQuery,
+                      Flexible(
+                        fit: FlexFit.tight,
+                        child: TextButton.icon(
+                          onPressed: _useLocationData ? _promptForLocation : null,
+                          icon: const Icon(Icons.place_outlined, size: 18),
+                          label: Text(
+                            _locationQuery.trim().isEmpty ? 'Set location' : _locationQuery,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
-                      TextButton.icon(
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(_weatherIconForTemp(), color: EaColor.fore, size: 20),
+                            const SizedBox(width: 6),
+                            if (_weatherLoading)
+                              const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: EaColor.fore,
+                                ),
+                              )
+                            else
+                              Text(
+                                '${_outsideTemp.toStringAsFixed(0)}°C',
+                                style: EaText.primary.copyWith(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
                         onPressed: (_useWeatherData && _locationQuery.trim().isNotEmpty)
                             ? _fetchOutsideTemperature
                             : null,
-                        icon: const Icon(Icons.refresh, size: 18),
-                        label: const Text('Refresh'),
+                        icon: const Icon(Icons.refresh, size: 20),
+                        color: EaColor.fore,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 8),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _nextAssistantDataTile,
@@ -1209,182 +1984,88 @@ class _AssistantState extends State<Assistant> {
               ],
             ),
             const SizedBox(height: 4),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _nextAnnotationTile,
-              onHorizontalDragEnd: (details) {
-                final vx = details.primaryVelocity ?? 0;
-                if (vx < 0) {
-                  _nextAnnotationTile();
-                } else if (vx > 0) {
-                  _prevAnnotationTile();
-                }
-              },
-              child: _card(
-                icon: currentAnnotation.icon,
-                title: currentAnnotation.title,
-                description: currentAnnotation.description,
-                trailing: currentAnnotation.onApply == null
-                    ? null
-                    : TextButton(
-                        onPressed: currentAnnotation.onApply,
-                        child: Text(
-                          currentAnnotation.actionLabel ?? 'Apply',
-                          style: EaText.accent,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(annotations.length, (i) {
-                final active = i == (_annotationIndex % annotations.length);
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 220),
-                  width: active ? 18 : 6,
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 14),
-            Text('Command center', style: EaText.primary.copyWith(fontSize: 18)),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: EaColor.back,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: EaColor.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      ChoiceChip(
-                        label: const Text('Text'),
-                        selected: !_useAudioInput,
-                        onSelected: (_) => setState(() => _useAudioInput = false),
-                        selectedColor: EaColor.fore.withValues(alpha: .22),
-                        side: const BorderSide(color: EaColor.border),
-                        labelStyle: EaText.secondary,
-                      ),
-                      const SizedBox(width: 8),
-                      ChoiceChip(
-                        label: const Text('Audio'),
-                        selected: _useAudioInput,
-                        onSelected: (_) => setState(() => _useAudioInput = true),
-                        selectedColor: EaColor.fore.withValues(alpha: .22),
-                        side: const BorderSide(color: EaColor.border),
-                        labelStyle: EaText.secondary,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  TextField(
-                    controller: _commandController,
-                    minLines: 1,
-                    maxLines: 3,
-                    cursorColor: EaColor.fore,
-                    style: EaText.secondary.copyWith(color: EaColor.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: _useAudioInput
-                          ? 'Audio transcript will appear here (minimal mode).'
-                          : 'Ex.: turn on living room AC and set temperature 23',
-                      hintStyle: EaText.secondaryTranslucent,
-                      filled: true,
-                      fillColor: EaColor.secondaryBack,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: EaColor.border),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: EaColor.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: EaColor.fore),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _executeAssistantCommand(_commandController.text),
-                          icon: const Icon(Icons.send_rounded),
-                          label: const Text('Run command'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: EaColor.fore,
-                            foregroundColor: Colors.black,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _useAudioInput ? _toggleAudioCapture : null,
-                          icon: Icon(_isRecordingAudio ? Icons.stop_circle : Icons.mic),
-                          label: Text(_isRecordingAudio ? 'Stop' : 'Record'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: EaColor.fore,
-                            side: const BorderSide(color: EaColor.fore),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: EaColor.secondaryBack,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: EaColor.border),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.smart_toy_outlined, size: 16, color: EaColor.fore),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _assistantReply,
-                            style: EaText.secondary.copyWith(
-                              color: EaColor.textSecondary,
-                              fontSize: 12,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _nextAnnotationTile,
+                  onHorizontalDragEnd: (details) {
+                    final vx = details.primaryVelocity ?? 0;
+                    if (vx < 0) {
+                      _nextAnnotationTile();
+                    } else if (vx > 0) {
+                      _prevAnnotationTile();
+                    }
+                  },
+                  child: SizedBox(
+                    height: 122,
+                    child: _card(
+                      icon: currentAnnotation.icon,
+                      title: currentAnnotation.title,
+                      description: currentAnnotation.description,
+                      trailing: currentAnnotation.onApply == null
+                          ? null
+                          : TextButton(
+                              onPressed: currentAnnotation.onApply,
+                              child: Text(
+                                currentAnnotation.actionLabel ?? 'Apply',
+                                style: EaText.accent,
+                              ),
                             ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                  if (_commandLog.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text('Recent automation', style: EaText.secondary),
-                    const SizedBox(height: 6),
-                    ..._commandLog.map(
-                      (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text('• $e', style: EaText.secondaryTranslucent),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(annotations.length, (i) {
+                    final active = i == (_annotationIndex % annotations.length);
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      width: active ? 18 : 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        color: active ? EaColor.fore : EaColor.fore.withValues(alpha: .22),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                  child: Container(
+                    height: 170,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          EaColor.back.withValues(alpha: 0.0),
+                          EaColor.back.withValues(alpha: 0.72),
+                          EaColor.back.withValues(alpha: 0.96),
+                        ],
                       ),
                     ),
-                  ],
-                ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 10,
+            child: _buildChatPanel(),
+          ),
+        ],
       ),
     );
   }
@@ -1404,4 +2085,13 @@ class _AnnotationModel {
     this.onApply,
     this.actionLabel,
   });
+}
+
+enum _ChatRole { user, assistant }
+
+class _ChatMessage {
+  final _ChatRole role;
+  final String text;
+
+  const _ChatMessage({required this.role, required this.text});
 }
