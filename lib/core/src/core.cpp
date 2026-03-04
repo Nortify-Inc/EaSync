@@ -92,6 +92,7 @@ struct CoreContext {
     bool aiAsyncReady = false;
     uint64_t aiAsyncToken = 0;
     std::string aiAsyncResponse;
+    std::string lastReferencedDeviceUuid;
 };
 
 
@@ -1726,6 +1727,7 @@ CoreResult core_ai_process_chat(CoreContext* core,
                     prediction.intent == "farewell" ||
                     prediction.intent == "gratitude" ||
                     prediction.intent == "smalltalk" ||
+                    prediction.intent == "outOfDomain" ||
                     prediction.intent == "ambiguous" ||
                     prediction.needsClarification ||
                     prediction.intentConfidence < 0.45f)) {
@@ -1895,6 +1897,56 @@ static bool firstSignedInteger(const std::string& text, int& outValue)
 
     outValue = negative ? -value : value;
     return true;
+}
+
+static bool parseModeValue(const std::string& text, int& outValue)
+{
+    int numeric = 0;
+    if (firstSignedInteger(text, numeric) && numeric >= 0) {
+        outValue = numeric;
+        return true;
+    }
+
+    const std::string q = lowerCopy(text);
+    if (q.find("auto") != std::string::npos || q.find("automatic") != std::string::npos) {
+        outValue = 0;
+        return true;
+    }
+    if (q.find("eco") != std::string::npos || q.find("economy") != std::string::npos) {
+        outValue = 1;
+        return true;
+    }
+    if (q.find("turbo") != std::string::npos || q.find("boost") != std::string::npos) {
+        outValue = 2;
+        return true;
+    }
+    if (q.find("sleep") != std::string::npos || q.find("night") != std::string::npos) {
+        outValue = 3;
+        return true;
+    }
+    if (q.find("comfort") != std::string::npos || q.find("relax") != std::string::npos) {
+        outValue = 4;
+        return true;
+    }
+    if (q.find("focus") != std::string::npos || q.find("work") != std::string::npos) {
+        outValue = 5;
+        return true;
+    }
+
+    return false;
+}
+
+static std::string modeNameForIndex(int mode)
+{
+    switch (mode) {
+        case 0: return "auto";
+        case 1: return "eco";
+        case 2: return "turbo";
+        case 3: return "sleep";
+        case 4: return "comfort";
+        case 5: return "focus";
+        default: return "mode " + std::to_string(mode);
+    }
 }
 
 static bool tryParseColor(const std::string& q, uint32_t& outColor)
@@ -2090,6 +2142,11 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
         }
     } else if (q.find("brightness") != std::string::npos || q.find("brilho") != std::string::npos) {
         collectByCap(CORE_CAP_BRIGHTNESS);
+    } else if (q.find("mode") != std::string::npos || q.find("modo") != std::string::npos ||
+               q.find("eco") != std::string::npos || q.find("turbo") != std::string::npos ||
+               q.find("sleep") != std::string::npos || q.find("comfort") != std::string::npos ||
+               q.find("auto") != std::string::npos) {
+        collectByCap(CORE_CAP_MODE);
     } else if (q.find("ac") != std::string::npos || q.find("climate") != std::string::npos ||
                q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos ||
                q.find("temperatura") != std::string::npos || q.find("temp") != std::string::npos ||
@@ -2103,6 +2160,20 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
 
     if (targets.empty() && core->devices.size() == 1) {
         targets.push_back(&core->devices.begin()->second);
+    }
+
+    if (targets.empty()) {
+        const bool pronounRef = containsAny(q, {
+            " it ", " it?", " its ", "its ", "this device", "that device",
+            "esse dispositivo", "este dispositivo", "dele", "dela"
+        });
+
+        if (pronounRef && !core->lastReferencedDeviceUuid.empty()) {
+            auto it = core->devices.find(core->lastReferencedDeviceUuid);
+            if (it != core->devices.end()) {
+                targets.push_back(&it->second);
+            }
+        }
     }
 
     return targets;
@@ -2149,6 +2220,11 @@ CoreResult core_ai_execute_command(CoreContext* core,
             "open", "close", "abr", "fech"
         });
 
+        const bool mentionsDeviceHint = containsAny(q, {
+            "lamp", "light", "luz", "ac", "air conditioner", "climate", "fridge", "freezer",
+            "geladeira", "congelador", "curtain", "blind", "cortina", "strip", "led", "lock", "door"
+        });
+
         const bool questionLike = q.find('?') != std::string::npos || containsAny(q, {
             "what", "which", "how", "quanto", "qual", "quais", "como", "status", "estado"
         });
@@ -2178,7 +2254,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
             "how are you", "how is it going", "how's it going", "how you doing", "you good", "tudo bem", "como voce", "como você"
         });
 
-        const bool socialOnly = !explicitAction && !mentionsStateDomain;
+        const bool socialOnly = !explicitAction && !mentionsStateDomain && !mentionsDeviceHint;
         if (socialOnly) {
             if (socialThanks || (modelOk && prediction.intent == "gratitude")) {
                 reply = prediction.generatedResponse.empty()
@@ -2210,6 +2286,13 @@ CoreResult core_ai_execute_command(CoreContext* core,
         if (!reply.empty()) {
             // Social intents should not go through command/action routing.
         } else {
+
+        {
+            auto contextTargets = resolveTargets(core, q);
+            if (!contextTargets.empty()) {
+                core->lastReferencedDeviceUuid = contextTargets.front()->uuid;
+            }
+        }
 
         const bool hasValueHint = hasAnyDigit(q) || containsAny(q, {
             "blue", "azul", "green", "verde", "red", "vermelho", "purple", "roxo",
@@ -2287,6 +2370,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     continue;
                 }
 
+                core->lastReferencedDeviceUuid = targets.front()->uuid;
+
                 for (auto* dev : targets) {
                     CoreDeviceState before = dev->state;
                     bool changed = false;
@@ -2312,7 +2397,9 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     }
 
                     if ((clause.find("temperature") != std::string::npos || clause.find("temperatura") != std::string::npos ||
-                         clause.find("temp") != std::string::npos || clause.find("tempeature") != std::string::npos) &&
+                        clause.find("temp") != std::string::npos || clause.find("tempeature") != std::string::npos ||
+                        clause.find("freezer") != std::string::npos || clause.find("congelador") != std::string::npos ||
+                        clause.find("fridge") != std::string::npos || clause.find("geladeira") != std::string::npos) &&
                         (hasCapability(*dev, CORE_CAP_TEMPERATURE) ||
                          hasCapability(*dev, CORE_CAP_TEMPERATURE_FRIDGE) ||
                          hasCapability(*dev, CORE_CAP_TEMPERATURE_FREEZER))) {
@@ -2339,6 +2426,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
                             }
 
                             if ((wantsFreezer && hasFreezerTemp) ||
+                                (v < 0 && hasFreezerTemp) ||
                                 (!hasRoomTemp && !hasFridgeTemp && hasFreezerTemp)) {
                                 const float t = static_cast<float>(std::clamp(v, -30, 10));
                                 if (dev->driver->setTemperatureFreezer(dev->uuid, t)) {
@@ -2428,7 +2516,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     if ((clause.find("mode") != std::string::npos || clause.find("modo") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_MODE)) {
                         int v = 0;
-                        if (firstSignedInteger(clause, v) && v >= 0) {
+                        if (parseModeValue(clause, v) && v >= 0) {
                             if (dev->driver->setMode(dev->uuid, static_cast<uint32_t>(v))) {
                                 dev->state.mode = static_cast<uint32_t>(v);
                                 changed = true;
@@ -2494,7 +2582,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     } else if (r.kind == ActionKind::SetLock) {
                         reply = std::string("Done. ") + r.deviceName + (r.value > 0 ? " is locked now." : " is unlocked now.");
                     } else if (r.kind == ActionKind::SetMode && r.value >= 0) {
-                        reply = "Done. " + r.deviceName + " mode is now " + std::to_string(r.value) + ".";
+                        reply = "Done. " + r.deviceName + " mode is now " + modeNameForIndex(r.value) + ".";
                     } else if (r.kind == ActionKind::SetColorTemperature && r.value >= 0) {
                         reply = "Done. " + r.deviceName + " color temperature is now " + std::to_string(r.value) + "K.";
                     }
