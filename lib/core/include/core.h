@@ -523,6 +523,16 @@ CoreResult core_ai_process_chat(
 );
 
 /**
+ * @brief Ask the model-backed AI path to process a chat message.
+ */
+CoreResult core_ai_model_process_chat(
+    CoreContext* core,
+    const char* input,
+    char* outResponse,
+    uint32_t outResponseSize
+);
+
+/**
  * @brief Return a summary of backend AI learning state.
  */
 CoreResult core_ai_learning_snapshot(
@@ -546,6 +556,44 @@ CoreResult core_ai_get_annotations(
 CoreResult core_ai_execute_command(
     CoreContext* core,
     const char* input,
+    char* outResponse,
+    uint32_t outResponseSize
+);
+
+/**
+ * @brief Execute assistant command with model-backed routing.
+ */
+CoreResult core_ai_model_execute_command(
+    CoreContext* core,
+    const char* input,
+    char* outResponse,
+    uint32_t outResponseSize
+);
+
+/**
+ * @brief Configure absolute path to the Python chat inference script.
+ */
+CoreResult core_ai_set_chat_model_script(
+    CoreContext* core,
+    const char* scriptPath
+);
+
+/**
+ * @brief Start async model-backed command execution.
+ */
+CoreResult core_ai_model_execute_command_async_start(
+    CoreContext* core,
+    const char* input,
+    uint64_t* outToken
+);
+
+/**
+ * @brief Poll async model-backed command execution result.
+ */
+CoreResult core_ai_model_execute_command_async_poll(
+    CoreContext* core,
+    uint64_t token,
+    bool* outReady,
     char* outResponse,
     uint32_t outResponseSize
 );

@@ -26,6 +26,8 @@
 #include "ble.hpp"
 #include "payload_utility.hpp"
 #include "aiEngine.hpp"
+#include "chatModelRuntime.hpp"
+#include "chatCommandRouter.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -42,8 +44,12 @@
 #include <cmath>
 #include <cctype>
 #include <chrono>
+#include <atomic>
+#include <thread>
 
 extern "C" {
+
+static std::atomic<uint64_t> g_aiAsyncTokenCounter{1};
 
 /**
  * @brief Internal representation of a device.
@@ -79,6 +85,12 @@ struct CoreContext {
     CoreEventCallback callback = nullptr;                                          /**< Event callback */
     void* callbackUserdata = nullptr;                                              /**< User data for callback */
     easync::ai::AiEngine ai;                                                       /**< Native AI backend */
+
+    std::mutex aiAsyncMutex;
+    bool aiAsyncRunning = false;
+    bool aiAsyncReady = false;
+    uint64_t aiAsyncToken = 0;
+    std::string aiAsyncResponse;
 };
 
 
@@ -1704,11 +1716,23 @@ CoreResult core_ai_process_chat(CoreContext* core,
     if (!core || !input || !outResponse || outResponseSize == 0)
         return CORE_INVALID_ARGUMENT;
 
+    const std::string raw = input;
+    easync::ai::ChatModelPrediction prediction;
+    const bool modelOk = easync::ai::runChatModelPrediction(raw, prediction);
+
     std::string response;
-    {
+    if (modelOk && prediction.intent == "greeting") {
+        response = "Hello. I can control devices, list status and execute your commands.";
+    } else if (modelOk && prediction.intent == "farewell") {
+        response = "See you soon. I will keep your devices ready.";
+    } else if (modelOk && prediction.intent == "gratitude") {
+        response = "You are welcome. Happy to help.";
+    } else if (modelOk && prediction.intent == "smalltalk") {
+        response = "I am active and ready. You can ask me to control devices or check status.";
+    } else {
         std::lock_guard<std::mutex> lock(core->mutex);
         const auto snapshots = collectSnapshots(core);
-        response = core->ai.processChat(input, snapshots);
+        response = core->ai.processChat(raw, snapshots);
     }
 
     if (response.size() + 1 > outResponseSize)
@@ -1717,6 +1741,14 @@ CoreResult core_ai_process_chat(CoreContext* core,
     std::strncpy(outResponse, response.c_str(), outResponseSize - 1);
     outResponse[outResponseSize - 1] = '\0';
     return CORE_OK;
+}
+
+CoreResult core_ai_model_process_chat(CoreContext* core,
+                                      const char* input,
+                                      char* outResponse,
+                                      uint32_t outResponseSize)
+{
+    return core_ai_process_chat(core, input, outResponse, outResponseSize);
 }
 
 CoreResult core_ai_learning_snapshot(CoreContext* core,
@@ -1808,6 +1840,58 @@ static int firstInteger(const std::string& text)
         }
     }
     return found ? value : -1;
+}
+
+static bool hasAnyDigit(const std::string& text)
+{
+    for (char c : text) {
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool firstSignedInteger(const std::string& text, int& outValue)
+{
+    bool found = false;
+    bool negative = false;
+    int value = 0;
+
+    for (size_t i = 0; i < text.size(); ++i) {
+        const char c = text[i];
+        if (!found) {
+            if (c == '-' && i + 1 < text.size() &&
+                std::isdigit(static_cast<unsigned char>(text[i + 1]))) {
+                negative = true;
+                found = true;
+                value = 0;
+                continue;
+            }
+            if (std::isdigit(static_cast<unsigned char>(c))) {
+                found = true;
+                value = c - '0';
+                continue;
+            }
+            continue;
+        }
+
+        if (std::isdigit(static_cast<unsigned char>(c))) {
+            value = value * 10 + (c - '0');
+            if (value > 1000) {
+                break;
+            }
+        } else {
+            break;
+        }
+    }
+
+    if (!found) {
+        return false;
+    }
+
+    outValue = negative ? -value : value;
+    return true;
 }
 
 static bool tryParseColor(const std::string& q, uint32_t& outColor)
@@ -2034,7 +2118,13 @@ CoreResult core_ai_execute_command(CoreContext* core,
         std::lock_guard<std::mutex> lock(core->mutex);
         const auto perms = core->ai.permissions();
         const std::string raw = input;
-        const std::string q = lowerCopy(raw);
+        easync::ai::ChatModelPrediction prediction;
+        const bool modelOk = easync::ai::runChatModelPrediction(raw, prediction);
+
+        const std::string effectiveRaw = modelOk
+            ? easync::ai::augmentCommandFromPrediction(raw, prediction)
+            : raw;
+        const std::string q = lowerCopy(effectiveRaw);
 
         const uint64_t nowTs = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -2064,21 +2154,34 @@ CoreResult core_ai_execute_command(CoreContext* core,
             "abre", "abrir", "fecha", "fechar", "lock", "unlock", "trancar", "destrancar"
         });
 
-        const bool hasValueHint = firstInteger(q) >= 0 || containsAny(q, {
+        const bool hasValueHint = hasAnyDigit(q) || containsAny(q, {
             "blue", "azul", "green", "verde", "red", "vermelho", "purple", "roxo",
             "yellow", "amarelo", "orange", "laranja", "white", "branco"
         });
 
-        const bool informationalLike = !explicitAction &&
-                                       (informationalCue || questionLike ||
-                                        (mentionsStateDomain && questionLike));
-        const bool actionLike = explicitAction ||
-                                (mentionsStateDomain && hasValueHint && !informationalLike);
+        bool informationalLike = !explicitAction &&
+                                 (informationalCue || questionLike ||
+                                  (mentionsStateDomain && questionLike));
+        bool actionLike = explicitAction ||
+                          (mentionsStateDomain && hasValueHint && !informationalLike);
 
-        const bool forceChatRouting = containsAny(q, {
+        bool forceChatRouting = containsAny(q, {
             "devices", "dispositivos", "dispositivo", "list", "lista", "listar",
             "status", "estado", "online", "hello", "hi", "oi", "ola", "olá", "help", "ajuda"
         }) && !explicitAction;
+
+        if (modelOk) {
+            if (easync::ai::predictionSuggestsAction(prediction)) {
+                actionLike = true;
+                informationalLike = false;
+                forceChatRouting = false;
+            } else if (!explicitAction && !hasValueHint &&
+                       easync::ai::predictionSuggestsInformational(prediction)) {
+                informationalLike = true;
+                actionLike = false;
+                forceChatRouting = true;
+            }
+        }
 
         if (forceChatRouting || !actionLike || informationalLike) {
             const auto snapshots = collectSnapshots(core);
@@ -2120,6 +2223,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
             std::string clause;
             while (std::getline(ss, clause, ';')) {
                 if (clause.empty()) continue;
+                const size_t actionsBeforeClause = actions.size();
                 auto targets = resolveTargets(core, clause);
                 if (targets.empty()) {
                     unresolved.push_back(clause);
@@ -2155,8 +2259,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
                         (hasCapability(*dev, CORE_CAP_TEMPERATURE) ||
                          hasCapability(*dev, CORE_CAP_TEMPERATURE_FRIDGE) ||
                          hasCapability(*dev, CORE_CAP_TEMPERATURE_FREEZER))) {
-                        const int v = firstInteger(clause);
-                        if (v >= 0) {
+                        int v = 0;
+                        if (firstSignedInteger(clause, v)) {
                             const std::string devName = lowerCopy(dev->name);
                             const bool coldDevice = devName.find("fridge") != std::string::npos ||
                                                     devName.find("freezer") != std::string::npos ||
@@ -2179,7 +2283,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
 
                             if ((wantsFreezer && hasFreezerTemp) ||
                                 (!hasRoomTemp && !hasFridgeTemp && hasFreezerTemp)) {
-                                const float t = static_cast<float>(std::clamp(v, -24, -14));
+                                const float t = static_cast<float>(std::clamp(v, -30, 10));
                                 if (dev->driver->setTemperatureFreezer(dev->uuid, t)) {
                                     dev->state.temperatureFreezer = t;
                                     changed = true;
@@ -2211,8 +2315,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
 
                     if ((clause.find("brightness") != std::string::npos || clause.find("brilho") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_BRIGHTNESS)) {
-                        const int v = firstInteger(clause);
-                        if (v >= 0) {
+                        int v = 0;
+                        if (firstSignedInteger(clause, v)) {
                             const uint32_t b = static_cast<uint32_t>(std::clamp(v, 0, 100));
                             if (dev->driver->setBrightness(dev->uuid, b)) {
                                 dev->state.brightness = b;
@@ -2238,8 +2342,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
                          clause.find("temperatura de cor") != std::string::npos ||
                          clause.find("kelvin") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_COLOR_TEMP)) {
-                        const int v = firstInteger(clause);
-                        if (v >= 0) {
+                        int v = 0;
+                        if (firstSignedInteger(clause, v)) {
                             const int k = std::clamp(v, 1000, 9000);
                             if (dev->driver->setColorTemperature(dev->uuid, static_cast<uint32_t>(k))) {
                                 dev->state.colorTemperature = static_cast<uint32_t>(k);
@@ -2266,8 +2370,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
 
                     if ((clause.find("mode") != std::string::npos || clause.find("modo") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_MODE)) {
-                        const int v = firstInteger(clause);
-                        if (v >= 0) {
+                        int v = 0;
+                        if (firstSignedInteger(clause, v) && v >= 0) {
                             if (dev->driver->setMode(dev->uuid, static_cast<uint32_t>(v))) {
                                 dev->state.mode = static_cast<uint32_t>(v);
                                 changed = true;
@@ -2286,8 +2390,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
                         } else if (clause.find("close") != std::string::npos) {
                             p = 0.f;
                         } else {
-                            const int v = firstInteger(clause);
-                            if (v >= 0) {
+                            int v = 0;
+                            if (firstSignedInteger(clause, v)) {
                                 p = static_cast<float>(std::clamp(v, 0, 100));
                             }
                         }
@@ -2310,6 +2414,10 @@ CoreResult core_ai_execute_command(CoreContext* core,
                         ev.state = dev->state;
                         pendingEvents.push_back({ev, core->callback, core->callbackUserdata});
                     }
+                }
+
+                if (actions.size() == actionsBeforeClause) {
+                    unresolved.push_back(clause);
                 }
             }
 
@@ -2370,6 +2478,108 @@ CoreResult core_ai_execute_command(CoreContext* core,
 
     std::strncpy(outResponse, reply.c_str(), outResponseSize - 1);
     outResponse[outResponseSize - 1] = '\0';
+    return CORE_OK;
+}
+
+CoreResult core_ai_model_execute_command(CoreContext* core,
+                                         const char* input,
+                                         char* outResponse,
+                                         uint32_t outResponseSize)
+{
+    return core_ai_execute_command(core, input, outResponse, outResponseSize);
+}
+
+CoreResult core_ai_set_chat_model_script(CoreContext* core,
+                                         const char* scriptPath)
+{
+    if (!core || !scriptPath || scriptPath[0] == '\0') {
+        return CORE_INVALID_ARGUMENT;
+    }
+
+#if defined(_WIN32)
+    const int rc = _putenv_s("EASYNC_CHAT_INFER_SCRIPT", scriptPath);
+#else
+    const int rc = setenv("EASYNC_CHAT_INFER_SCRIPT", scriptPath, 1);
+#endif
+
+    if (rc != 0) {
+        return CORE_ERROR;
+    }
+
+    return CORE_OK;
+}
+
+CoreResult core_ai_model_execute_command_async_start(CoreContext* core,
+                                                     const char* input,
+                                                     uint64_t* outToken)
+{
+    if (!core || !input || !outToken) {
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    const std::string raw = input;
+    const uint64_t token = g_aiAsyncTokenCounter.fetch_add(1);
+
+    {
+        std::lock_guard<std::mutex> lock(core->aiAsyncMutex);
+        if (core->aiAsyncRunning) {
+            return CORE_ERROR;
+        }
+        core->aiAsyncRunning = true;
+        core->aiAsyncReady = false;
+        core->aiAsyncToken = token;
+        core->aiAsyncResponse.clear();
+    }
+
+    *outToken = token;
+
+    std::thread([core, raw, token]() {
+        char out[4096] = {0};
+        CoreResult rc = core_ai_execute_command(core, raw.c_str(), out, sizeof(out));
+        std::string response = (rc == CORE_OK) ? std::string(out) : std::string("I could not process this request right now.");
+
+        std::lock_guard<std::mutex> lock(core->aiAsyncMutex);
+        if (core->aiAsyncToken == token) {
+            core->aiAsyncResponse = response;
+            core->aiAsyncReady = true;
+            core->aiAsyncRunning = false;
+        }
+    }).detach();
+
+    return CORE_OK;
+}
+
+CoreResult core_ai_model_execute_command_async_poll(CoreContext* core,
+                                                    uint64_t token,
+                                                    bool* outReady,
+                                                    char* outResponse,
+                                                    uint32_t outResponseSize)
+{
+    if (!core || !outReady || !outResponse || outResponseSize == 0 || token == 0) {
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->aiAsyncMutex);
+    if (core->aiAsyncToken != token) {
+        return CORE_NOT_FOUND;
+    }
+
+    *outReady = core->aiAsyncReady;
+    if (!core->aiAsyncReady) {
+        outResponse[0] = '\0';
+        return CORE_OK;
+    }
+
+    if (core->aiAsyncResponse.size() + 1 > outResponseSize) {
+        return CORE_ERROR;
+    }
+
+    std::strncpy(outResponse, core->aiAsyncResponse.c_str(), outResponseSize - 1);
+    outResponse[outResponseSize - 1] = '\0';
+
+    core->aiAsyncReady = false;
+    core->aiAsyncToken = 0;
+    core->aiAsyncResponse.clear();
     return CORE_OK;
 }
 
