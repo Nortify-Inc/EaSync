@@ -21,8 +21,9 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   static const int fakePages = 10000;
-  static const int pageCount = 4;
-  static const int startPage = (fakePages ~/ 2) - ((fakePages ~/ 2) % pageCount);
+  static const int pageCount = 5;
+  static const int startPage =
+      (fakePages ~/ 2) - ((fakePages ~/ 2) % pageCount);
 
   int selectedIndex = 0;
   int currentFakePage = startPage;
@@ -37,11 +38,18 @@ class _HomeState extends State<Home> {
   final List<Widget> pages = [
     const Dashboard(),
     const Profiles(),
-    const Assistant(),
+    const AssistantChat(),
     const Manage(),
+    const Account(),
   ];
 
-  final List<String> tabs = ["Dashboard", "Profiles", "Assistant", "Manage"];
+  final List<String> tabs = [
+    "Dashboard",
+    "Profiles",
+    "Assistant",
+    "Manage",
+    "Account",
+  ];
 
   int getRealIndex(int fakeIndex) => fakeIndex % pages.length;
 
@@ -109,7 +117,24 @@ class _HomeState extends State<Home> {
             height: 56,
             alignment: Alignment.centerLeft,
             child: Row(
-              children: [Spacer(flex: 1), _buildBlurTitle(), Spacer(flex: 100)],
+              children: [
+                const Spacer(flex: 1),
+                _buildBlurTitle(),
+                const Spacer(flex: 100),
+                IconButton(
+                  tooltip: 'Settings',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const Settings()),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.settings_outlined,
+                    color: EaColor.fore,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -151,12 +176,7 @@ class _HomeState extends State<Home> {
                   offset: const Offset(0, 0),
                 ),
               ]
-            : [
-              BoxShadow(
-                color: EaColor.back, 
-                blurRadius: 2
-                )
-              ],
+            : [BoxShadow(color: EaColor.back, blurRadius: 2)],
       ),
     );
   }
@@ -169,7 +189,7 @@ class _HomeState extends State<Home> {
     final double bottomPadding = 36 + 16; // indicador + margem
 
     return Scaffold(
-      backgroundColor: EaColor.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           GestureDetector(

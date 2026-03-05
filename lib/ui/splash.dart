@@ -36,7 +36,7 @@ class _SplashState extends State<Splash> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: EaColor.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       body: Stack(
         children: [
@@ -69,7 +69,11 @@ class _SplashState extends State<Splash> {
       children: [
         Text("Powered by", style: EaText.secondaryTranslucent),
         SizedBox(width: 10),
-        Image(image: const AssetImage("assets/images/logo.png"), width: 32, height: 32),
+        Image(
+          image: const AssetImage("assets/images/logo.png"),
+          width: 32,
+          height: 32,
+        ),
         SizedBox(width: 6),
         Text("Nortify", style: EaText.primary),
       ],
