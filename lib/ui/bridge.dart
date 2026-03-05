@@ -261,6 +261,9 @@ base class CoreAiPermissionsNative extends Struct {
 
   @Bool()
   external bool allowAutoRoutines;
+
+  @Uint32()
+  external int temperament;
 }
 
 typedef _coreCreateC = Pointer<Void> Function();
@@ -884,6 +887,7 @@ class AiPermissions {
   final bool useUsageHistory;
   final bool allowDeviceControl;
   final bool allowAutoRoutines;
+  final int temperament;
 
   const AiPermissions({
     required this.useLocationData,
@@ -891,6 +895,7 @@ class AiPermissions {
     required this.useUsageHistory,
     required this.allowDeviceControl,
     required this.allowAutoRoutines,
+    this.temperament = 0,
   });
 }
 
@@ -2366,6 +2371,7 @@ class Bridge {
     ptr.ref.useUsageHistory = permissions.useUsageHistory;
     ptr.ref.allowDeviceControl = permissions.allowDeviceControl;
     ptr.ref.allowAutoRoutines = permissions.allowAutoRoutines;
+    ptr.ref.temperament = permissions.temperament;
 
     final res = _coreAiSetPermissions!(_ctx!, ptr);
     calloc.free(ptr);
@@ -2384,6 +2390,7 @@ class Bridge {
         useUsageHistory: true,
         allowDeviceControl: true,
         allowAutoRoutines: true,
+        temperament: 0,
       );
     }
 
@@ -2400,6 +2407,7 @@ class Bridge {
       useUsageHistory: ptr.ref.useUsageHistory,
       allowDeviceControl: ptr.ref.allowDeviceControl,
       allowAutoRoutines: ptr.ref.allowAutoRoutines,
+      temperament: ptr.ref.temperament,
     );
     calloc.free(ptr);
     return result;
@@ -2483,57 +2491,13 @@ class Bridge {
   }
 
   static Future<String> aiExecuteCommandAsync(String input) async {
-    _ensureReady();
-
-    final startFn = _coreAiModelExecuteCommandAsyncStart;
-    final pollFn = _coreAiModelExecuteCommandAsyncPoll;
-    if (startFn == null || pollFn == null) {
-      return 'AI async backend unavailable in current native library.';
+    final hasAsyncNative =
+        _coreAiModelExecuteCommandAsyncStart != null &&
+        _coreAiModelExecuteCommandAsyncPoll != null;
+    if (hasAsyncNative) {
+     
     }
-
-    final inPtr = input.toNativeUtf8();
-    final tokenPtr = calloc<Uint64>();
-    final startRes = startFn(_ctx!, inPtr, tokenPtr);
-    calloc.free(inPtr);
-
-    if (startRes != 0) {
-      calloc.free(tokenPtr);
-      if (startRes == CoreResult.CORE_ERROR) {
-        return 'Assistant is still processing your previous command. Please wait a moment.';
-      }
-      _throwLastError(startRes);
-    }
-
-    final token = tokenPtr.value;
-    calloc.free(tokenPtr);
-
-    final readyPtr = calloc<Bool>();
-    final outPtr = calloc<Int8>(4096);
-    final timeoutAt = DateTime.now().millisecondsSinceEpoch + 20000;
-    try {
-      while (true) {
-        final pollRes = pollFn(_ctx!, token, readyPtr, outPtr, 4096);
-        if (pollRes != 0) {
-          _throwLastError(pollRes);
-        }
-
-        if (readyPtr.value) {
-          final response = outPtr.cast<Utf8>().toDartString();
-          return response.trim().isEmpty
-              ? 'I could not process this request right now.'
-              : response;
-        }
-
-        if (DateTime.now().millisecondsSinceEpoch > timeoutAt) {
-          return 'I am still processing this command. Please try again in a moment.';
-        }
-
-        await Future.delayed(const Duration(milliseconds: 24));
-      }
-    } finally {
-      calloc.free(readyPtr);
-      calloc.free(outPtr);
-    }
+    return Future<String>.microtask(() => aiExecuteCommand(input));
   }
 
   static List<String> aiAnnotations() {

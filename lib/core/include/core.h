@@ -172,6 +172,7 @@ typedef struct {
     bool useUsageHistory;
     bool allowDeviceControl;
     bool allowAutoRoutines;
+    uint32_t temperament;
 } CoreAiPermissions;
 
 

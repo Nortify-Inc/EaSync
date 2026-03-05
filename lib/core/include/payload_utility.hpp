@@ -9,6 +9,7 @@
  */
 
 #include <string>
+#include <vector>
 
 namespace core {
 
@@ -45,6 +46,11 @@ public:
                                  const std::string& uuid,
                                  const std::string& capability,
                                  const std::string& valueJson);
+
+    std::vector<std::string> modeOptions(const std::string& brand,
+                                         const std::string& model);
+
+    std::vector<std::string> modeOptionsForDevice(const std::string& uuid);
 
 private:
     PayloadUtility() = default;

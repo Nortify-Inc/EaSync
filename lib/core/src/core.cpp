@@ -1649,6 +1649,7 @@ CoreResult core_ai_set_permissions(CoreContext* core, const CoreAiPermissions* p
     p.useUsageHistory = permissions->useUsageHistory;
     p.allowDeviceControl = permissions->allowDeviceControl;
     p.allowAutoRoutines = permissions->allowAutoRoutines;
+    p.temperament = permissions->temperament;
     core->ai.setPermissions(p);
 
     return CORE_OK;
@@ -1667,6 +1668,7 @@ CoreResult core_ai_get_permissions(CoreContext* core, CoreAiPermissions* outPerm
     outPermissions->useUsageHistory = p.useUsageHistory;
     outPermissions->allowDeviceControl = p.allowDeviceControl;
     outPermissions->allowAutoRoutines = p.allowAutoRoutines;
+    outPermissions->temperament = p.temperament;
 
     return CORE_OK;
 }
@@ -1710,6 +1712,25 @@ CoreResult core_ai_observe_profile_apply(CoreContext* core,
     return CORE_OK;
 }
 
+static std::string temperamentToken(uint32_t value)
+{
+    switch (value) {
+        case 1: return "cheerful";
+        case 2: return "direct";
+        case 3: return "professional";
+        default: return "minimalist";
+    }
+}
+
+static std::string composeModelInput(const std::string& raw,
+                                     const easync::ai::Permissions& permissions)
+{
+    std::ostringstream oss;
+    oss << "[TEMPERAMENT=" << temperamentToken(permissions.temperament) << "] ";
+    oss << raw;
+    return oss.str();
+}
+
 CoreResult core_ai_process_chat(CoreContext* core,
                                 const char* input,
                                 char* outResponse,
@@ -1720,25 +1741,14 @@ CoreResult core_ai_process_chat(CoreContext* core,
 
     const std::string raw = input;
     easync::ai::ChatModelPrediction prediction;
-    const bool modelOk = easync::ai::runChatModelPrediction(raw, prediction);
-
-    std::string response;
-    if (modelOk && (prediction.intent == "greeting" ||
-                    prediction.intent == "farewell" ||
-                    prediction.intent == "gratitude" ||
-                    prediction.intent == "smalltalk" ||
-                    prediction.intent == "outOfDomain" ||
-                    prediction.intent == "ambiguous" ||
-                    prediction.needsClarification ||
-                    prediction.intentConfidence < 0.45f)) {
-        response = prediction.generatedResponse.empty()
-            ? "I interpreted the message, but I still need more context to proceed safely."
-            : prediction.generatedResponse;
-    } else {
+    std::string modelInput = raw;
+    {
         std::lock_guard<std::mutex> lock(core->mutex);
-        const auto snapshots = collectSnapshots(core);
-        response = core->ai.processChat(raw, snapshots);
+        modelInput = composeModelInput(raw, core->ai.permissions());
     }
+
+    const bool modelOk = easync::ai::runChatModelPrediction(modelInput, prediction);
+    std::string response = modelOk ? prediction.generatedResponse : std::string();
 
     if (response.size() + 1 > outResponseSize)
         return CORE_ERROR;
@@ -1899,54 +1909,105 @@ static bool firstSignedInteger(const std::string& text, int& outValue)
     return true;
 }
 
-static bool parseModeValue(const std::string& text, int& outValue)
+static std::string normalizeModeToken(const std::string& text)
 {
-    int numeric = 0;
-    if (firstSignedInteger(text, numeric) && numeric >= 0) {
-        outValue = numeric;
-        return true;
+    std::string s = lowerCopy(text);
+    for (char& c : s) {
+        if (c == '_' || c == '-') {
+            c = ' ';
+        }
     }
 
-    const std::string q = lowerCopy(text);
-    if (q.find("auto") != std::string::npos || q.find("automatic") != std::string::npos) {
-        outValue = 0;
-        return true;
+    std::string out;
+    out.reserve(s.size());
+    bool prevSpace = false;
+    for (char c : s) {
+        const bool isSpace = std::isspace(static_cast<unsigned char>(c)) != 0;
+        if (isSpace) {
+            if (!prevSpace && !out.empty()) {
+                out.push_back(' ');
+            }
+            prevSpace = true;
+        } else {
+            out.push_back(c);
+            prevSpace = false;
+        }
     }
-    if (q.find("eco") != std::string::npos || q.find("economy") != std::string::npos) {
-        outValue = 1;
-        return true;
+    if (!out.empty() && out.back() == ' ') {
+        out.pop_back();
     }
-    if (q.find("turbo") != std::string::npos || q.find("boost") != std::string::npos) {
-        outValue = 2;
-        return true;
+
+    return out;
+}
+
+static bool parseModeValueForDevice(const InternalDevice& dev,
+                                    const std::string& text,
+                                    int& outValue,
+                                    std::string& outModeLabel)
+{
+    const auto options = core::PayloadUtility::instance().modeOptionsForDevice(dev.uuid);
+
+    int numeric = 0;
+    if (firstSignedInteger(text, numeric) && numeric >= 0) {
+        if (options.empty()) {
+            outValue = numeric;
+            outModeLabel = "mode " + std::to_string(numeric);
+            return true;
+        }
+
+        if (numeric < static_cast<int>(options.size())) {
+            outValue = numeric;
+            outModeLabel = options[static_cast<size_t>(numeric)];
+            return true;
+        }
+
+        return false;
     }
-    if (q.find("sleep") != std::string::npos || q.find("night") != std::string::npos) {
-        outValue = 3;
-        return true;
+
+    if (options.empty()) {
+        return false;
     }
-    if (q.find("comfort") != std::string::npos || q.find("relax") != std::string::npos) {
-        outValue = 4;
-        return true;
-    }
-    if (q.find("focus") != std::string::npos || q.find("work") != std::string::npos) {
-        outValue = 5;
-        return true;
+
+    const std::string q = normalizeModeToken(text);
+    const std::string qCompact = [&]() {
+        std::string compact;
+        compact.reserve(q.size());
+        for (char c : q) {
+            if (!std::isspace(static_cast<unsigned char>(c))) {
+                compact.push_back(c);
+            }
+        }
+        return compact;
+    }();
+
+    for (size_t i = 0; i < options.size(); ++i) {
+        const std::string candidate = normalizeModeToken(options[i]);
+        if (candidate.empty()) {
+            continue;
+        }
+
+        if (q.find(candidate) != std::string::npos) {
+            outValue = static_cast<int>(i);
+            outModeLabel = options[i];
+            return true;
+        }
+
+        std::string candidateCompact;
+        candidateCompact.reserve(candidate.size());
+        for (char c : candidate) {
+            if (!std::isspace(static_cast<unsigned char>(c))) {
+                candidateCompact.push_back(c);
+            }
+        }
+
+        if (!candidateCompact.empty() && qCompact.find(candidateCompact) != std::string::npos) {
+            outValue = static_cast<int>(i);
+            outModeLabel = options[i];
+            return true;
+        }
     }
 
     return false;
-}
-
-static std::string modeNameForIndex(int mode)
-{
-    switch (mode) {
-        case 0: return "auto";
-        case 1: return "eco";
-        case 2: return "turbo";
-        case 3: return "sleep";
-        case 4: return "comfort";
-        case 5: return "focus";
-        default: return "mode " + std::to_string(mode);
-    }
 }
 
 static bool tryParseColor(const std::string& q, uint32_t& outColor)
@@ -2147,6 +2208,11 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
                q.find("sleep") != std::string::npos || q.find("comfort") != std::string::npos ||
                q.find("auto") != std::string::npos) {
         collectByCap(CORE_CAP_MODE);
+    } else if (q.find("lock") != std::string::npos || q.find("unlock") != std::string::npos ||
+               q.find("door") != std::string::npos || q.find("fechadura") != std::string::npos ||
+               q.find("tranca") != std::string::npos || q.find("trancar") != std::string::npos ||
+               q.find("destrancar") != std::string::npos || q.find("porta") != std::string::npos) {
+        collectByCap(CORE_CAP_LOCK);
     } else if (q.find("ac") != std::string::npos || q.find("climate") != std::string::npos ||
                q.find("ar") != std::string::npos || q.find("temperature") != std::string::npos ||
                q.find("temperatura") != std::string::npos || q.find("temp") != std::string::npos ||
@@ -2201,7 +2267,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
         const auto perms = core->ai.permissions();
         const std::string raw = input;
         easync::ai::ChatModelPrediction prediction;
-        const bool modelOk = easync::ai::runChatModelPrediction(raw, prediction);
+        const std::string modelInput = composeModelInput(raw, perms);
+        const bool modelOk = easync::ai::runChatModelPrediction(modelInput, prediction);
 
         const std::string effectiveRaw = modelOk
             ? easync::ai::augmentCommandFromPrediction(raw, prediction)
@@ -2257,30 +2324,20 @@ CoreResult core_ai_execute_command(CoreContext* core,
         const bool socialOnly = !explicitAction && !mentionsStateDomain && !mentionsDeviceHint;
         if (socialOnly) {
             if (socialThanks || (modelOk && prediction.intent == "gratitude")) {
-                reply = prediction.generatedResponse.empty()
-                    ? "You are welcome. Happy to help."
-                    : prediction.generatedResponse;
+                reply = prediction.generatedResponse;
             } else if (socialFarewell || (modelOk && prediction.intent == "farewell")) {
-                reply = prediction.generatedResponse.empty()
-                    ? "See you soon. I will keep your devices ready."
-                    : prediction.generatedResponse;
+                reply = prediction.generatedResponse;
             } else if (socialHowAreYou || (modelOk && prediction.intent == "smalltalk")) {
-                reply = prediction.generatedResponse.empty()
-                    ? "I am active and ready. You can ask me to control devices or check status."
-                    : prediction.generatedResponse;
+                reply = prediction.generatedResponse;
             } else if (socialGreeting || (modelOk && prediction.intent == "greeting")) {
-                reply = prediction.generatedResponse.empty()
-                    ? "Hello. I can control devices, list status and execute your commands."
-                    : prediction.generatedResponse;
+                reply = prediction.generatedResponse;
             }
         }
 
         const bool clarificationLike = modelOk &&
             (prediction.needsClarification || prediction.intent == "ambiguous" || prediction.intentConfidence < 0.45f);
         if (reply.empty() && clarificationLike && !explicitAction && !mentionsStateDomain) {
-            reply = prediction.generatedResponse.empty()
-                ? "I could not fully understand this request yet. Please provide more context."
-                : prediction.generatedResponse;
+            reply = prediction.generatedResponse;
         }
 
         if (!reply.empty()) {
@@ -2327,7 +2384,13 @@ CoreResult core_ai_execute_command(CoreContext* core,
             const auto snapshots = collectSnapshots(core);
             reply = core->ai.processChat(raw, snapshots);
         } else if (!perms.allowDeviceControl) {
-            reply = "Device control is disabled in assistant permissions.";
+            if (modelOk) {
+                reply = prediction.generatedResponse;
+            }
+            if (reply.empty()) {
+                const auto snapshots = collectSnapshots(core);
+                reply = core->ai.processChat(raw, snapshots);
+            }
         } else {
             enum class ActionKind {
                 Unknown,
@@ -2346,6 +2409,7 @@ CoreResult core_ai_execute_command(CoreContext* core,
                 ActionKind kind = ActionKind::Unknown;
                 std::string deviceName;
                 int value = -1;
+                std::string detail;
             };
 
             std::vector<std::string> actions;
@@ -2516,12 +2580,14 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     if ((clause.find("mode") != std::string::npos || clause.find("modo") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_MODE)) {
                         int v = 0;
-                        if (parseModeValue(clause, v) && v >= 0) {
+                        std::string modeLabel;
+                        if (parseModeValueForDevice(*dev, clause, v, modeLabel) && v >= 0) {
                             if (dev->driver->setMode(dev->uuid, static_cast<uint32_t>(v))) {
                                 dev->state.mode = static_cast<uint32_t>(v);
                                 changed = true;
-                                actions.push_back("set mode " + std::to_string(v) + " on " + dev->name);
-                                records.push_back({ActionKind::SetMode, dev->name, v});
+                                const std::string prettyMode = modeLabel.empty() ? ("mode " + std::to_string(v)) : modeLabel;
+                                actions.push_back("set mode " + prettyMode + " on " + dev->name);
+                                records.push_back({ActionKind::SetMode, dev->name, v, prettyMode});
                             }
                         }
                     }
@@ -2566,44 +2632,19 @@ CoreResult core_ai_execute_command(CoreContext* core,
                 }
             }
 
-            if (!actions.empty()) {
-                if (records.size() == 1) {
-                    const auto& r = records.front();
-                    if (r.kind == ActionKind::SetTemperature && r.value >= 0) {
-                        reply = "Sure! Now " + r.deviceName + " is running at " + std::to_string(r.value) + "°C.";
-                    } else if (r.kind == ActionKind::PowerOn) {
-                        reply = "Done. " + r.deviceName + " is ON now.";
-                    } else if (r.kind == ActionKind::PowerOff) {
-                        reply = "Done. " + r.deviceName + " is OFF now.";
-                    } else if (r.kind == ActionKind::SetBrightness && r.value >= 0) {
-                        reply = "Sure! " + r.deviceName + " brightness is now " + std::to_string(r.value) + "%.";
-                    } else if (r.kind == ActionKind::SetPosition && r.value >= 0) {
-                        reply = "Sure! " + r.deviceName + " position is now " + std::to_string(r.value) + "%.";
-                    } else if (r.kind == ActionKind::SetLock) {
-                        reply = std::string("Done. ") + r.deviceName + (r.value > 0 ? " is locked now." : " is unlocked now.");
-                    } else if (r.kind == ActionKind::SetMode && r.value >= 0) {
-                        reply = "Done. " + r.deviceName + " mode is now " + modeNameForIndex(r.value) + ".";
-                    } else if (r.kind == ActionKind::SetColorTemperature && r.value >= 0) {
-                        reply = "Done. " + r.deviceName + " color temperature is now " + std::to_string(r.value) + "K.";
-                    }
-                }
+            if (modelOk) {
+                reply = prediction.generatedResponse;
+            }
 
-                if (reply.empty()) {
-                    std::ostringstream oss;
-                    oss << "Done: ";
-                    for (size_t i = 0; i < actions.size(); ++i) {
-                        if (i > 0) oss << ", ";
-                        oss << actions[i];
+            if (reply.empty() && !actions.empty()) {
+                std::ostringstream applied;
+                for (size_t i = 0; i < actions.size(); ++i) {
+                    if (i > 0) {
+                        applied << "; ";
                     }
-                    if (!unresolved.empty()) {
-                        oss << ". Some clauses were not resolved.";
-                    }
-                    reply = oss.str();
+                    applied << actions[i];
                 }
-            } else if (!unresolved.empty()) {
-                reply = "I could not map this request to a known device or capability. Please mention the device name and the exact change (for example: set bedroom curtains to 100%).";
-            } else {
-                reply = "I understood the message but found no actionable change. Please clarify what should be changed and include a value when applicable.";
+                reply = applied.str();
             }
         }
         }
@@ -2615,10 +2656,6 @@ CoreResult core_ai_execute_command(CoreContext* core,
                 item.cb(&item.ev, item.userdata);
             }
         }
-    }
-
-    if (reply.empty()) {
-        reply = "I could not process this command.";
     }
 
     if (reply.size() + 1 > outResponseSize)
@@ -2687,7 +2724,7 @@ CoreResult core_ai_model_execute_command_async_start(CoreContext* core,
         g_suppressCoreCallbacks = true;
         CoreResult rc = core_ai_execute_command(core, raw.c_str(), out, sizeof(out));
         g_suppressCoreCallbacks = previousSuppress;
-        std::string response = (rc == CORE_OK) ? std::string(out) : std::string("I could not process this request right now.");
+        std::string response = (rc == CORE_OK) ? std::string(out) : std::string();
 
         std::lock_guard<std::mutex> lock(core->aiAsyncMutex);
         if (core->aiAsyncToken == token) {

@@ -37,6 +37,7 @@ std::mutex gMutex;
 bool gLoaded = false;
 std::unordered_map<std::string, DeviceProfile> gDeviceProfiles;
 std::unordered_map<std::string, PayloadTemplate> gTemplates;
+std::unordered_map<std::string, std::vector<std::string>> gModeOptions;
 
 std::string toLower(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
@@ -158,6 +159,57 @@ std::string extractFieldObject(const std::string& objectText, const std::string&
     return objectText.substr(braceStart, braceEnd - braceStart + 1);
 }
 
+std::string extractFieldArray(const std::string& objectText, const std::string& fieldName) {
+    std::string key = "\"" + fieldName + "\"";
+    size_t keyPos = objectText.find(key);
+    if (keyPos == std::string::npos)
+        return "";
+
+    size_t colonPos = objectText.find(':', keyPos + key.size());
+    if (colonPos == std::string::npos)
+        return "";
+
+    size_t arrStart = objectText.find('[', colonPos + 1);
+    if (arrStart == std::string::npos)
+        return "";
+
+    size_t arrEnd = findMatching(objectText, arrStart, '[', ']');
+    if (arrEnd == std::string::npos)
+        return "";
+
+    return objectText.substr(arrStart, arrEnd - arrStart + 1);
+}
+
+std::vector<std::string> extractArrayStrings(const std::string& arrayText) {
+    std::vector<std::string> out;
+    if (arrayText.empty())
+        return out;
+
+    const size_t arrStart = arrayText.find('[');
+    const size_t arrEnd = arrayText.rfind(']');
+    if (arrStart == std::string::npos || arrEnd == std::string::npos || arrEnd <= arrStart)
+        return out;
+
+    size_t i = arrStart + 1;
+    while (i < arrEnd) {
+        const size_t quoteStart = arrayText.find('"', i);
+        if (quoteStart == std::string::npos || quoteStart >= arrEnd)
+            break;
+        const size_t quoteEnd = findStringEnd(arrayText, quoteStart);
+        if (quoteEnd == std::string::npos || quoteEnd > arrEnd)
+            break;
+
+        const std::string value = trim(arrayText.substr(quoteStart + 1, quoteEnd - quoteStart - 1));
+        if (!value.empty()) {
+            out.push_back(value);
+        }
+
+        i = quoteEnd + 1;
+    }
+
+    return out;
+}
+
 std::vector<std::string> extractArrayObjects(const std::string& jsonText) {
     std::vector<std::string> result;
 
@@ -223,6 +275,11 @@ std::string makeTemplateKey(const std::string& brand,
     return normalize(brand) + "|" + normalize(model) + "|" + normalize(capability);
 }
 
+std::string makeDeviceKey(const std::string& brand,
+                          const std::string& model) {
+    return normalize(brand) + "|" + normalize(model);
+}
+
 void replaceAll(std::string& value, const std::string& from, const std::string& to) {
     if (from.empty())
         return;
@@ -264,6 +321,7 @@ void loadTemplatesLocked() {
             std::string brand = extractFieldString(obj, "brand");
             std::string model = extractFieldString(obj, "model");
             std::string payloads = extractFieldObject(obj, "payloads");
+            std::string constrains = extractFieldObject(obj, "constrains");
 
             if (model.empty() || payloads.empty())
                 continue;
@@ -298,6 +356,14 @@ void loadTemplatesLocked() {
 
                 gTemplates[makeTemplateKey(brand, model, cap)] = entry;
             }
+
+            if (!constrains.empty()) {
+                const std::string modeArray = extractFieldArray(constrains, "mode");
+                const auto modes = extractArrayStrings(modeArray);
+                if (!modes.empty()) {
+                    gModeOptions[makeDeviceKey(brand, model)] = modes;
+                }
+            }
         }
     }
 
@@ -324,6 +390,26 @@ PayloadTemplate findTemplateEntry(const std::string& brand,
     }
 
     return PayloadTemplate{};
+}
+
+std::vector<std::string> findModeOptionsEntry(const std::string& brand,
+                                              const std::string& model) {
+    auto it = gModeOptions.find(makeDeviceKey(brand, model));
+    if (it != gModeOptions.end()) {
+        return it->second;
+    }
+
+    const std::string modelNorm = normalize(model);
+    const std::string suffix = "|" + modelNorm;
+    for (const auto& pair : gModeOptions) {
+        if (pair.first.size() >= suffix.size() &&
+            pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0)
+        {
+            return pair.second;
+        }
+    }
+
+    return {};
 }
 
 core::PayloadCommand resolveCommand(PayloadTemplate entry,
@@ -420,6 +506,29 @@ PayloadCommand PayloadUtility::createCommand(const std::string& uuid,
     );
 
     return resolveCommand(entry, uuid, valueJson);
+}
+
+std::vector<std::string> PayloadUtility::modeOptions(const std::string& brand,
+                                                     const std::string& model)
+{
+    ensureLoaded();
+
+    std::lock_guard<std::mutex> lock(gMutex);
+    return findModeOptionsEntry(brand, model);
+}
+
+std::vector<std::string> PayloadUtility::modeOptionsForDevice(const std::string& uuid)
+{
+    ensureLoaded();
+
+    std::lock_guard<std::mutex> lock(gMutex);
+
+    auto it = gDeviceProfiles.find(uuid);
+    if (it == gDeviceProfiles.end()) {
+        return {};
+    }
+
+    return findModeOptionsEntry(it->second.brand, it->second.model);
 }
 
 } // namespace core
