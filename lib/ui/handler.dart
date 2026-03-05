@@ -22,9 +22,9 @@ export 'splash.dart';
 export 'home.dart';
 
 export 'dashboard.dart';
-export 'assistant.dart';
+export 'assistant_chat.dart';
 export 'profiles.dart';
 export 'manage.dart';
-
-
-
+export 'account.dart';
+export 'settings.dart';
+export 'widgets/skeleton.dart';
