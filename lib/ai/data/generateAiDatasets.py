@@ -401,7 +401,7 @@ def build_nlu_row(idx: int, text: str, intent: str, entities=None, actions=None,
     }
 
 
-def generate_chat_dataset(target_size: int = 180000):
+def generate_chat_dataset(target_size: int = 320000):
     rows = []
     idx = 1
 
@@ -445,13 +445,13 @@ def generate_chat_dataset(target_size: int = 180000):
         [(t, "farewell", "friendly") for t in FAREWELL_CUSTOM + FAREWELL_VARIANTS]
     )
 
-    for _ in range(8000):
+    for _ in range(24000):
         base_text, intent, style = random.choice(social_seed)
         text = maybe_typo(maybe_style(base_text))
         rows.append(build_nlu_row(idx, text, intent, response_style=style))
         idx += 1
 
-    for _ in range(9000):
+    for _ in range(24000):
         text = maybe_typo(maybe_style(random.choice(OUT_OF_DOMAIN_UTTERANCES)))
         rows.append(build_nlu_row(idx, text, "outOfDomain", response_style="honest"))
         idx += 1

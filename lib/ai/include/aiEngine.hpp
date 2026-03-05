@@ -17,6 +17,7 @@ struct Permissions {
     bool useUsageHistory = true;
     bool allowDeviceControl = true;
     bool allowAutoRoutines = true;
+    uint32_t temperament = 0;
 };
 
 struct DeviceSnapshot {
@@ -28,11 +29,11 @@ struct DeviceSnapshot {
 };
 
 enum class BehaviorEventType {
-    AppOpen,
-    PowerOn,
-    ProfileApply,
-    StateChange,
-    Command
+    appOpen,
+    powerOn,
+    profileApply,
+    stateChange,
+    command,
 };
 
 struct BehaviorEvent {
@@ -66,7 +67,7 @@ public:
 private:
     static std::string normalize(std::string value);
     static int hourFromTimestamp(uint64_t timestampMs);
-    static std::string hhmmFromHour(int hour);
+    static std::string join(const std::vector<std::string>& items, const char* sep);
 
     bool hasCapability(const DeviceSnapshot& device, CoreCapability capability) const;
     const DeviceSnapshot* findByName(const std::string& text,
@@ -84,7 +85,7 @@ private:
     Permissions permissions_{};
 
     std::deque<BehaviorEvent> memory_{};
-    static constexpr size_t kMaxMemory = 100;
+    static constexpr size_t maxMemory = 120;
 
     std::array<int, 24> appOpenByHour_{};
     std::array<int, 24> powerOnByHour_{};

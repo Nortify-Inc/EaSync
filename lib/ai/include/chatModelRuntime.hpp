@@ -6,7 +6,7 @@ namespace easync::ai {
 
 struct ChatModelPrediction {
     std::string intent = "unknown";
-    std::string responseStyle = "helpful";
+    std::string responseStyle = "minimalist";
     std::string predictedCapability = "none";
     std::string predictedOperation = "none";
     std::string generatedResponse;

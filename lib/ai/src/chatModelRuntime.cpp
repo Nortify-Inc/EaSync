@@ -14,9 +14,9 @@ namespace easync::ai {
 
 namespace {
 
-std::mutex g_contextMutex;
-std::deque<std::string> g_recentTurns;
-constexpr size_t kMaxRecentTurns = 4;
+std::mutex contextMutex;
+std::deque<std::string> recentTurns;
+constexpr size_t maxRecentTurns = 6;
 
 std::string trimCopy(std::string value) {
     value.erase(value.begin(), std::find_if(value.begin(), value.end(), [](unsigned char c) {
@@ -52,12 +52,13 @@ std::filesystem::path resolveScriptPath() {
     }
 
     const auto cwd = std::filesystem::current_path();
-    const std::array<std::filesystem::path, 5> candidates = {
+    const std::array<std::filesystem::path, 6> candidates = {
         cwd / "lib/ai/models/chatInferenceCli.py",
         cwd / "../lib/ai/models/chatInferenceCli.py",
         cwd / "../../lib/ai/models/chatInferenceCli.py",
         cwd / "../../../lib/ai/models/chatInferenceCli.py",
         cwd / "../easync/lib/ai/models/chatInferenceCli.py",
+        cwd / "ai/models/chatInferenceCli.py",
     };
 
     for (const auto& c : candidates) {
@@ -105,7 +106,7 @@ void parseLine(const std::string& line, ChatModelPrediction& out) {
     if (key == "INTENT") {
         out.intent = value.empty() ? "unknown" : value;
     } else if (key == "STYLE") {
-        out.responseStyle = value.empty() ? "helpful" : value;
+        out.responseStyle = value.empty() ? "minimalist" : value;
     } else if (key == "CAPABILITY") {
         out.predictedCapability = value.empty() ? "none" : value;
     } else if (key == "OPERATION") {
@@ -149,9 +150,9 @@ bool runChatModelPrediction(const std::string& input, ChatModelPrediction& out) 
 
     std::string contextualInput;
     {
-        std::lock_guard<std::mutex> lock(g_contextMutex);
+        std::lock_guard<std::mutex> lock(contextMutex);
         std::ostringstream oss;
-        for (const auto& turn : g_recentTurns) {
+        for (const auto& turn : recentTurns) {
             oss << turn << " ";
         }
         oss << input;
@@ -187,10 +188,10 @@ bool runChatModelPrediction(const std::string& input, ChatModelPrediction& out) 
     }
 
     {
-        std::lock_guard<std::mutex> lock(g_contextMutex);
-        g_recentTurns.push_back(input);
-        while (g_recentTurns.size() > kMaxRecentTurns) {
-            g_recentTurns.pop_front();
+        std::lock_guard<std::mutex> lock(contextMutex);
+        recentTurns.push_back(input);
+        while (recentTurns.size() > maxRecentTurns) {
+            recentTurns.pop_front();
         }
     }
 

@@ -65,7 +65,7 @@ std::string augmentCommandFromPrediction(const std::string& input,
     } else if (prediction.predictedCapability == "temperature" ||
                prediction.predictedCapability == "temperatureFridge" ||
                prediction.predictedCapability == "temperatureFreezer") {
-        if (prediction.numericValue >= 0 && !containsAny(q, {"temperature", "temperatura", "temp", "fridge", "freezer"})) {
+        if (prediction.numericValue >= 0 && !containsAny(q, {"temperature", "temperatura", "temp", "fridge", "freezer", "geladeira", "congelador"})) {
             out += " temperature";
         }
     } else if (prediction.predictedCapability == "color") {
@@ -79,10 +79,6 @@ std::string augmentCommandFromPrediction(const std::string& input,
     } else if (prediction.predictedCapability == "position") {
         if (!containsAny(q, {"position", "posicao", "open", "close", "abrir", "fechar"}) && prediction.numericValue >= 0) {
             out += " position";
-        }
-    } else if (prediction.predictedCapability == "mode") {
-        if (prediction.numericValue >= 0 && !containsAny(q, {"mode", "modo"})) {
-            out += " mode";
         }
     } else if (prediction.predictedCapability == "lock") {
         if (!containsAny(q, {"lock", "unlock", "trancar", "destrancar", "fechadura", "tranca"})) {
