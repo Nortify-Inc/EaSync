@@ -225,10 +225,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(
-              color: EaColor.fore,
-              
-            ),
+            side: const BorderSide(color: EaColor.fore),
           ),
         ),
       );
@@ -322,19 +319,31 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(d.name, style: EaText.secondary.copyWith(fontSize: 16)),
+                                Text(
+                                  d.name,
+                                  style: EaText.secondary.copyWith(
+                                    fontSize: 16,
+                                  ),
+                                ),
 
                                 Text(
                                   '${d.host}:${d.port}',
-                                  style: EaText.secondary.copyWith(fontSize: 12),
+                                  style: EaText.secondary.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   'Confidence ${(d.confidence * 100).toStringAsFixed(0)}% • ${d.vendor}',
-                                  style: EaText.secondary.copyWith(fontSize: 12),
+                                  style: EaText.secondary.copyWith(
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 const SizedBox(height: 6),
-                                Text(d.hint, style: EaText.secondaryTranslucent),
+                                Text(
+                                  d.hint,
+                                  style: EaText.secondaryTranslucent,
+                                ),
                               ],
                             ),
                           ),
@@ -348,14 +357,17 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                             onPressed: () => _registerDiscovered(d),
                             style: ButtonStyle(
                               side: WidgetStateProperty.fromMap({
-                                WidgetState.any: BorderSide(color: EaColor.fore, width: 1),
-                                
+                                WidgetState.any: BorderSide(
+                                  color: EaColor.fore,
+                                  width: 1,
+                                ),
                               }),
                             ),
                             child: Text(
                               'Add',
-                              style: EaText.secondary.copyWith(color: EaColor.fore),
-                              
+                              style: EaText.secondary.copyWith(
+                                color: EaColor.fore,
+                              ),
                             ),
                           ),
                         ],
@@ -407,7 +419,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
 
       if (mounted) {
         Navigator.pop(context);
-          _showBottomSnack('${d.name} was added.');
+        _showBottomSnack('${d.name} was added.');
       }
 
       _loadDevices();
@@ -700,7 +712,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       Bridge.removeDevice(device.uuid);
       if (mounted) {
         Navigator.pop(context);
-          _showBottomSnack('Device was removed.');
+        _showBottomSnack('Device was removed.');
       }
       _loadDevices();
     } catch (e) {
@@ -717,7 +729,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     );
     if (mounted) {
       if (ok) {
-          _showBottomSnack('Connection established for ${device.name}.');
+        _showBottomSnack('Connection established for ${device.name}.');
       } else {
         _showTopErrorSnack('Unable to establish connection for ${device.name}');
       }
@@ -760,10 +772,8 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: logs.length,
-                        separatorBuilder: (_, _) => const Divider(
-                          color: EaColor.border,
-                          height: 10,
-                        ),
+                        separatorBuilder: (_, _) =>
+                            const Divider(color: EaColor.border, height: 10),
                         itemBuilder: (_, i) {
                           final log = logs[i];
                           return Column(
@@ -875,11 +885,17 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Column(
-        children: [
-          Expanded(child: _body()),
-          _fab(),
-        ],
+      child: EaFadeSlideIn(
+        begin: const Offset(0, 0.015),
+        duration: EaAppSettings.instance.animationsEnabled
+            ? EaMotion.normal
+            : Duration.zero,
+        child: Column(
+          children: [
+            Expanded(child: _body()),
+            _fab(),
+          ],
+        ),
       ),
     );
   }
@@ -914,11 +930,23 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       onPressed: discovering ? null : _discoverDevices,
                       icon: const Icon(Icons.radar),
                       label: discovering
-                          ? Text('Discovering...', style: EaText.secondary)
-                          : Text('Discover', style: EaText.secondary),
+                          ? Text(
+                              'Discovering...',
+                              style: EaText.secondary.copyWith(
+                                color: EaAdaptiveColor.bodyText(context),
+                              ),
+                            )
+                          : Text(
+                              'Discover',
+                              style: EaText.secondary.copyWith(
+                                color: EaAdaptiveColor.bodyText(context),
+                              ),
+                            ),
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(
-                          color: discovering ? Colors.transparent : EaColor.fore,
+                          color: discovering
+                              ? Colors.transparent
+                              : EaColor.fore,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -967,11 +995,18 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           children: [
             const Icon(Icons.add_circle_outline, size: 36, color: EaColor.fore),
             const SizedBox(height: 8),
-            Text("Add your first device", style: EaText.primary),
+            Text(
+              "Add your first device",
+              style: EaText.primary.copyWith(
+                color: EaAdaptiveColor.bodyText(context),
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               "Let EaSync to discover him or add manually.",
-              style: EaText.secondaryTranslucent,
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1005,7 +1040,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           ),
         ),
         SizedBox(height: 8),
-        Expanded( 
+        Expanded(
           child: filteredDevices.isEmpty
               ? const Center(child: Text("No matching devices"))
               : ListView.builder(
@@ -1306,7 +1341,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
     if (isWifi) {
       if (!apConfirmed) {
-        _showError("Please confirm you're connected to the device Access Point.");
+        _showError(
+          "Please confirm you're connected to the device Access Point.",
+        );
         return;
       }
 
@@ -1400,18 +1437,15 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       }
 
       if (Platform.isMacOS) {
-        await Process.run(
-          "open",
-          ["x-apple.systempreferences:com.apple.NetworkSettings"],
-          runInShell: true,
-        );
+        await Process.run("open", [
+          "x-apple.systempreferences:com.apple.NetworkSettings",
+        ], runInShell: true);
         return;
       }
 
       _showError(
         "Automatic network settings opening is not supported on this system.",
       );
-
     } catch (_) {
       _showError("Could not open network settings.");
     }

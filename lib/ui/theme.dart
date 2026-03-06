@@ -203,22 +203,36 @@ class EaAdaptiveColor {
       Theme.of(context).brightness == Brightness.dark;
 
   static Color pageBackground(BuildContext context) =>
-      _dark(context) ? EaColor.background : const Color(0xFFF5F7FC);
+      _dark(context) ? EaColor.background : const Color(0xFFF1F4FB);
 
   static Color surface(BuildContext context) =>
       _dark(context) ? EaColor.secondaryBack : Colors.white;
 
   static Color field(BuildContext context) =>
-      _dark(context) ? EaColor.back : const Color(0xFFF0F3FA);
+      _dark(context) ? EaColor.back : const Color(0xFFE9EEF8);
 
   static Color border(BuildContext context) =>
-      _dark(context) ? EaColor.border : const Color(0xFFDDE3F0);
+      _dark(context) ? EaColor.border : const Color(0xFFC9D4EA);
 
   static Color bodyText(BuildContext context) =>
-      _dark(context) ? EaColor.textPrimary : const Color(0xFF1B2230);
+      _dark(context) ? EaColor.textPrimary : const Color(0xFF1A2134);
 
   static Color secondaryText(BuildContext context) =>
-      _dark(context) ? EaColor.textSecondary : const Color(0xFF56607A);
+      _dark(context) ? EaColor.textSecondary : const Color(0xFF5C667F);
+      static Color scrim(BuildContext context) => _dark(context)
+          ? Colors.black.withOpacity(0.32)
+          : const Color(0xFF2A3458).withOpacity(0.18);
+    }
+
+    class EaDecoration {
+      static LinearGradient roundOrbGradient() {
+        return LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [EaColor.fore.withOpacity(0.24), EaColor.back],
+        );
+      }
+    }
 }
 
 class EaColor {
