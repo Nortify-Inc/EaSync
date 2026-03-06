@@ -7,9 +7,13 @@
  */
 
 import 'handler.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp();
+  } catch (_) {}
   await Bridge.init();
   await EaAppSettings.instance.load();
   Bridge.aiObserveAppOpen();

@@ -59,7 +59,7 @@ class Profiles extends StatefulWidget {
 }
 
 class _ProfilesState extends State<Profiles>
-  with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
+    with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   static const _kPowerOnByHour = 'assistant.power_on_by_hour';
   static const _kDeviceActivityById = 'assistant.device_activity_by_id';
   static const _kTempSetSum = 'assistant.temp_set_sum';
@@ -220,7 +220,9 @@ class _ProfilesState extends State<Profiles>
     try {
       final prefs = await SharedPreferences.getInstance();
       final powerByHour = _decodeStringIntMap(prefs.getString(_kPowerOnByHour));
-      final activityById = _decodeStringIntMap(prefs.getString(_kDeviceActivityById));
+      final activityById = _decodeStringIntMap(
+        prefs.getString(_kDeviceActivityById),
+      );
 
       final tempSum = prefs.getDouble(_kTempSetSum) ?? 0;
       final tempCount = prefs.getInt(_kTempSetCount) ?? 0;
@@ -237,11 +239,15 @@ class _ProfilesState extends State<Profiles>
         _assistantDeviceActivityById
           ..clear()
           ..addAll(activityById);
-        _assistantPreferredTemp = tempCount > 0 ? (tempSum / tempCount).clamp(16, 30) : null;
-        _assistantPreferredBrightness =
-            brightCount > 0 ? (brightSum / brightCount).round().clamp(0, 100) : null;
-        _assistantPreferredPosition =
-            posCount > 0 ? (posSum / posCount).round().clamp(0, 100) : null;
+        _assistantPreferredTemp = tempCount > 0
+            ? (tempSum / tempCount).clamp(16, 30)
+            : null;
+        _assistantPreferredBrightness = brightCount > 0
+            ? (brightSum / brightCount).round().clamp(0, 100)
+            : null;
+        _assistantPreferredPosition = posCount > 0
+            ? (posSum / posCount).round().clamp(0, 100)
+            : null;
       });
     } catch (_) {}
   }
@@ -403,7 +409,9 @@ class _ProfilesState extends State<Profiles>
   Profile? _assistantRecommendedProfile() {
     final actions = <DeviceAction>[];
 
-    final climate = _mostUsedWithCapability(CoreCapability.CORE_CAP_TEMPERATURE);
+    final climate = _mostUsedWithCapability(
+      CoreCapability.CORE_CAP_TEMPERATURE,
+    );
     if (climate != null) {
       actions.add(
         DeviceAction(
@@ -416,7 +424,8 @@ class _ProfilesState extends State<Profiles>
       );
     }
 
-    final light = _mostUsedWithCapability(CoreCapability.CORE_CAP_BRIGHTNESS) ??
+    final light =
+        _mostUsedWithCapability(CoreCapability.CORE_CAP_BRIGHTNESS) ??
         _firstWithCapability(CoreCapability.CORE_CAP_POWER);
     if (light != null) {
       actions.add(
@@ -425,7 +434,8 @@ class _ProfilesState extends State<Profiles>
           power: light.capabilities.contains(CoreCapability.CORE_CAP_POWER)
               ? true
               : null,
-          brightness: light.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
+          brightness:
+              light.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
               ? (_assistantPreferredBrightness ?? 38)
               : null,
         ),
@@ -460,7 +470,13 @@ class _ProfilesState extends State<Profiles>
     }
 
     setState(() {
-      profiles.add(Profile(name: name, actions: recommended.actions, icon: recommended.icon));
+      profiles.add(
+        Profile(
+          name: name,
+          actions: recommended.actions,
+          icon: recommended.icon,
+        ),
+      );
     });
     _showBottomSnack('Profile $name was added.');
   }
@@ -477,10 +493,7 @@ class _ProfilesState extends State<Profiles>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              EaColor.back,
-              EaColor.back.withValues(alpha: .88),
-            ],
+            colors: [EaColor.fore.withValues(alpha: 0.18), EaColor.back],
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: EaColor.border),
@@ -494,7 +507,11 @@ class _ProfilesState extends State<Profiles>
                 color: EaColor.fore.withValues(alpha: .12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.auto_awesome, color: EaColor.fore, size: 18),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: EaColor.fore,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -540,10 +557,15 @@ class _ProfilesState extends State<Profiles>
               style: OutlinedButton.styleFrom(
                 foregroundColor: EaColor.fore,
                 side: const BorderSide(color: EaColor.fore),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
+                ),
                 minimumSize: const Size(86, 34),
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                textStyle: EaText.secondary.copyWith(fontWeight: FontWeight.w600),
+                textStyle: EaText.secondary.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -557,12 +579,18 @@ class _ProfilesState extends State<Profiles>
     super.build(context);
 
     return SafeArea(
-      child: Column(
-        children: [
-          Expanded(child: _body()),
-          _assistantRecommendedCard(),
-          _fab(),
-        ],
+      child: EaFadeSlideIn(
+        begin: const Offset(0, 0.015),
+        duration: EaAppSettings.instance.animationsEnabled
+            ? EaMotion.normal
+            : Duration.zero,
+        child: Column(
+          children: [
+            Expanded(child: _body()),
+            _assistantRecommendedCard(),
+            _fab(),
+          ],
+        ),
       ),
     );
   }
@@ -611,12 +639,7 @@ class _ProfilesState extends State<Profiles>
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    EaColor.fore.withValues(alpha: .25),
-                    EaColor.fore.withValues(alpha: .05),
-                  ],
-                ),
+                gradient: EaDecoration.roundOrbGradient(),
               ),
               child: const Icon(Icons.tune, size: 42, color: EaColor.fore),
             ),
@@ -626,13 +649,16 @@ class _ProfilesState extends State<Profiles>
               style: EaText.primary.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
+                color: EaAdaptiveColor.bodyText(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "Create profiles aligned with your mood.",
               textAlign: TextAlign.center,
-              style: EaText.secondaryTranslucent,
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
             ),
           ],
         ),
@@ -656,7 +682,10 @@ class _ProfilesState extends State<Profiles>
                     final fadeStart = 0.72;
                     final opacity = t < fadeStart
                         ? 1.0
-                        : (1 - ((t - fadeStart) / (1 - fadeStart))).clamp(0.0, 1.0);
+                        : (1 - ((t - fadeStart) / (1 - fadeStart))).clamp(
+                            0.0,
+                            1.0,
+                          );
                     return CustomPaint(
                       painter: _OrbitBorderPainter(
                         progress: t,
@@ -672,7 +701,9 @@ class _ProfilesState extends State<Profiles>
             decoration: BoxDecoration(
               color: EaColor.back,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: highlighted ? Colors.transparent : EaColor.border),
+              border: Border.all(
+                color: highlighted ? Colors.transparent : EaColor.border,
+              ),
             ),
             child: Row(
               children: [
@@ -1123,7 +1154,6 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           if (hasMode) _modeRow(a, d),
 
           if (hasPosition) _positionRow(a),
-
         ],
       ),
     );

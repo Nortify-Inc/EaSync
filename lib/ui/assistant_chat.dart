@@ -1,18 +1,17 @@
 /*!
  * @file assistant_chat.dart
- * @brief EaSync assistant page focused on chat and outside temperature only.
+ * @brief EaSync assistant page focused only on chat.
  * @param No external parameters.
- * @return Stateful chat interface with quick weather context.
+ * @return Stateful chat interface with persisted chat history and sidebar.
  * @author Erick Radmann
  */
 
-import 'dart:math';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
-import 'widgets/skeleton.dart';
 
 class AssistantChat extends StatefulWidget {
   const AssistantChat({super.key});
@@ -23,31 +22,42 @@ class AssistantChat extends StatefulWidget {
 
 class _AssistantChatState extends State<AssistantChat>
     with TickerProviderStateMixin {
-  static const String _kOutsideTempCache = 'assistant.outside_temp_cache';
-  static const String _kOutsideTempUpdatedAt =
-      'assistant.outside_temp_updated_at';
+  static const String _kChats = 'assistant.chats.v1';
+  static const String _kActiveChatId = 'assistant.active_chat_id';
+  static const String _kAuthName = 'account.auth.name';
+  static const String _kAuthPhoto = 'account.auth.photo';
 
   final EaAppSettings _settings = EaAppSettings.instance;
   final TextEditingController _commandController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  final List<_ChatMessage> _messages = [];
-
-  bool _loadingOutside = true;
+  final List<_ChatSession> _sessions = [];
+  String? _activeChatId;
   bool _sending = false;
   bool _typingIndicator = false;
-  double _outsideTemp = 25.0;
-  DateTime? _outsideUpdatedAt;
+  bool _sidebarOpen = false;
+  String _profileName = 'amigo';
+  String? _profilePhoto;
+
+  static const double _chatDrawerWidth = 252;
 
   late final AnimationController _thinkingPulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
   )..repeat(reverse: true);
 
+  _ChatSession? get _activeSession {
+    if (_activeChatId == null) return null;
+    for (final s in _sessions) {
+      if (s.id == _activeChatId) return s;
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
-    _bootstrap();
+    _loadState();
   }
 
   @override
@@ -58,70 +68,65 @@ class _AssistantChatState extends State<AssistantChat>
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
-    await _loadOutsideTemperature();
-    _appendAssistant(
-      'Olá! Sou o EaSync Assistant. Posso te ajudar com comandos para seus dispositivos.',
-    );
-  }
-
-  Future<void> _loadOutsideTemperature() async {
-    setState(() => _loadingOutside = true);
-
+  Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
-    final cached = prefs.getDouble(_kOutsideTempCache);
-    final cachedAtMs = prefs.getInt(_kOutsideTempUpdatedAt);
 
-    if (cached != null) {
-      _outsideTemp = cached;
-      if (cachedAtMs != null) {
-        _outsideUpdatedAt = DateTime.fromMillisecondsSinceEpoch(cachedAtMs);
-      }
+    final raw = prefs.getString(_kChats);
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          _sessions
+            ..clear()
+            ..addAll(
+              decoded.whereType<Map>().map(
+                (e) => _ChatSession.fromJson(e.cast<String, dynamic>()),
+              ),
+            );
+        }
+      } catch (_) {}
     }
 
-    await Future.delayed(
-      Duration(milliseconds: _settings.animationsEnabled ? 450 : 0),
-    );
+    _activeChatId = prefs.getString(_kActiveChatId);
+    _profileName = prefs.getString(_kAuthName)?.trim().isNotEmpty == true
+        ? prefs.getString(_kAuthName)!.trim()
+        : 'amigo';
+    _profilePhoto = prefs.getString(_kAuthPhoto);
 
-    final inferred = _inferOutsideTemperature();
+    if (_activeSession == null && _sessions.isNotEmpty) {
+      _activeChatId = _sessions.first.id;
+    }
 
-    _outsideTemp = inferred;
-    _outsideUpdatedAt = DateTime.now();
-
-    await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
-    await prefs.setInt(
-      _kOutsideTempUpdatedAt,
-      _outsideUpdatedAt!.millisecondsSinceEpoch,
-    );
-
-    if (!mounted) return;
-    setState(() => _loadingOutside = false);
+    if (mounted) setState(() {});
   }
 
-  double _inferOutsideTemperature() {
-    try {
-      final devices = Bridge.listDevices();
-      final temps = <double>[];
+  Future<void> _persistState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _kChats,
+      jsonEncode(_sessions.map((e) => e.toJson()).toList()),
+    );
+    if (_activeChatId != null) {
+      await prefs.setString(_kActiveChatId, _activeChatId!);
+    }
+  }
 
-      for (final d in devices) {
-        if (!d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE)) {
-          continue;
-        }
-        final state = Bridge.getState(d.uuid);
-        if (state.temperature >= -15 && state.temperature <= 60) {
-          temps.add(state.temperature);
-        }
-      }
+  Future<void> _createNewChat({String? fromText}) async {
+    final title = (fromText ?? '').trim().isEmpty
+        ? 'New chat'
+        : fromText!.trim().split('\n').first;
 
-      if (temps.isNotEmpty) {
-        final avg = temps.reduce((a, b) => a + b) / temps.length;
-        return (avg - 1.8).clamp(-10, 48);
-      }
-    } catch (_) {}
+    final session = _ChatSession(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      title: title.length > 48 ? '${title.substring(0, 48)}…' : title,
+      createdAtMs: DateTime.now().millisecondsSinceEpoch,
+      messages: [],
+    );
 
-    final base = _outsideTemp;
-    final drift = (Random().nextDouble() * 1.6) - 0.8;
-    return (base + drift).clamp(-10, 48);
+    _sessions.insert(0, session);
+    _activeChatId = session.id;
+    await _persistState();
+    if (mounted) setState(() {});
   }
 
   Future<void> _send() async {
@@ -132,46 +137,39 @@ class _AssistantChatState extends State<AssistantChat>
       HapticFeedback.lightImpact();
     }
 
-    _commandController.clear();
-    _appendUser(raw);
+    if (_activeSession == null) {
+      await _createNewChat(fromText: raw);
+    }
 
+    final session = _activeSession;
+    if (session == null) return;
+
+    _commandController.clear();
     setState(() {
+      session.messages.add(_ChatMessage(role: _Role.user, text: raw));
       _sending = true;
       _typingIndicator = true;
     });
+    await _persistState();
+    _scrollToBottom();
 
     String reply;
     try {
       reply = (await Bridge.aiExecuteCommandAsync(raw)).trim();
       if (reply.isEmpty) {
-        reply =
-            'Recebi sua mensagem, mas não consegui gerar uma resposta agora.';
+        reply = 'No response generated. Try rephrasing your request.';
       }
     } catch (_) {
-      reply =
-          'Falha ao processar no backend de IA. Tente novamente em instantes.';
+      reply = 'Could not process this command right now. Please try again.';
     }
 
     if (!mounted) return;
     setState(() {
       _typingIndicator = false;
       _sending = false;
+      session.messages.add(_ChatMessage(role: _Role.assistant, text: reply));
     });
-
-    _appendAssistant(reply);
-  }
-
-  void _appendUser(String text) {
-    setState(() {
-      _messages.add(_ChatMessage(role: _Role.user, text: text));
-    });
-    _scrollToBottom();
-  }
-
-  void _appendAssistant(String text) {
-    setState(() {
-      _messages.add(_ChatMessage(role: _Role.assistant, text: text));
-    });
+    await _persistState();
     _scrollToBottom();
   }
 
@@ -186,13 +184,6 @@ class _AssistantChatState extends State<AssistantChat>
     });
   }
 
-  IconData _outsideIcon() {
-    if (_outsideTemp >= 31) return Icons.wb_sunny_rounded;
-    if (_outsideTemp >= 25) return Icons.wb_sunny_outlined;
-    if (_outsideTemp >= 18) return Icons.cloud_outlined;
-    return Icons.ac_unit_rounded;
-  }
-
   @override
   Widget build(BuildContext context) {
     final compact = _settings.compactMode;
@@ -205,12 +196,30 @@ class _AssistantChatState extends State<AssistantChat>
           compact ? 14 : 20,
           12,
         ),
-        child: Column(
-          children: [
-            _outsideTemperatureTile(),
-            const SizedBox(height: 10),
-            Expanded(
+        child: EaFadeSlideIn(
+          begin: const Offset(0, 0.015),
+          duration: _settings.animationsEnabled
+              ? EaMotion.normal
+            child: EaFadeSlideIn(
+              begin: const Offset(0, 0.015),
+              duration: _settings.animationsEnabled
+                  ? EaMotion.normal
+                  : Duration.zero,
               child: Container(
+                decoration: BoxDecoration(
+                  color: EaAdaptiveColor.surface(context),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: EaAdaptiveColor.border(context)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Stack(
+                    clipBehavior: Clip.hardEdge,
+                    children: [
+                      Column(
+          child: Stack(
+            children: [
+              Container(
                 decoration: BoxDecoration(
                   color: EaAdaptiveColor.surface(context),
                   borderRadius: BorderRadius.circular(18),
@@ -219,20 +228,18 @@ class _AssistantChatState extends State<AssistantChat>
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                      padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            color: EaColor.fore,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Assistant chat',
-                            style: EaText.secondary.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: EaAdaptiveColor.bodyText(context),
+                          IconButton(
+                            tooltip: _sidebarOpen ? 'Hide chats' : 'Show chats',
+                            onPressed: () =>
+                                setState(() => _sidebarOpen = !_sidebarOpen),
+                            icon: Icon(
+                              _sidebarOpen
+                                  ? Icons.menu_open_rounded
+                                  : Icons.menu_rounded,
+                              color: EaColor.fore,
                             ),
                           ),
                           const Spacer(),
@@ -248,121 +255,295 @@ class _AssistantChatState extends State<AssistantChat>
                                   color: EaAdaptiveColor.secondaryText(context),
                                 ),
                               ),
-                            ),
-                        ],
+                  if (_sidebarOpen)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(() => _sidebarOpen = false),
+                        child: Container(color: EaAdaptiveColor.scrim(context)),
                       ),
                     ),
-                    Divider(height: 1, color: EaAdaptiveColor.border(context)),
-                    Expanded(child: _buildMessageList()),
-                    _composer(),
-                  ],
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    top: 0,
+                    bottom: 0,
+                    left: _sidebarOpen ? 0 : -(_chatDrawerWidth + 8),
+                    child: IgnorePointer(
+                      ignoring: !_sidebarOpen,
+                      child: Container(
+                        width: _chatDrawerWidth,
+                        decoration: BoxDecoration(
+                          color: EaAdaptiveColor.surface(context),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: EaAdaptiveColor.border(context)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.16),
+                              blurRadius: 20,
+                              offset: const Offset(4, 0),
+                            ),
+                          ],
+                        ),
+                        child: _buildSidebar(),
+                      ),
+                    ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.16),
+                          blurRadius: 20,
+                          offset: const Offset(4, 0),
+                        ),
+                      ],
+                    ),
+                    child: _buildSidebar(),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _outsideTemperatureTile() {
-    return Container(
-      decoration: BoxDecoration(
-        color: EaAdaptiveColor.surface(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: EaAdaptiveColor.border(context)),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: EaColor.fore.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(_outsideIcon(), color: EaColor.fore, size: 18),
-        ),
-        title: Text(
-          'Outside temperature',
-          style: EaText.secondary.copyWith(
-            color: EaAdaptiveColor.bodyText(context),
-          ),
-        ),
-        subtitle: _loadingOutside && _settings.skeletonEnabled
-            ? const Padding(
-                padding: EdgeInsets.only(top: 4),
-                child: EaSkeleton(width: 140, height: 12),
-              )
-            : Text(
-                '${_outsideTemp.toStringAsFixed(1)} °C'
-                '${_outsideUpdatedAt == null ? '' : ' • updated ${_outsideUpdatedAt!.hour.toString().padLeft(2, '0')}:${_outsideUpdatedAt!.minute.toString().padLeft(2, '0')}'}',
-                style: EaText.small.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
+  Widget _buildSidebar() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: _railActionButton(
+                  icon: Icons.add_comment_rounded,
+                  label: 'New chat',
+                  onTap: () => _createNewChat(),
                 ),
               ),
-        trailing: IconButton(
-          onPressed: _loadingOutside ? null : _loadOutsideTemperature,
-          icon: const Icon(Icons.refresh_rounded, color: EaColor.fore),
+              const SizedBox(width: 8),
+              _railIconButton(
+                tooltip: 'Close chats',
+                icon: Icons.close_rounded,
+                onTap: () => setState(() => _sidebarOpen = false),
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: EaAdaptiveColor.border(context)),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            itemCount: _sessions.length,
+            itemBuilder: (context, i) {
+              final s = _sessions[i];
+              final active = s.id == _activeChatId;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                child: ListTile(
+                  dense: true,
+                  tileColor: active
+                      ? EaColor.fore.withValues(alpha: 0.15)
+                      : Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  title: Text(
+                    s.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.small.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
+                  onTap: () async {
+                    setState(() => _activeChatId = s.id);
+                    await _persistState();
+                    if (mounted) {
+                      setState(() => _sidebarOpen = false);
+                    }
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _railIconButton({
+    required String tooltip,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: EaAdaptiveColor.field(context),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            width: 38,
+            height: 38,
+            child: Icon(icon, size: 20, color: EaColor.fore),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _railActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: EaAdaptiveColor.field(context),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: EaColor.fore),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EaText.small.copyWith(
+                    color: EaAdaptiveColor.bodyText(context),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMessageList() {
-    if (_messages.isEmpty && _settings.skeletonEnabled) {
-      return ListView(
-        padding: const EdgeInsets.all(12),
-        children: const [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: EaSkeleton(width: 190, height: 34),
+    final messages = _activeSession?.messages ?? const <_ChatMessage>[];
+    if (messages.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          child: Text(
+            '✨ No que posso ajudar você hoje, $_profileName?',
+            textAlign: TextAlign.center,
+            style: EaText.secondary.copyWith(
+              fontSize: 18,
+              color: EaAdaptiveColor.secondaryText(context),
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: EaSkeleton(width: 140, height: 34),
-          ),
-        ],
+        ),
       );
     }
 
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(12),
-      itemCount: _messages.length,
+      itemCount: messages.length,
       itemBuilder: (context, i) {
-        final msg = _messages[i];
+        final msg = messages[i];
         final user = msg.role == _Role.user;
 
-        return EaFadeSlideIn(
-          duration: _settings.animationsEnabled
-              ? EaMotion.normal
-              : Duration.zero,
-          begin: user ? const Offset(0.03, 0) : const Offset(-0.03, 0),
-          child: Align(
-            alignment: user ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              constraints: const BoxConstraints(maxWidth: 480),
-              decoration: BoxDecoration(
-                color: user
-                    ? EaColor.fore.withValues(alpha: 0.18)
-                    : EaAdaptiveColor.field(context),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: EaAdaptiveColor.border(context)),
-              ),
-              child: Text(
-                msg.text,
-                style: EaText.small.copyWith(
-                  color: EaAdaptiveColor.bodyText(context),
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final bubbleMax = max(120.0, constraints.maxWidth - 82);
+
+            return EaFadeSlideIn(
+              duration: _settings.animationsEnabled
+                  ? EaMotion.normal
+                  : Duration.zero,
+              begin: user ? const Offset(0.03, 0) : const Offset(-0.03, 0),
+              child: Align(
+                alignment: user ? Alignment.centerRight : Alignment.centerLeft,
+                child: Row(
+                  mainAxisAlignment: user
+                      ? MainAxisAlignment.end
+                      : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (!user) _assistantAvatar(),
+                    if (!user) const SizedBox(width: 8),
+                    Flexible(
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        constraints: BoxConstraints(maxWidth: bubbleMax),
+                        decoration: BoxDecoration(
+                          color: user
+                              ? EaColor.fore.withValues(alpha: 0.18)
+                              : EaAdaptiveColor.field(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: EaAdaptiveColor.border(context),
+                          ),
+                        ),
+                        child: Text(
+                          msg.text,
+                          style: EaText.small.copyWith(
+                            color: EaAdaptiveColor.bodyText(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (user) const SizedBox(width: 8),
+                    if (user) _userAvatar(),
+                  ],
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _assistantAvatar() {
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        color: EaColor.fore.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: const Icon(
+        Icons.auto_awesome_rounded,
+        size: 15,
+        color: EaColor.fore,
+      ),
+    );
+  }
+
+  Widget _userAvatar() {
+    final photo = (_profilePhoto ?? '').trim();
+    final provider = photo.isEmpty
+        ? null
+        : (photo.startsWith('http')
+              ? NetworkImage(photo)
+              : FileImage(File(photo)) as ImageProvider);
+
+    return CircleAvatar(
+      radius: 13,
+      backgroundColor: EaColor.fore.withValues(alpha: 0.16),
+      backgroundImage: provider,
+      child: provider == null
+          ? const Icon(Icons.person, size: 13, color: EaColor.fore)
+          : null,
     );
   }
 
@@ -445,4 +626,50 @@ class _ChatMessage {
   final String text;
 
   const _ChatMessage({required this.role, required this.text});
+
+  Map<String, dynamic> toJson() => {'role': role.name, 'text': text};
+
+  factory _ChatMessage.fromJson(Map<String, dynamic> json) {
+    final roleRaw = (json['role'] ?? 'assistant').toString();
+    return _ChatMessage(
+      role: roleRaw == 'user' ? _Role.user : _Role.assistant,
+      text: (json['text'] ?? '').toString(),
+    );
+  }
+}
+
+class _ChatSession {
+  final String id;
+  final String title;
+  final int createdAtMs;
+  final List<_ChatMessage> messages;
+
+  _ChatSession({
+    required this.id,
+    required this.title,
+    required this.createdAtMs,
+    required this.messages,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'createdAtMs': createdAtMs,
+    'messages': messages.map((e) => e.toJson()).toList(),
+  };
+
+  factory _ChatSession.fromJson(Map<String, dynamic> json) {
+    final list = json['messages'];
+    return _ChatSession(
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? 'Chat').toString(),
+      createdAtMs: int.tryParse((json['createdAtMs'] ?? '0').toString()) ?? 0,
+      messages: list is List
+          ? list
+                .whereType<Map>()
+                .map((e) => _ChatMessage.fromJson(e.cast<String, dynamic>()))
+                .toList()
+          : [],
+    );
+  }
 }

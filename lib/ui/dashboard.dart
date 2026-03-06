@@ -159,40 +159,40 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
       required bool selected,
       required VoidCallback onTap,
     }) {
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected ? EaColor.fore : EaColor.back,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: selected ? EaColor.fore : EaColor.border,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  icon,
-                  size: 15,
-                  color: selected ? EaColor.back : EaColor.fore,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: EaText.small.copyWith(
-                    color: selected ? EaColor.back : EaColor.textPrimary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? EaColor.fore : EaColor.back,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? EaColor.fore : EaColor.border,
+              width: 1,
             ),
           ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: selected ? EaColor.back : EaColor.fore,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: EaText.small.copyWith(
+                  color: selected ? EaColor.back : EaColor.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -229,9 +229,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           ],
         ),
       ),
+
       // quick summary
       // keeps filter context visible while scrolling
-      
     );
   }
 
@@ -264,7 +264,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         : visibleDevices.length;
 
     return KeyedSubtree(
-      key: ValueKey('dashboard-ready-${_selectedCapabilityFilter ?? -1}-${devices.length}'),
+      key: ValueKey(
+        'dashboard-ready-${_selectedCapabilityFilter ?? -1}-${devices.length}',
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -292,7 +294,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       _selectedCapabilityFilter == null
                           ? 'Showing all devices (${devices.length})'
                           : 'Filtered: $selectedCount of ${devices.length}',
-                      key: ValueKey('filter-summary-${_selectedCapabilityFilter ?? -1}-$selectedCount'),
+                      key: ValueKey(
+                        'filter-summary-${_selectedCapabilityFilter ?? -1}-$selectedCount',
+                      ),
                       style: EaText.secondaryTranslucent.copyWith(fontSize: 12),
                     ),
                   ),
@@ -339,7 +343,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           ),
                         )
                       : Wrap(
-                          key: ValueKey('filter-wrap-${_selectedCapabilityFilter ?? -1}-${visibleDevices.length}'),
+                          key: ValueKey(
+                            'filter-wrap-${_selectedCapabilityFilter ?? -1}-${visibleDevices.length}',
+                          ),
                           spacing: 18,
                           runSpacing: 18,
                           children: visibleDevices.asMap().entries.map((entry) {
@@ -347,17 +353,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             final d = entry.value;
                             final extra = (i * 35).clamp(0, 280);
                             return TweenAnimationBuilder<double>(
-                              key: ValueKey('device-card-${d.uuid}-${_selectedCapabilityFilter ?? -1}'),
+                              key: ValueKey(
+                                'device-card-${d.uuid}-${_selectedCapabilityFilter ?? -1}',
+                              ),
                               tween: Tween(begin: 0, end: 1),
                               duration: Duration(milliseconds: 220 + extra),
                               curve: Curves.easeOutCubic,
                               builder: (_, t, child) {
                                 return Transform.scale(
                                   scale: 0.90 + (0.10 * t),
-                                  child: Opacity(
-                                    opacity: t,
-                                    child: child,
-                                  ),
+                                  child: Opacity(opacity: t, child: child),
                                 );
                               },
                               child: _deviceCard(d),
@@ -423,7 +428,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         }
       }
     } catch (_) {
-      
     } finally {
       _templateAssetsLoaded = true;
     }
@@ -577,12 +581,19 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
             const SizedBox(height: 16),
-            Text("Core error", style: EaText.primary),
+            Text(
+              "Core error",
+              style: EaText.primary.copyWith(
+                color: EaAdaptiveColor.bodyText(context),
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               error ?? "",
               textAlign: TextAlign.center,
-              style: EaText.secondary,
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
             ),
           ],
         ),
@@ -602,12 +613,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    EaColor.fore.withValues(alpha: .25),
-                    EaColor.fore.withValues(alpha: .08),
-                  ],
-                ),
+                gradient: EaDecoration.roundOrbGradient(),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -624,13 +630,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               style: EaText.primary.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
+                color: EaAdaptiveColor.bodyText(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "Your devices will appear here.",
               textAlign: TextAlign.center,
-              style: EaText.secondaryTranslucent,
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
             ),
           ],
         ),
@@ -1293,11 +1302,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 alpha: .25,
                               ),
                               onChanged: (v) {
-                                final mapped =
-                                    (fridgeMin + fridgeMax - v).clamp(
-                                      fridgeMin,
-                                      fridgeMax,
-                                    );
+                                final mapped = (fridgeMin + fridgeMax - v)
+                                    .clamp(fridgeMin, fridgeMax);
                                 final snapped = _snapStep(
                                   mapped,
                                   fridgeStep,
@@ -1354,18 +1360,16 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 freezerMax,
                                 freezerStep,
                               ),
-                              value: (freezerMin + freezerMax - temperatureFreezer)
-                                  .clamp(freezerMin, freezerMax),
+                              value:
+                                  (freezerMin + freezerMax - temperatureFreezer)
+                                      .clamp(freezerMin, freezerMax),
                               activeColor: EaColor.fore,
                               inactiveColor: EaColor.fore.withValues(
                                 alpha: .25,
                               ),
                               onChanged: (v) {
-                                final mapped =
-                                    (freezerMin + freezerMax - v).clamp(
-                                      freezerMin,
-                                      freezerMax,
-                                    );
+                                final mapped = (freezerMin + freezerMax - v)
+                                    .clamp(freezerMin, freezerMax);
                                 final snapped = _snapStep(
                                   mapped,
                                   freezerStep,
@@ -1778,15 +1782,17 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 duration: const Duration(milliseconds: 360),
                 curve: Curves.easeOutSine,
                 builder: (_, animatedColor, child) {
-                  
                   final effectiveRingColor = animatedColor ?? ringColorTarget;
                   final isTargetZero = target <= 0.000001;
                   final fadeBase = begin <= 0.000001 ? 1.0 : begin;
-                  final normalizedToBegin = (animated / fadeBase).clamp(0.0, 1.0);
+                  final normalizedToBegin = (animated / fadeBase).clamp(
+                    0.0,
+                    1.0,
+                  );
                   final dotOpacity = isTargetZero
-                    ? (normalizedToBegin > 0.35
-                      ? 1.0
-                      : (normalizedToBegin / 0.35).clamp(0.0, 1.0))
+                      ? (normalizedToBegin > 0.35
+                            ? 1.0
+                            : (normalizedToBegin / 0.35).clamp(0.0, 1.0))
                       : (animated > 0.001 ? 1.0 : 0.0);
 
                   return RepaintBoundary(
@@ -1865,24 +1871,33 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                       decoration: BoxDecoration(
                                         color: EaColor.back,
                                         border: Border.all(
-                                          color: EaColor.fore.withValues(alpha: .75),
+                                          color: EaColor.fore.withValues(
+                                            alpha: .75,
+                                          ),
                                         ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
                                         children: [
-                                          if (cap == CoreCapability.CORE_CAP_COLOR) ...[
+                                          if (cap ==
+                                              CoreCapability
+                                                  .CORE_CAP_COLOR) ...[
                                             Container(
                                               width: 30,
                                               height: 30,
                                               decoration: BoxDecoration(
                                                 color: Color(
                                                   0xFF000000 |
-                                                      Bridge.getState(device.uuid).color,
+                                                      Bridge.getState(
+                                                        device.uuid,
+                                                      ).color,
                                                 ),
                                                 shape: BoxShape.circle,
-                                                border: Border.all(color: EaColor.border),
+                                                border: Border.all(
+                                                  color: EaColor.border,
+                                                ),
                                               ),
                                             ),
                                           ] else ...[

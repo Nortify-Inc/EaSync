@@ -67,7 +67,12 @@ class _SplashState extends State<Splash> {
   Widget _brand() {
     return Row(
       children: [
-        Text("Powered by", style: EaText.secondaryTranslucent),
+        Text(
+          "Powered by",
+          style: EaText.secondary.copyWith(
+            color: EaAdaptiveColor.secondaryText(context),
+          ),
+        ),
         SizedBox(width: 10),
         Image(
           image: const AssetImage("assets/images/logo.png"),
@@ -75,7 +80,12 @@ class _SplashState extends State<Splash> {
           height: 32,
         ),
         SizedBox(width: 6),
-        Text("Nortify", style: EaText.primary),
+        Text(
+          "Nortify",
+          style: EaText.primary.copyWith(
+            color: EaAdaptiveColor.bodyText(context),
+          ),
+        ),
       ],
     );
   }
@@ -110,6 +120,7 @@ class _SplashState extends State<Splash> {
                 Text(
                   "EaSync",
                   style: EaText.primary.copyWith(
+                    color: EaAdaptiveColor.bodyText(context),
                     fontSize: 48,
                     height: 1.05,
                     fontWeight: FontWeight.w700,
@@ -121,7 +132,7 @@ class _SplashState extends State<Splash> {
                 Text(
                   "Everything connected.\nOne interface.",
                   style: EaText.secondary.copyWith(
-                    color: EaColor.textSecondary,
+                    color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 16,
                   ),
                 ),

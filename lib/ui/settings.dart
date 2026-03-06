@@ -70,7 +70,12 @@ class _SettingsState extends State<Settings> {
                   icon: const Icon(Icons.arrow_back_ios_new_rounded),
                 ),
                 const SizedBox(width: 4),
-                Text('Settings', style: EaText.primary),
+                Text(
+                  'Settings',
+                  style: EaText.primary.copyWith(
+                    color: EaAdaptiveColor.bodyText(context),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -102,7 +107,7 @@ class _SettingsState extends State<Settings> {
                 _switchTile(
                   icon: Icons.view_quilt_outlined,
                   title: 'Skeleton loading',
-                  subtitle: 'Placeholder state while data is loading',
+                  subtitle: 'Animated loading visuals while data is fetched',
                   value: _settings.skeletonEnabled,
                   onChanged: (v) async {
                     setState(() => _settings.skeletonEnabled = v);

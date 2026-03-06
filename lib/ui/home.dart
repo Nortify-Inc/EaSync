@@ -8,6 +8,7 @@
 
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'handler.dart';
 
 List<DeviceInfo> devices = [];
@@ -20,6 +21,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  static const String _kAuthPhoto = 'account.auth.photo';
+
   static const int fakePages = 10000;
   static const int pageCount = 5;
   static const int startPage =
@@ -32,6 +35,7 @@ class _HomeState extends State<Home> {
   final PageController pageController = PageController(initialPage: startPage);
 
   late double screenWidth;
+  String? _profilePhoto;
   double dragStartX = 0;
   double dragDelta = 0;
 
@@ -56,9 +60,16 @@ class _HomeState extends State<Home> {
   @override
   void initState() {
     super.initState();
+    _loadProfilePhoto();
     _eventSub = Bridge.onEvents.listen((_) {
       setState(() {});
     });
+  }
+
+  Future<void> _loadProfilePhoto() async {
+    final prefs = await SharedPreferences.getInstance();
+    _profilePhoto = prefs.getString(_kAuthPhoto);
+    if (mounted) setState(() {});
   }
 
   @override
@@ -99,7 +110,12 @@ class _HomeState extends State<Home> {
       builder: (context, blur, _) {
         return ImageFiltered(
           imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Text(title, style: EaText.primary),
+          child: Text(
+            title,
+            style: EaText.primary.copyWith(
+              color: EaAdaptiveColor.bodyText(context),
+            ),
+          ),
         );
       },
     );
@@ -121,19 +137,50 @@ class _HomeState extends State<Home> {
                 const Spacer(flex: 1),
                 _buildBlurTitle(),
                 const Spacer(flex: 100),
-                IconButton(
-                  tooltip: 'Settings',
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const Settings()),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.settings_outlined,
-                    color: EaColor.fore,
+                if (selectedIndex == 4)
+                  IconButton(
+                    tooltip: 'Settings',
+                    icon: const Icon(
+                      Icons.settings_outlined,
+                      color: EaColor.fore,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const Settings()),
+                      );
+                    },
+                  )
+                else
+                  GestureDetector(
+                    onTap: () {
+                      final anchor =
+                          currentFakePage - (currentFakePage % pageCount);
+                      final target = anchor + 4;
+                      pageController.animateToPage(
+                        target,
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeOutCubic,
+                      );
+                    },
+                    child: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: EaColor.fore.withValues(alpha: 0.18),
+                      backgroundImage: (_profilePhoto ?? '').trim().isEmpty
+                          ? null
+                          : (_profilePhoto!.startsWith('http')
+                                ? NetworkImage(_profilePhoto!)
+                                : FileImage(File(_profilePhoto!))
+                                      as ImageProvider),
+                      child: (_profilePhoto ?? '').trim().isEmpty
+                          ? const Icon(
+                              Icons.person_outline_rounded,
+                              size: 14,
+                              color: EaColor.fore,
+                            )
+                          : null,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -166,7 +213,9 @@ class _HomeState extends State<Home> {
       width: active ? 20 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: active ? EaColor.secondaryFore : EaColor.back,
+        color: active
+            ? EaColor.secondaryFore
+            : EaAdaptiveColor.secondaryText(context),
         borderRadius: BorderRadius.circular(20),
         boxShadow: active
             ? [
@@ -176,7 +225,12 @@ class _HomeState extends State<Home> {
                   offset: const Offset(0, 0),
                 ),
               ]
-            : [BoxShadow(color: EaColor.back, blurRadius: 2)],
+            : [
+                BoxShadow(
+                  color: EaAdaptiveColor.border(context),
+                  blurRadius: 2,
+                ),
+              ],
       ),
     );
   }
@@ -213,6 +267,7 @@ class _HomeState extends State<Home> {
                 onPageChanged: (fake) {
                   currentFakePage = fake;
                   final real = getRealIndex(fake);
+                  _loadProfilePhoto();
                   if (real != selectedIndex)
                     setState(() => selectedIndex = real);
                 },
