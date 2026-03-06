@@ -2494,9 +2494,7 @@ class Bridge {
     final hasAsyncNative =
         _coreAiModelExecuteCommandAsyncStart != null &&
         _coreAiModelExecuteCommandAsyncPoll != null;
-    if (hasAsyncNative) {
-     
-    }
+    if (hasAsyncNative) {}
     return Future<String>.microtask(() => aiExecuteCommand(input));
   }
 

@@ -522,7 +522,7 @@ class _ProfilesState extends State<Profiles>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Assistant recommendation',
+                    EaI18n.t(context, 'Assistant recommendation'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: EaText.secondary.copyWith(
@@ -558,7 +558,7 @@ class _ProfilesState extends State<Profiles>
             OutlinedButton.icon(
               onPressed: () => _addAssistantRecommendedProfile(recommended),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add'),
+              label: Text(EaI18n.t(context, 'Add')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: EaColor.fore,
                 side: const BorderSide(color: EaColor.fore),
@@ -610,7 +610,10 @@ class _ProfilesState extends State<Profiles>
           child: ElevatedButton.icon(
             onPressed: () => _openEditor(),
             icon: const Icon(Icons.add),
-            label: Text("New profile", style: EaText.primaryBack),
+            label: Text(
+              EaI18n.t(context, 'New profile'),
+              style: EaText.primaryBack,
+            ),
             style: EaButtonStyle.gradientFilled(
               context: context,
               borderRadius: BorderRadius.circular(12),
@@ -650,7 +653,7 @@ class _ProfilesState extends State<Profiles>
             ),
             const SizedBox(height: 24),
             Text(
-              "No profiles yet",
+              EaI18n.t(context, 'No profiles yet'),
               style: EaText.primary.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -659,7 +662,7 @@ class _ProfilesState extends State<Profiles>
             ),
             const SizedBox(height: 8),
             Text(
-              "Create profiles aligned with your mood.",
+              EaI18n.t(context, 'Create profiles aligned with your mood.'),
               textAlign: TextAlign.center,
               style: EaText.secondary.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
@@ -936,20 +939,25 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: EaColor.back,
-          title: Text('Delete profile?', style: EaText.primary),
+          title: Text(
+            EaI18n.t(context, 'Delete profile?'),
+            style: EaText.primary,
+          ),
           content: Text(
-            'This will permanently remove "${widget.profile!.name}".',
+            EaI18n.t(context, 'This will permanently remove "{name}".', {
+              'name': widget.profile!.name,
+            }),
             style: EaText.secondary,
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: EaText.secondary),
+              child: Text(EaI18n.t(context, 'Cancel'), style: EaText.secondary),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: Text(
-                'Delete',
+                EaI18n.t(context, 'Delete'),
                 style: EaText.secondary.copyWith(color: Colors.redAccent),
               ),
             ),
@@ -1016,7 +1024,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
   Widget _title() {
     return Text(
-      widget.profile == null ? "New Profile" : "Edit Profile",
+      widget.profile == null
+          ? EaI18n.t(context, 'New Profile')
+          : EaI18n.t(context, 'Edit Profile'),
       style: EaText.primary.copyWith(
         fontWeight: FontWeight.w600,
         color: EaAdaptiveColor.bodyText(context),
@@ -1031,12 +1041,12 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         color: EaAdaptiveColor.bodyText(context),
       ),
       decoration: InputDecoration(
-        hintText: "e.g Focus Mode, Movie Time, Relax Moment",
+        hintText: EaI18n.t(context, 'e.g Focus Mode, Movie Time, Relax Moment'),
         hintStyle: EaText.secondary.copyWith(
           color: EaAdaptiveColor.secondaryText(context),
         ),
 
-        labelText: "Profile name",
+        labelText: EaI18n.t(context, 'Profile name'),
         labelStyle: EaText.secondary.copyWith(
           color: EaAdaptiveColor.secondaryText(context),
         ),
@@ -1100,7 +1110,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   Widget _actions() {
     return widget.devices.isEmpty
         ? Text(
-            "No devices yet",
+            EaI18n.t(context, 'No devices yet'),
             style: EaText.secondary.copyWith(
               color: EaAdaptiveColor.secondaryText(context),
             ),
@@ -1196,7 +1206,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
         const SizedBox(width: 8),
 
-        Text("Power", style: EaText.secondary),
+        Text(EaI18n.t(context, 'Power'), style: EaText.secondary),
 
         const Spacer(),
 
@@ -1231,7 +1241,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.tungsten, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Brightness", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Brightness'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1272,7 +1282,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.palette, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Color", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Color'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1332,7 +1342,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                                     setState(() => a.color = rgb);
                                     Navigator.pop(context);
                                   },
-                                  child: const Text("Apply"),
+                                  child: Text(EaI18n.t(context, 'Apply')),
                                 ),
                               ),
                             ],
@@ -1376,7 +1386,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.thermostat, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Temperature", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Temperature'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1419,7 +1429,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.kitchen_outlined, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Fridge", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Fridge'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1462,7 +1472,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.ac_unit, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Freezer", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Freezer'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1508,7 +1518,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.tonality, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Color temp", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Color Temp'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1547,7 +1557,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
         const SizedBox(width: 8),
 
-        Text("Lock", style: EaText.secondary),
+        Text(EaI18n.t(context, 'Lock'), style: EaText.secondary),
 
         const Spacer(),
 
@@ -1576,7 +1586,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.tune, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Mode", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Mode'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1613,7 +1623,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.straighten, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Position", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Position'), style: EaText.secondary),
 
             const Spacer(),
 
@@ -1665,7 +1675,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
           children: [
             const Icon(Icons.schedule, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Schedule", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Schedule'), style: EaText.secondary),
           ],
         ),
 
@@ -1683,7 +1693,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               Text(
                 time != null
                     ? "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"
-                    : "Not set",
+                    : EaI18n.t(context, 'Not set'),
                 style: EaText.secondary,
               ),
 
@@ -1695,7 +1705,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                   final picked = await showTimePicker(
                     context: context,
 
-                    helpText: "Select time",
+                    helpText: EaI18n.t(context, 'Select time'),
 
                     initialEntryMode: TimePickerEntryMode.inputOnly,
                     initialTime: time ?? TimeOfDay.now(),
@@ -1823,7 +1833,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               context: context,
               borderRadius: BorderRadius.circular(18),
             ),
-            child: Text("Save Profile", style: EaText.primaryBack),
+            child: Text(
+              EaI18n.t(context, 'Save Profile'),
+              style: EaText.primaryBack,
+            ),
           ),
         ),
       );
@@ -1834,7 +1847,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         OutlinedButton.icon(
           onPressed: _confirmDeleteProfile,
           icon: const Icon(Icons.delete_outline, size: 18),
-          label: const Text('Delete'),
+          label: Text(EaI18n.t(context, 'Delete')),
           style: OutlinedButton.styleFrom(
             foregroundColor: Colors.redAccent,
             side: const BorderSide(color: Colors.redAccent),
@@ -1853,7 +1866,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                 context: context,
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: Text("Save Profile", style: EaText.primaryBack),
+              child: Text(
+                EaI18n.t(context, 'Save Profile'),
+                style: EaText.primaryBack,
+              ),
             ),
           ),
         ),

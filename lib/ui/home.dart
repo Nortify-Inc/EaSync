@@ -44,11 +44,11 @@ class _HomeState extends State<Home> {
   ];
 
   final List<String> tabs = [
-    "Dashboard",
-    "Profiles",
-    "Assistant",
-    "Manage",
-    "Account",
+    'Dashboard',
+    'Profiles',
+    'Assistant',
+    'Manage',
+    'Account',
   ];
 
   @override
@@ -119,7 +119,7 @@ class _HomeState extends State<Home> {
   }
 
   Widget _buildBlurTitle() {
-    final title = tabs[selectedIndex];
+    final title = EaI18n.t(context, tabs[selectedIndex]);
 
     return TweenAnimationBuilder<double>(
       key: ValueKey(title),
@@ -158,7 +158,7 @@ class _HomeState extends State<Home> {
                 const Spacer(flex: 100),
                 if (selectedIndex == 4)
                   IconButton(
-                    tooltip: 'Settings',
+                    tooltip: EaI18n.t(context, 'Settings'),
                     icon: const Icon(
                       Icons.settings_outlined,
                       color: EaColor.fore,

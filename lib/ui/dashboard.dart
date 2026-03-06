@@ -61,29 +61,29 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   String _capLabel(int cap) {
     switch (cap) {
       case CoreCapability.CORE_CAP_POWER:
-        return 'Power';
+        return EaI18n.t(context, 'Power');
       case CoreCapability.CORE_CAP_BRIGHTNESS:
-        return 'Brightness';
+        return EaI18n.t(context, 'Brightness');
       case CoreCapability.CORE_CAP_COLOR:
-        return 'Color';
+        return EaI18n.t(context, 'Color');
       case CoreCapability.CORE_CAP_TEMPERATURE:
-        return 'Temperature';
+        return EaI18n.t(context, 'Temperature');
       case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-        return 'Fridge';
+        return EaI18n.t(context, 'Fridge');
       case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-        return 'Freezer';
+        return EaI18n.t(context, 'Freezer');
       case CoreCapability.CORE_CAP_TIMESTAMP:
-        return 'Schedule';
+        return EaI18n.t(context, 'Schedule');
       case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-        return 'White Temp';
+        return EaI18n.t(context, 'White Temp');
       case CoreCapability.CORE_CAP_LOCK:
-        return 'Lock';
+        return EaI18n.t(context, 'Lock');
       case CoreCapability.CORE_CAP_MODE:
-        return 'Mode';
+        return EaI18n.t(context, 'Mode');
       case CoreCapability.CORE_CAP_POSITION:
-        return 'Position';
+        return EaI18n.t(context, 'Position');
       default:
-        return 'Other';
+        return EaI18n.t(context, 'Other');
     }
   }
 
@@ -153,6 +153,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Widget _buildCapabilityFilterBar(List<int> availableCaps) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final filterSurface = EaAdaptiveColor.surface(context);
+    final filterBorder = EaAdaptiveColor.border(context);
+    final chipUnselectedBg = EaAdaptiveColor.field(context);
+    final chipUnselectedText = EaAdaptiveColor.bodyText(context);
+
     Widget chip({
       required String label,
       required IconData icon,
@@ -167,10 +173,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? EaColor.fore : EaColor.back,
+            color: selected ? EaColor.fore : chipUnselectedBg,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected ? EaColor.fore : EaColor.border,
+              color: selected ? EaColor.fore : filterBorder,
               width: 1,
             ),
           ),
@@ -180,13 +186,17 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               Icon(
                 icon,
                 size: 15,
-                color: selected ? EaColor.back : EaColor.fore,
+                color: selected
+                    ? (isDark ? EaColor.back : Colors.white)
+                    : EaColor.fore,
               ),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: EaText.small.copyWith(
-                  color: selected ? EaColor.back : EaColor.textPrimary,
+                  color: selected
+                      ? (isDark ? EaColor.back : Colors.white)
+                      : chipUnselectedText,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -199,9 +209,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: EaColor.secondaryBack,
+        color: filterSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: EaColor.border),
+        border: Border.all(color: filterBorder),
       ),
       clipBehavior: Clip.hardEdge,
       child: SingleChildScrollView(
@@ -209,7 +219,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         child: Row(
           children: [
             chip(
-              label: 'All',
+              label: EaI18n.t(context, 'All'),
               icon: Icons.grid_view_rounded,
               selected: _selectedCapabilityFilter == null,
               onTap: () => _applyCapabilityFilter(null),
@@ -292,8 +302,17 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     ),
                     child: Text(
                       _selectedCapabilityFilter == null
-                          ? 'Showing all devices (${devices.length})'
-                          : 'Filtered: $selectedCount of ${devices.length}',
+                          ? EaI18n.t(context, 'Showing all devices ({count})', {
+                              'count': '${devices.length}',
+                            })
+                          : EaI18n.t(
+                              context,
+                              'Filtered: {selected} of {total}',
+                              {
+                                'selected': '$selectedCount',
+                                'total': '${devices.length}',
+                              },
+                            ),
                       key: ValueKey(
                         'filter-summary-${_selectedCapabilityFilter ?? -1}-$selectedCount',
                       ),
@@ -340,7 +359,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             border: Border.all(color: EaColor.border),
                           ),
                           child: Text(
-                            'No devices match this capability filter.',
+                            EaI18n.t(
+                              context,
+                              'No devices match this capability filter.',
+                            ),
                             textAlign: TextAlign.center,
                             style: EaText.secondary.copyWith(
                               color: EaAdaptiveColor.secondaryText(context),
@@ -587,7 +609,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
             const SizedBox(height: 16),
             Text(
-              "Core error",
+              EaI18n.t(context, 'Core error'),
               style: EaText.primary.copyWith(
                 color: EaAdaptiveColor.bodyText(context),
               ),
@@ -631,7 +653,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 24),
             Text(
-              "No devices yet",
+              EaI18n.t(context, 'No devices yet'),
               style: EaText.primary.copyWith(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
@@ -640,7 +662,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             Text(
-              "Your devices will appear here.",
+              EaI18n.t(context, 'Your devices will appear here.'),
               textAlign: TextAlign.center,
               style: EaText.secondary.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
@@ -768,7 +790,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
     switch (cap) {
       case CoreCapability.CORE_CAP_POWER:
-        return s.power ? "On" : "Off";
+        return s.power ? EaI18n.t(context, 'On') : EaI18n.t(context, 'Off');
 
       case CoreCapability.CORE_CAP_BRIGHTNESS:
         final b = _clampByConstraint(
@@ -824,7 +846,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         return "${c.round()}K";
 
       case CoreCapability.CORE_CAP_LOCK:
-        return s.lock ? "Locked" : "Unlocked";
+        return s.lock
+            ? EaI18n.t(context, 'Locked')
+            : EaI18n.t(context, 'Unlocked');
 
       case CoreCapability.CORE_CAP_MODE:
         final idx = s.mode.clamp(0, Bridge.modeCount(device.uuid) - 1);
@@ -1013,7 +1037,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                             const SizedBox(width: 8),
 
-                            Text("Power", style: EaText.secondary),
+                            Text(
+                              EaI18n.t(context, 'Power'),
+                              style: EaText.secondary,
+                            ),
 
                             const Spacer(),
 
@@ -1048,7 +1075,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Brightness", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Brightness'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1106,7 +1136,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                               color: EaColor.fore,
                             ),
                             const SizedBox(width: 8),
-                            Text("Color", style: EaText.secondary),
+                            Text(
+                              EaI18n.t(context, 'Color'),
+                              style: EaText.secondary,
+                            ),
                             Spacer(),
                             GestureDetector(
                               onTap: () async {
@@ -1183,7 +1216,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                                         ),
                                                   ),
                                                   child: Text(
-                                                    "Apply",
+                                                    EaI18n.t(context, 'Apply'),
                                                     style: EaText.secondary
                                                         .copyWith(
                                                           color: EaColor.back,
@@ -1239,7 +1272,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Temperature", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Temperature'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1293,7 +1329,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Fridge", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Fridge'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1358,7 +1397,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Freezer", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Freezer'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1425,7 +1467,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                 const SizedBox(width: 8),
 
                                 Text(
-                                  "Color temperature",
+                                  EaI18n.t(context, 'Color temperature'),
                                   style: EaText.secondary,
                                 ),
 
@@ -1486,7 +1528,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                             const SizedBox(width: 8),
 
-                            Text("Lock", style: EaText.secondary),
+                            Text(
+                              EaI18n.t(context, 'Lock'),
+                              style: EaText.secondary,
+                            ),
 
                             const Spacer(),
 
@@ -1519,7 +1564,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Mode", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Mode'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1572,7 +1620,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
                                 const SizedBox(width: 8),
 
-                                Text("Position", style: EaText.secondary),
+                                Text(
+                                  EaI18n.t(context, 'Position'),
+                                  style: EaText.secondary,
+                                ),
 
                                 const Spacer(),
 
@@ -1650,7 +1701,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           children: [
             const Icon(Icons.schedule, size: 18, color: EaColor.fore),
             const SizedBox(width: 8),
-            Text("Schedule", style: EaText.secondary),
+            Text(EaI18n.t(context, 'Schedule'), style: EaText.secondary),
           ],
         ),
 
@@ -1668,7 +1719,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               Text(
                 time != null
                     ? "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"
-                    : "Not set",
+                    : EaI18n.t(context, 'Not set'),
                 style: EaText.secondary,
               ),
 
@@ -1680,7 +1731,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   final picked = await showTimePicker(
                     context: context,
 
-                    helpText: "Select time",
+                    helpText: EaI18n.t(context, 'Select time'),
 
                     initialEntryMode: TimePickerEntryMode.inputOnly,
                     initialTime: time ?? TimeOfDay.now(),
@@ -1811,6 +1862,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   final effectiveRingColor = isLightTheme
                       ? EaColor.back
                       : (animatedColor ?? ringColorTarget);
+                  final capBadgeBg = EaAdaptiveColor.field(context);
+                  final capBadgeBorder = isLightTheme
+                      ? EaAdaptiveColor.border(context)
+                      : EaColor.fore.withValues(alpha: .75);
+                  final capBadgeText = EaAdaptiveColor.bodyText(context);
                   final isTargetZero = target <= 0.000001;
                   final fadeBase = begin <= 0.000001 ? 1.0 : begin;
                   final normalizedToBegin = (animated / fadeBase).clamp(
@@ -1901,11 +1957,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                       height: 30,
                                       alignment: Alignment.center,
                                       decoration: BoxDecoration(
-                                        color: EaColor.back,
+                                        color: capBadgeBg,
                                         border: Border.all(
-                                          color: EaColor.fore.withValues(
-                                            alpha: .75,
-                                          ),
+                                          color: capBadgeBorder,
                                         ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
@@ -1936,12 +1990,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                             Icon(
                                               _capIcon(cap),
                                               size: 18,
-                                              color: EaColor.secondaryFore,
+                                              color: EaColor.fore,
                                             ),
                                             const SizedBox(width: 6),
                                             Text(
                                               _capValue(device, cap).toString(),
-                                              style: EaText.secondary,
+                                              style: EaText.secondary.copyWith(
+                                                color: capBadgeText,
+                                              ),
                                             ),
                                           ],
                                         ],

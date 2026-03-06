@@ -17,6 +17,7 @@ export 'dart:io';
 
 export 'bridge.dart';
 export 'theme.dart';
+export 'i18n.dart';
 
 export 'splash.dart';
 export 'home.dart';

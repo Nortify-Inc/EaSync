@@ -28,7 +28,7 @@ class Account extends StatefulWidget {
   State<Account> createState() => _AccountState();
 }
 
-class _AccountState extends State<Account> {
+class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   static const String _kOutsideTempCache = 'assistant.outside_temp_cache';
   static const String _kOutsideTempUpdatedAt =
       'assistant.outside_temp_updated_at';
@@ -50,6 +50,7 @@ class _AccountState extends State<Account> {
   final EaAppSettings _settings = EaAppSettings.instance;
   final ImagePicker _picker = ImagePicker();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  late final AnimationController _updatePulse;
 
   FirebaseAuth? get _authOrNull {
     if (Firebase.apps.isEmpty) return null;
@@ -74,7 +75,17 @@ class _AccountState extends State<Account> {
   @override
   void initState() {
     super.initState();
+    _updatePulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
     _loadAccountState();
+  }
+
+  @override
+  void dispose() {
+    _updatePulse.dispose();
+    super.dispose();
   }
 
   Future<void> _loadAccountState() async {
@@ -270,8 +281,13 @@ class _AccountState extends State<Account> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível atualizar a temperatura agora.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Não foi possível atualizar a temperatura agora.',
+            ),
+          ),
         ),
       );
     } finally {
@@ -331,8 +347,13 @@ class _AccountState extends State<Account> {
     if (Firebase.apps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Firebase ainda não está configurado nesta build.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Firebase ainda não está configurado nesta build.',
+            ),
+          ),
         ),
       );
       return;
@@ -355,8 +376,13 @@ class _AccountState extends State<Account> {
     if (Firebase.apps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Firebase ainda não está configurado nesta build.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Firebase ainda não está configurado nesta build.',
+            ),
+          ),
         ),
       );
       return;
@@ -391,7 +417,13 @@ class _AccountState extends State<Account> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível escolher a imagem: $e')),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Não foi possível escolher a imagem: {error}', {
+              'error': '$e',
+            }),
+          ),
+        ),
       );
     }
   }
@@ -481,8 +513,14 @@ class _AccountState extends State<Account> {
         SnackBar(
           content: Text(
             kIsWeb
-                ? 'GPS indisponível na Web. Usando o campo Localização como fallback.'
-                : 'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.',
+                ? EaI18n.t(
+                    context,
+                    'GPS indisponível na Web. Usando o campo Localização como fallback.',
+                  )
+                : EaI18n.t(
+                    context,
+                    'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.',
+                  ),
           ),
         ),
       );
@@ -502,8 +540,15 @@ class _AccountState extends State<Account> {
         SnackBar(
           content: Text(
             geocoded == null
-                ? 'Não foi possível atualizar localização: $e'
-                : 'Localização atualizada com fallback do campo digitado.',
+                ? EaI18n.t(
+                    context,
+                    'Não foi possível atualizar localização: {error}',
+                    {'error': '$e'},
+                  )
+                : EaI18n.t(
+                    context,
+                    'Localização atualizada com fallback do campo digitado.',
+                  ),
           ),
         ),
       );
@@ -527,7 +572,10 @@ class _AccountState extends State<Account> {
           children: [
             _accountSummary(),
             const SizedBox(height: 10),
-            _sectionTitle('Perfil e ambiente'),
+            _sectionTitle(
+              EaI18n.t(context, 'Profile and environment'),
+              trailing: _profileUpdateButton(),
+            ),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
@@ -536,8 +584,8 @@ class _AccountState extends State<Account> {
                   Divider(height: 1, color: EaAdaptiveColor.border(context)),
                   _AccountTile(
                     icon: Icons.badge_outlined,
-                    title: 'Informações pessoais',
-                    subtitle: 'Nome, email e telefone',
+                    title: EaI18n.t(context, 'Personal information'),
+                    subtitle: EaI18n.t(context, 'Name, email and phone'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -550,25 +598,19 @@ class _AccountState extends State<Account> {
                   const SizedBox(height: 2),
                   _profileInfoRow(
                     icon: Icons.language_outlined,
-                    label: 'Idioma',
-                    value: '$_language • $_region',
-                  ),
-                  _profileInfoRow(
-                    icon: Icons.place_outlined,
-                    label: 'Localização completa',
-                    value: _fullLocation,
-                    action: TextButton.icon(
-                      onPressed: _locationRefreshing
-                          ? null
-                          : _refreshCurrentLocation,
-                      icon: _locationRefreshing
-                          ? const SizedBox(
-                              width: 13,
-                              height: 13,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.my_location_rounded, size: 14),
-                      label: const Text('Atualizar'),
+                    label: EaI18n.t(context, 'Language'),
+                    value: _language,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const LanguageRegionPage(),
+                        ),
+                      ).then((_) => _loadAccountState());
+                    },
+                    action: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: EaColor.fore,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -576,15 +618,15 @@ class _AccountState extends State<Account> {
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Segurança'),
+            _sectionTitle(EaI18n.t(context, 'Security')),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
                 children: [
                   _AccountTile(
                     icon: Icons.lock_outline_rounded,
-                    title: 'Senha e passkeys',
-                    subtitle: 'Gerenciamento de credenciais',
+                    title: EaI18n.t(context, 'Password and passkeys'),
+                    subtitle: EaI18n.t(context, 'Credential management'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -596,8 +638,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.shield_moon_outlined,
-                    title: 'Verificação em 2 etapas',
-                    subtitle: 'Proteção adicional de acesso',
+                    title: EaI18n.t(context, '2-step verification'),
+                    subtitle: EaI18n.t(context, 'Additional access protection'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -609,8 +651,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.devices_other_outlined,
-                    title: 'Dispositivos confiáveis',
-                    subtitle: 'Sessões atuais e recentes',
+                    title: EaI18n.t(context, 'Trusted devices'),
+                    subtitle: EaI18n.t(context, 'Current and recent sessions'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -624,7 +666,7 @@ class _AccountState extends State<Account> {
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Assinatura'),
+            _sectionTitle(EaI18n.t(context, 'Subscription')),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
@@ -632,7 +674,10 @@ class _AccountState extends State<Account> {
                   _AccountTile(
                     icon: Icons.workspace_premium_outlined,
                     title: 'EaSync Pro',
-                    subtitle: 'Detalhes do plano e benefícios',
+                    subtitle: EaI18n.t(
+                      context,
+                      'Detalhes do plano e benefícios',
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -644,8 +689,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.receipt_long_outlined,
-                    title: 'Histórico de cobranças',
-                    subtitle: 'Faturas e meios de pagamento',
+                    title: EaI18n.t(context, 'Billing history'),
+                    subtitle: EaI18n.t(context, 'Invoices and payment methods'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -657,15 +702,15 @@ class _AccountState extends State<Account> {
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Controle de dados'),
+            _sectionTitle(EaI18n.t(context, 'Data control')),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
                 children: [
                   _AccountTile(
                     icon: Icons.download_outlined,
-                    title: 'Exportar dados da conta',
-                    subtitle: 'Pacote de backup portátil',
+                    title: EaI18n.t(context, 'Export account data'),
+                    subtitle: EaI18n.t(context, 'Portable backup package'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -677,8 +722,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.delete_forever_outlined,
-                    title: 'Excluir conta',
-                    subtitle: 'Fluxo de remoção permanente',
+                    title: EaI18n.t(context, 'Delete account'),
+                    subtitle: EaI18n.t(context, 'Permanent removal flow'),
                     danger: true,
                     onTap: () {
                       Navigator.push(
@@ -721,7 +766,7 @@ class _AccountState extends State<Account> {
                     children: [
                       Text(
                         _authName?.trim().isEmpty ?? true
-                            ? 'Conta autenticada'
+                            ? EaI18n.t(context, 'Authenticated account')
                             : _authName!,
                         style: EaText.secondary.copyWith(
                           fontSize: 16,
@@ -741,7 +786,7 @@ class _AccountState extends State<Account> {
                 TextButton.icon(
                   onPressed: _signOut,
                   icon: const Icon(Icons.logout, size: 16),
-                  label: const Text('Sair'),
+                  label: Text(EaI18n.t(context, 'Sign out')),
                 ),
               ],
             )
@@ -750,7 +795,7 @@ class _AccountState extends State<Account> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Você ainda não está autenticado.',
+                  EaI18n.t(context, 'You are not authenticated yet.'),
                   style: EaText.secondary.copyWith(
                     color: EaAdaptiveColor.bodyText(context),
                   ),
@@ -769,7 +814,7 @@ class _AccountState extends State<Account> {
                           ),
                           onPressed: _openSignIn,
                           icon: const Icon(Icons.login_rounded),
-                          label: const Text('Entrar'),
+                          label: Text(EaI18n.t(context, 'Sign in')),
                         ),
                       ),
                     ),
@@ -785,7 +830,7 @@ class _AccountState extends State<Account> {
                         ),
                         onPressed: _openSignUp,
                         icon: const Icon(Icons.person_add_alt_1_rounded),
-                        label: const Text('Criar conta'),
+                        label: Text(EaI18n.t(context, 'Create account')),
                       ),
                     ),
                   ],
@@ -799,15 +844,21 @@ class _AccountState extends State<Account> {
             children: [
               _chip(
                 Icons.verified_user_outlined,
-                _isAuthenticated ? 'Autenticado' : 'Convidado',
+                _isAuthenticated
+                    ? EaI18n.t(context, 'Authenticated')
+                    : EaI18n.t(context, 'Guest'),
               ),
               _chip(
                 Icons.security_outlined,
-                _hasPassword ? 'Senha definida' : 'Sem senha',
+                _hasPassword
+                    ? EaI18n.t(context, 'Password set')
+                    : EaI18n.t(context, 'No password'),
               ),
               _chip(
                 Icons.fingerprint,
-                _fingerprintEnabled ? 'Digital ativada' : 'Digital desativada',
+                _fingerprintEnabled
+                    ? EaI18n.t(context, 'Fingerprint enabled')
+                    : EaI18n.t(context, 'Fingerprint disabled'),
               ),
               if (_authProvider != null)
                 _chip(Icons.account_circle_outlined, _authProvider!),
@@ -819,19 +870,17 @@ class _AccountState extends State<Account> {
   }
 
   Widget _profileAvatar() {
-    final path = (_authPhoto ?? '').trim();
-    ImageProvider? provider;
-    if (path.isNotEmpty) {
-      if (path.startsWith('http')) {
-        provider = NetworkImage(path);
-      } else {
-        provider = FileImage(File(path));
-      }
-    }
+    final photo = (_authPhoto ?? '').trim();
+    final provider = photo.isEmpty
+        ? null
+        : (photo.startsWith('http')
+              ? NetworkImage(photo)
+              : FileImage(File(photo)) as ImageProvider);
 
     return GestureDetector(
       onTap: _pickProfileImage,
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           CircleAvatar(
             radius: 20,
@@ -840,8 +889,8 @@ class _AccountState extends State<Account> {
             child: provider == null
                 ? const Icon(
                     Icons.person_outline_rounded,
-                    color: EaColor.fore,
                     size: 20,
+                    color: EaColor.fore,
                   )
                 : null,
           ),
@@ -853,8 +902,8 @@ class _AccountState extends State<Account> {
               height: 15,
               decoration: BoxDecoration(
                 color: EaColor.fore,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: EaAdaptiveColor.surface(context)),
+                shape: BoxShape.circle,
+                border: Border.all(color: EaColor.back, width: 1.2),
               ),
               child: const Icon(Icons.edit, size: 9, color: EaColor.back),
             ),
@@ -896,15 +945,13 @@ class _AccountState extends State<Account> {
           Expanded(
             child: _summaryTile(
               icon: Icons.thermostat,
-              label: 'Outside',
+              label: EaI18n.t(context, 'Outside'),
               value: '${_outsideTemp.toStringAsFixed(1)} °C',
-              trailing: _outsideTempRefreshing
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.refresh_rounded, size: 14),
+              trailing: Icon(
+                Icons.refresh_rounded,
+                size: 14,
+                color: EaAdaptiveColor.border(context),
+              ),
               onTap: _refreshOutsideTemperature,
             ),
           ),
@@ -912,15 +959,13 @@ class _AccountState extends State<Account> {
           Expanded(
             child: _summaryTile(
               icon: Icons.place_outlined,
-              label: 'Location',
+              label: EaI18n.t(context, 'Location'),
               value: _fullLocation,
-              trailing: _locationRefreshing
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.my_location_rounded, size: 14),
+              trailing: Icon(
+                Icons.my_location_rounded,
+                size: 14,
+                color: EaAdaptiveColor.border(context),
+              ),
               onTap: _refreshCurrentLocation,
             ),
           ),
@@ -987,52 +1032,117 @@ class _AccountState extends State<Account> {
     required String label,
     required String value,
     Widget? action,
+    VoidCallback? onTap,
   }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, size: 18, color: EaColor.fore),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: EaText.small.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.secondaryText(context),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (action != null) action,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileUpdateButton() {
+    final borderColor = EaAdaptiveColor.border(context);
+    return SizedBox(
+      height: 32,
+      child: Stack(
         children: [
-          Icon(icon, size: 18, color: EaColor.fore),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: EaText.small.copyWith(
-                    color: EaAdaptiveColor.secondaryText(context),
-                  ),
+          if (_locationRefreshing)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _updatePulse,
+                  builder: (_, _) {
+                    return CustomPaint(
+                      painter: _UpdateBorderPainter(
+                        progress: _updatePulse.value,
+                        color: borderColor,
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: EaText.secondary.copyWith(
-                    color: EaAdaptiveColor.bodyText(context),
-                    fontSize: 13,
-                  ),
+              ),
+            ),
+          Positioned.fill(
+            child: OutlinedButton.icon(
+              onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
+              icon: Icon(
+                Icons.my_location_rounded,
+                size: 14,
+                color: borderColor,
+              ),
+              label: Text(
+                EaI18n.t(context, 'Update'),
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.bodyText(context),
                 ),
-              ],
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(
+                  color: _locationRefreshing ? Colors.transparent : borderColor,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                foregroundColor: borderColor,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
             ),
           ),
-          if (action != null) action,
         ],
       ),
     );
   }
 
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(String title, {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        title,
-        style: EaText.secondary.copyWith(
-          fontWeight: FontWeight.w700,
-          color: EaAdaptiveColor.bodyText(context),
-        ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: EaText.secondary.copyWith(
+                fontWeight: FontWeight.w700,
+                color: EaAdaptiveColor.bodyText(context),
+              ),
+            ),
+          ),
+          if (trailing != null) trailing,
+        ],
       ),
     );
   }
@@ -1049,6 +1159,53 @@ class _AccountState extends State<Account> {
         children: [...children],
       ),
     );
+  }
+}
+
+class _UpdateBorderPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+
+  const _UpdateBorderPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const radius = Radius.circular(12);
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect.deflate(.8), radius);
+
+    final base = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = color.withValues(alpha: .24);
+
+    canvas.drawRRect(rrect, base);
+
+    final path = Path()..addRRect(rrect);
+    final metric = path.computeMetrics().first;
+    final length = metric.length;
+
+    final segment = length * .22;
+    final head = progress * length;
+    final tail = head - segment;
+
+    final active = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..color = color;
+
+    if (tail >= 0) {
+      canvas.drawPath(metric.extractPath(tail, head), active);
+    } else {
+      canvas.drawPath(metric.extractPath(length + tail, length), active);
+      canvas.drawPath(metric.extractPath(0, head), active);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _UpdateBorderPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.color != color;
   }
 }
 
@@ -1123,9 +1280,12 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
     if (Firebase.apps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Firebase ainda não está configurado para esta plataforma.',
+            EaI18n.t(
+              context,
+              'Firebase ainda não está configurado para esta plataforma.',
+            ),
           ),
         ),
       );
@@ -1142,14 +1302,20 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
       Navigator.pop(context, result);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Falha ao entrar.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message ?? EaI18n.t(context, 'Falha ao entrar.')),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Falha ao entrar: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Falha ao entrar: {error}', {'error': '$e'}),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1158,13 +1324,13 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Entrar')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Sign in'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _authField(_email, 'Email', false),
           const SizedBox(height: 10),
-          _authField(_password, 'Senha', true),
+          _authField(_password, EaI18n.t(context, 'Password'), true),
           const SizedBox(height: 14),
           EaGradientButtonFrame(
             borderRadius: BorderRadius.circular(12),
@@ -1175,14 +1341,8 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
                 shadowColor: Colors.transparent,
               ),
               onPressed: _loading ? null : _submit,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.login_rounded),
-              label: const Text('Continuar'),
+              icon: const Icon(Icons.login_rounded),
+              label: Text(EaI18n.t(context, 'Continue')),
             ),
           ),
         ],
@@ -1238,7 +1398,13 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
       _awaitingPin = true;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Código de verificação (demo): $generated')),
+      SnackBar(
+        content: Text(
+          EaI18n.t(context, 'Código de verificação (demo): {code}', {
+            'code': generated,
+          }),
+        ),
+      ),
     );
   }
 
@@ -1246,9 +1412,12 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
     if (Firebase.apps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Firebase ainda não está configurado para esta plataforma.',
+            EaI18n.t(
+              context,
+              'Firebase ainda não está configurado para esta plataforma.',
+            ),
           ),
         ),
       );
@@ -1257,7 +1426,9 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
 
     if (_pin.text.trim() != _expectedPin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN de verificação inválido.')),
+        SnackBar(
+          content: Text(EaI18n.t(context, 'PIN de verificação inválido.')),
+        ),
       );
       return;
     }
@@ -1274,13 +1445,21 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message ?? 'Falha ao criar conta.')),
+        SnackBar(
+          content: Text(
+            e.message ?? EaI18n.t(context, 'Falha ao criar conta.'),
+          ),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Falha ao criar conta: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Falha ao criar conta: {error}', {'error': '$e'}),
+          ),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1289,15 +1468,15 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Create account'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _authField(_name, 'Nome de exibição', false),
+          _authField(_name, EaI18n.t(context, 'Display name'), false),
           const SizedBox(height: 10),
           _authField(_email, 'Email', false),
           const SizedBox(height: 10),
-          _authField(_password, 'Senha', true),
+          _authField(_password, EaI18n.t(context, 'Password'), true),
           const SizedBox(height: 12),
           if (!_awaitingPin)
             EaGradientButtonFrame(
@@ -1310,12 +1489,15 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
                 ),
                 onPressed: _requestVerificationPin,
                 icon: const Icon(Icons.pin_outlined),
-                label: const Text('Enviar PIN de verificação'),
+                label: Text(EaI18n.t(context, 'Send verification PIN')),
               ),
             )
           else ...[
             Text(
-              'Digite o PIN de 6 dígitos para concluir o cadastro',
+              EaI18n.t(
+                context,
+                'Digite o PIN de 6 dígitos para concluir o cadastro',
+              ),
               style: EaText.small.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
               ),
@@ -1347,14 +1529,8 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
                   shadowColor: Colors.transparent,
                 ),
                 onPressed: _loading ? null : _submitSignUp,
-                icon: _loading
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.check_circle_outline),
-                label: const Text('Criar conta'),
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(EaI18n.t(context, 'Create account')),
               ),
             ),
           ],
@@ -1487,10 +1663,11 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     }
     await prefs.setString(_kLanguage, _selectedLanguage.trim());
     await prefs.setString(_kRegion, _selectedRegion.trim());
+    EaAppSettings.instance.setLocaleFromProfileLanguage(_selectedLanguage);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Dados salvos localmente.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(EaI18n.t(context, 'Dados salvos localmente.'))),
+    );
   }
 
   Iterable<String> _locationSuggestions(TextEditingValue value) {
@@ -1515,7 +1692,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Informações pessoais')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Informações pessoais'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1532,7 +1709,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                   _field(_nameController, 'Full name'),
                   _locationAutocompleteField(),
                   _dropdownField(
-                    label: 'Idioma',
+                    label: EaI18n.t(context, 'Idioma'),
                     value: _selectedLanguage,
                     options: _languageOptions,
                     onChanged: (v) {
@@ -1541,7 +1718,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                     },
                   ),
                   _dropdownField(
-                    label: 'Região',
+                    label: EaI18n.t(context, 'Região'),
                     value: _selectedRegion,
                     options: _regionOptions,
                     onChanged: (v) {
@@ -1564,7 +1741,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar alterações'),
+              label: Text(EaI18n.t(context, 'Salvar alterações')),
             ),
           ),
         ],
@@ -1587,12 +1764,13 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
             style: EaText.secondary.copyWith(
               color: EaAdaptiveColor.bodyText(context),
             ),
-            decoration: _fieldDecoration('Localização').copyWith(
-              hintText: 'Digite cidade, estado ou país',
-              hintStyle: EaText.small.copyWith(
-                color: EaAdaptiveColor.secondaryText(context),
-              ),
-            ),
+            decoration: _fieldDecoration(EaI18n.t(context, 'Localização'))
+                .copyWith(
+                  hintText: EaI18n.t(context, 'Digite cidade, estado ou país'),
+                  hintStyle: EaText.small.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
+                ),
             onSubmitted: (_) => onSubmitted(),
           );
         },
@@ -1773,7 +1951,7 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Temperatura externa')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Temperatura externa'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1798,8 +1976,11 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
                   const SizedBox(height: 4),
                   Text(
                     _updatedAt == null
-                        ? 'Sem atualização registrada.'
-                        : 'Atualizado às ${_updatedAt!.hour.toString().padLeft(2, '0')}:${_updatedAt!.minute.toString().padLeft(2, '0')}',
+                        ? EaI18n.t(context, 'Sem atualização registrada.')
+                        : EaI18n.t(context, 'Atualizado às {time}', {
+                            'time':
+                                '${_updatedAt!.hour.toString().padLeft(2, '0')}:${_updatedAt!.minute.toString().padLeft(2, '0')}',
+                          }),
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
                     ),
@@ -1815,7 +1996,9 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
                       ),
                       onPressed: _refreshFromDevices,
                       icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Atualizar pelos dispositivos'),
+                      label: Text(
+                        EaI18n.t(context, 'Atualizar pelos dispositivos'),
+                      ),
                     ),
                   ),
                 ],
@@ -1877,15 +2060,15 @@ class _AddressLocationPageState extends State<AddressLocationPage> {
     await prefs.setString(_kPostal, _postal.text.trim());
     await prefs.setString(_kCountry, _country.text.trim());
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Endereço salvo localmente.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(EaI18n.t(context, 'Endereço salvo localmente.'))),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Endereço e localização')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Endereço e localização'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1899,10 +2082,10 @@ class _AddressLocationPageState extends State<AddressLocationPage> {
               ),
               child: Column(
                 children: [
-                  _textField(_street, 'Rua'),
-                  _textField(_city, 'Cidade'),
-                  _textField(_postal, 'CEP'),
-                  _textField(_country, 'País'),
+                  _textField(_street, EaI18n.t(context, 'Rua')),
+                  _textField(_city, EaI18n.t(context, 'Cidade')),
+                  _textField(_postal, EaI18n.t(context, 'CEP')),
+                  _textField(_country, EaI18n.t(context, 'País')),
                 ],
               ),
             ),
@@ -1918,7 +2101,7 @@ class _AddressLocationPageState extends State<AddressLocationPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar endereço'),
+              label: Text(EaI18n.t(context, 'Salvar endereço')),
             ),
           ),
         ],
@@ -1971,9 +2154,12 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
     await prefs.setString(_kLanguage, _language);
     await prefs.setString(_kRegion, _region);
     await prefs.setBool(_kTimeFormat24h, _time24h);
+    EaAppSettings.instance.setLocaleFromProfileLanguage(_language);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Idioma e região atualizados.')),
+      SnackBar(
+        content: Text(EaI18n.t(context, 'Idioma e região atualizados.')),
+      ),
     );
   }
 
@@ -1986,7 +2172,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Idioma e região')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Idioma e região'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2000,21 +2186,21 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
               child: Column(
                 children: [
                   ListTile(
-                    title: const Text('Idioma'),
+                    title: Text(EaI18n.t(context, 'Idioma')),
                     trailing: DropdownButton<String>(
                       value: _language,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'Português',
-                          child: Text('Português'),
+                          child: Text(EaI18n.t(context, 'Português')),
                         ),
                         DropdownMenuItem(
                           value: 'English',
-                          child: Text('Inglês'),
+                          child: Text(EaI18n.t(context, 'Inglês')),
                         ),
                         DropdownMenuItem(
                           value: 'Español',
-                          child: Text('Español'),
+                          child: Text(EaI18n.t(context, 'Español')),
                         ),
                       ],
                       onChanged: (v) {
@@ -2024,21 +2210,21 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                     ),
                   ),
                   ListTile(
-                    title: const Text('Região'),
+                    title: Text(EaI18n.t(context, 'Região')),
                     trailing: DropdownButton<String>(
                       value: _region,
-                      items: const [
+                      items: [
                         DropdownMenuItem(
                           value: 'Brasil',
-                          child: Text('Brasil'),
+                          child: Text(EaI18n.t(context, 'Brasil')),
                         ),
                         DropdownMenuItem(
                           value: 'Portugal',
-                          child: Text('Portugal'),
+                          child: Text(EaI18n.t(context, 'Portugal')),
                         ),
                         DropdownMenuItem(
                           value: 'United States',
-                          child: Text('Estados Unidos'),
+                          child: Text(EaI18n.t(context, 'Estados Unidos')),
                         ),
                       ],
                       onChanged: (v) {
@@ -2049,7 +2235,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                   ),
                   SwitchListTile.adaptive(
                     value: _time24h,
-                    title: const Text('Formato 24 horas'),
+                    title: Text(EaI18n.t(context, 'Formato 24 horas')),
                     onChanged: (v) => setState(() => _time24h = v),
                   ),
                 ],
@@ -2067,7 +2253,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_rounded),
-              label: const Text('Salvar preferências'),
+              label: Text(EaI18n.t(context, 'Salvar preferências')),
             ),
           ),
         ],
@@ -2112,23 +2298,30 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Senha e passkeys')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Senha e passkeys'))),
       body: ListView(
         children: [
           SwitchListTile.adaptive(
             value: _fingerprintEnabled,
-            title: const Text('Ativar desbloqueio por digital'),
-            subtitle: const Text(
-              'Barreira biométrica no dispositivo (sem local_auth).',
+            title: Text(EaI18n.t(context, 'Ativar desbloqueio por digital')),
+            subtitle: Text(
+              EaI18n.t(
+                context,
+                'Barreira biométrica no dispositivo (sem local_auth).',
+              ),
             ),
             onChanged: _setFingerprint,
           ),
           ListTile(
             leading: const Icon(Icons.password_rounded),
             title: Text(
-              _hasPassword ? 'Alterar senha de login' : 'Criar senha de login',
+              _hasPassword
+                  ? EaI18n.t(context, 'Alterar senha de login')
+                  : EaI18n.t(context, 'Criar senha de login'),
             ),
-            subtitle: const Text('Configurar sua senha local de login'),
+            subtitle: Text(
+              EaI18n.t(context, 'Configurar sua senha local de login'),
+            ),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
               Navigator.push(
@@ -2167,44 +2360,50 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
     final b = _confirm.text.trim();
     if (a.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('A senha precisa ter ao menos 4 caracteres.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'A senha precisa ter ao menos 4 caracteres.'),
+          ),
         ),
       );
       return;
     }
     if (a != b) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('As senhas não coincidem.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(EaI18n.t(context, 'As senhas não coincidem.'))),
+      );
       return;
     }
 
     await _secure.write(key: 'account.password', value: a);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Senha salva com sucesso.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(EaI18n.t(context, 'Senha salva com sucesso.'))),
+    );
     Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Senha de login')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Senha de login'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _pwd,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Nova senha'),
+            decoration: InputDecoration(
+              labelText: EaI18n.t(context, 'Nova senha'),
+            ),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _confirm,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Confirmar senha'),
+            decoration: InputDecoration(
+              labelText: EaI18n.t(context, 'Confirmar senha'),
+            ),
           ),
           const SizedBox(height: 12),
           EaGradientButtonFrame(
@@ -2216,7 +2415,7 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
                 shadowColor: Colors.transparent,
               ),
               onPressed: _savePassword,
-              child: const Text('Salvar senha'),
+              child: Text(EaI18n.t(context, 'Salvar senha')),
             ),
           ),
         ],
@@ -2263,14 +2462,14 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
     await prefs.setBool(_k2faEmail, _email);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('2FA atualizada com sucesso.')),
+      SnackBar(content: Text(EaI18n.t(context, '2FA atualizada com sucesso.'))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verificação em 2 etapas')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Verificação em 2 etapas'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2285,17 +2484,17 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
                 children: [
                   SwitchListTile.adaptive(
                     value: _app,
-                    title: const Text('Aplicativo autenticador'),
+                    title: Text(EaI18n.t(context, 'Aplicativo autenticador')),
                     onChanged: (v) => setState(() => _app = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _sms,
-                    title: const Text('Verificação por SMS'),
+                    title: Text(EaI18n.t(context, 'Verificação por SMS')),
                     onChanged: (v) => setState(() => _sms = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _email,
-                    title: const Text('Verificação por email'),
+                    title: Text(EaI18n.t(context, 'Verificação por email')),
                     onChanged: (v) => setState(() => _email = v),
                   ),
                 ],
@@ -2313,7 +2512,7 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.shield_outlined),
-              label: const Text('Salvar configurações de 2FA'),
+              label: Text(EaI18n.t(context, 'Salvar configurações de 2FA')),
             ),
           ),
         ],
@@ -2361,7 +2560,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dispositivos confiáveis')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Dispositivos confiáveis'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2374,7 +2573,11 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
                     color: EaColor.fore,
                   ),
                   title: Text(_devices[i]),
-                  subtitle: Text(i == 0 ? 'Sessão atual' : 'Sessão confiável'),
+                  subtitle: Text(
+                    i == 0
+                        ? EaI18n.t(context, 'Sessão atual')
+                        : EaI18n.t(context, 'Sessão confiável'),
+                  ),
                   trailing: i == 0
                       ? const Icon(Icons.verified_rounded, color: EaColor.fore)
                       : IconButton(
@@ -2382,7 +2585,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
                             Icons.logout_rounded,
                             color: Colors.redAccent,
                           ),
-                          tooltip: 'Remover dispositivo',
+                          tooltip: EaI18n.t(context, 'Remover dispositivo'),
                           onPressed: () => _removeAt(i),
                         ),
                   onTap: i == 0 ? null : () => _removeAt(i),
@@ -2447,7 +2650,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('EaSync Pro')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'EaSync Pro'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2468,14 +2671,17 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Plano atual: $_plan',
+                    EaI18n.t(context, 'Plano atual: {plan}', {'plan': _plan}),
                     style: EaText.primary.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Automações, análises e controles avançados do assistente.',
+                    EaI18n.t(
+                      context,
+                      'Automações, análises e controles avançados do assistente.',
+                    ),
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
                     ),
@@ -2485,8 +2691,14 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             ),
           ),
           const SizedBox(height: 12),
-          _planTile('Free', 'Controles básicos de dispositivos e assistente'),
-          _planTile('Pro', 'Automações avançadas e modos completos de IA'),
+          _planTile(
+            'Free',
+            EaI18n.t(context, 'Controles básicos de dispositivos e assistente'),
+          ),
+          _planTile(
+            'Pro',
+            EaI18n.t(context, 'Automações avançadas e modos completos de IA'),
+          ),
         ],
       ),
     );
@@ -2532,11 +2744,11 @@ class _BillingPageState extends State<BillingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Histórico de cobranças')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Histórico de cobranças'))),
       body: _items.isEmpty
           ? Center(
               child: Text(
-                'Nenhuma cobrança registrada ainda.',
+                EaI18n.t(context, 'Nenhuma cobrança registrada ainda.'),
                 style: EaText.secondary.copyWith(
                   color: EaAdaptiveColor.secondaryText(context),
                 ),
@@ -2591,8 +2803,10 @@ class _DataExportPageState extends State<DataExportPage> {
     await Clipboard.setData(ClipboardData(text: jsonText));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Export copiado para a área de transferência.'),
+      SnackBar(
+        content: Text(
+          EaI18n.t(context, 'Export copiado para a área de transferência.'),
+        ),
       ),
     );
   }
@@ -2600,23 +2814,23 @@ class _DataExportPageState extends State<DataExportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Exportar dados da conta')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Exportar dados da conta'))),
       body: ListView(
         children: [
           CheckboxListTile(
             value: _includeProfile,
             onChanged: (v) => setState(() => _includeProfile = v ?? false),
-            title: const Text('Dados de perfil'),
+            title: Text(EaI18n.t(context, 'Dados de perfil')),
           ),
           CheckboxListTile(
             value: _includeUsage,
             onChanged: (v) => setState(() => _includeUsage = v ?? false),
-            title: const Text('Dados de uso'),
+            title: Text(EaI18n.t(context, 'Dados de uso')),
           ),
           CheckboxListTile(
             value: _includeSecurity,
             onChanged: (v) => setState(() => _includeSecurity = v ?? false),
-            title: const Text('Configurações de segurança'),
+            title: Text(EaI18n.t(context, 'Configurações de segurança')),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -2630,7 +2844,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 ),
                 onPressed: _export,
                 icon: const Icon(Icons.file_download_outlined),
-                label: const Text('Gerar exportação'),
+                label: Text(EaI18n.t(context, 'Gerar exportação')),
               ),
             ),
           ),
@@ -2661,8 +2875,10 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
     if (!_understand ||
         _confirmController.text.trim().toUpperCase() != 'DELETE') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Confirme digitando DELETE e marque a opção.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Confirme digitando DELETE e marque a opção.'),
+          ),
         ),
       );
       return;
@@ -2672,7 +2888,9 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
     await prefs.clear();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Dados locais da conta removidos.')),
+      SnackBar(
+        content: Text(EaI18n.t(context, 'Dados locais da conta removidos.')),
+      ),
     );
     Navigator.pop(context);
   }
@@ -2680,7 +2898,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Excluir conta')),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Excluir conta'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2693,28 +2911,33 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
                 color: Colors.redAccent.withValues(alpha: 0.3),
               ),
             ),
-            child: const Text(
-              'Esta ação remove seus dados locais e não pode ser desfeita.',
+            child: Text(
+              EaI18n.t(
+                context,
+                'Esta ação remove seus dados locais e não pode ser desfeita.',
+              ),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _confirmController,
-            decoration: const InputDecoration(
-              labelText: 'Digite DELETE para confirmar',
+            decoration: InputDecoration(
+              labelText: EaI18n.t(context, 'Digite DELETE para confirmar'),
             ),
           ),
           CheckboxListTile(
             value: _understand,
             onChanged: (v) => setState(() => _understand = v ?? false),
-            title: const Text('Entendo que esta operação é irreversível'),
+            title: Text(
+              EaI18n.t(context, 'Entendo que esta operação é irreversível'),
+            ),
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: _delete,
             icon: const Icon(Icons.delete_forever_rounded),
-            label: const Text('Excluir dados locais da conta'),
+            label: Text(EaI18n.t(context, 'Excluir dados locais da conta')),
           ),
         ],
       ),

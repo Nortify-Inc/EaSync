@@ -113,7 +113,7 @@ class _AssistantChatState extends State<AssistantChat>
 
   Future<void> _createNewChat({String? fromText}) async {
     final title = (fromText ?? '').trim().isEmpty
-        ? 'New chat'
+        ? EaI18n.t(context, 'New chat')
         : fromText!.trim().split('\n').first;
 
     final session = _ChatSession(
@@ -157,10 +157,16 @@ class _AssistantChatState extends State<AssistantChat>
     try {
       reply = (await Bridge.aiExecuteCommandAsync(raw)).trim();
       if (reply.isEmpty) {
-        reply = 'No response generated. Try rephrasing your request.';
+        reply = EaI18n.t(
+          context,
+          'No response generated. Try rephrasing your request.',
+        );
       }
     } catch (_) {
-      reply = 'Could not process this command right now. Please try again.';
+      reply = EaI18n.t(
+        context,
+        'Could not process this command right now. Please try again.',
+      );
     }
 
     if (!mounted) return;
@@ -220,8 +226,8 @@ class _AssistantChatState extends State<AssistantChat>
                           children: [
                             IconButton(
                               tooltip: _sidebarOpen
-                                  ? 'Hide chats'
-                                  : 'Show chats',
+                                  ? EaI18n.t(context, 'Hide chats')
+                                  : EaI18n.t(context, 'Show chats'),
                               onPressed: () =>
                                   setState(() => _sidebarOpen = !_sidebarOpen),
                               icon: Icon(
@@ -239,7 +245,7 @@ class _AssistantChatState extends State<AssistantChat>
                                   curve: Curves.easeInOut,
                                 ),
                                 child: Text(
-                                  'Thinking...',
+                                  EaI18n.t(context, 'Thinking...'),
                                   style: EaText.small.copyWith(
                                     color: EaAdaptiveColor.secondaryText(
                                       context,
@@ -313,13 +319,13 @@ class _AssistantChatState extends State<AssistantChat>
               Expanded(
                 child: _railActionButton(
                   icon: Icons.add_comment_rounded,
-                  label: 'New chat',
+                  label: EaI18n.t(context, 'New chat'),
                   onTap: () => _createNewChat(),
                 ),
               ),
               const SizedBox(width: 8),
               _railIconButton(
-                tooltip: 'Close chats',
+                tooltip: EaI18n.t(context, 'Close chats'),
                 icon: Icons.close_rounded,
                 onTap: () => setState(() => _sidebarOpen = false),
               ),
@@ -433,7 +439,11 @@ class _AssistantChatState extends State<AssistantChat>
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
           child: Text(
-            '✨ No que posso ajudar você hoje, $_profileName?',
+            EaI18n.t(
+              context,
+              '✨ No que posso ajudar você hoje, {_profileName}?',
+              {'_profileName': _profileName},
+            ),
             textAlign: TextAlign.center,
             style: EaText.secondary.copyWith(
               fontSize: 18,
@@ -558,7 +568,10 @@ class _AssistantChatState extends State<AssistantChat>
               maxLines: 4,
               onSubmitted: (_) => _send(),
               decoration: InputDecoration(
-                hintText: 'Type a command or ask a question...',
+                hintText: EaI18n.t(
+                  context,
+                  'Type a command or ask a question...',
+                ),
                 hintStyle: EaText.small.copyWith(
                   color: EaAdaptiveColor.secondaryText(context),
                 ),

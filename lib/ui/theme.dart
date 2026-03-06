@@ -28,6 +28,7 @@ class EaAppSettings extends ChangeNotifier {
   static const String _kOfflineCache = 'usage.offline_cache';
   static const String _kLowDataMode = 'usage.low_data_mode';
   static const String _kUsagePattern = 'usage.pattern';
+  static const String _kProfileLanguage = 'profile.language';
 
   static final EaAppSettings instance = EaAppSettings._();
   EaAppSettings._();
@@ -50,6 +51,22 @@ class EaAppSettings extends ChangeNotifier {
   bool offlineCache = true;
   bool lowDataMode = false;
   String usagePattern = 'balanced';
+  Locale? localeOverride;
+
+  static Locale? _localeFromProfileLanguage(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v.isEmpty) return null;
+
+    if (v == 'português' || v == 'portugues' || v == 'pt' || v == 'pt-br') {
+      return const Locale('pt', 'BR');
+    }
+
+    if (v == 'english' || v == 'inglês' || v == 'ingles' || v == 'en') {
+      return const Locale('en');
+    }
+
+    return null;
+  }
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -77,6 +94,26 @@ class EaAppSettings extends ChangeNotifier {
     offlineCache = prefs.getBool(_kOfflineCache) ?? true;
     lowDataMode = prefs.getBool(_kLowDataMode) ?? false;
     usagePattern = prefs.getString(_kUsagePattern) ?? 'balanced';
+    localeOverride = _localeFromProfileLanguage(
+      prefs.getString(_kProfileLanguage) ?? '',
+    );
+  }
+
+  Future<void> refreshLocaleFromProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final next = _localeFromProfileLanguage(
+      prefs.getString(_kProfileLanguage) ?? '',
+    );
+    if (localeOverride == next) return;
+    localeOverride = next;
+    notifyListeners();
+  }
+
+  void setLocaleFromProfileLanguage(String languageLabel) {
+    final next = _localeFromProfileLanguage(languageLabel);
+    if (localeOverride == next) return;
+    localeOverride = next;
+    notifyListeners();
   }
 
   Future<void> setThemeMode(ThemeMode next) async {
