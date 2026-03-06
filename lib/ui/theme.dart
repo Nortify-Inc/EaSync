@@ -172,8 +172,8 @@ class EaTheme {
         ),
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) return EaColor.fore;
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return EaColor.fore;
           return EaColor.textDisabled;
         }),
       ),
@@ -306,8 +306,8 @@ class EaAdaptiveColor {
       _dark(context) ? EaColor.textSecondary : const Color(0xFF5C667F);
 
   static Color scrim(BuildContext context) => _dark(context)
-      ? Colors.black.withOpacity(0.32)
-      : const Color(0xFF2A3458).withOpacity(0.18);
+      ? Colors.black.withValues(alpha: 0.32)
+      : const Color(0xFF2A3458).withValues(alpha: 0.18);
 }
 
 class EaDecoration {

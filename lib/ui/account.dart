@@ -1,3 +1,5 @@
+// ignore_for_file: use_null_aware_elements
+
 /*!
  * @file account.dart
  * @brief Account page with profile, security and connected app sections.
@@ -270,11 +272,14 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
       _outsideTemp = parsed;
       _outsideUpdatedAt = DateTime.now();
+      final updatedAt = _outsideUpdatedAt;
       await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
-      await prefs.setInt(
-        _kOutsideTempUpdatedAt,
-        _outsideUpdatedAt!.millisecondsSinceEpoch,
-      );
+      if (updatedAt != null) {
+        await prefs.setInt(
+          _kOutsideTempUpdatedAt,
+          updatedAt.millisecondsSinceEpoch,
+        );
+      }
 
       if (!mounted) return;
       setState(() {});
@@ -472,9 +477,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         throw 'Location permission denied.';
       }
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      final position = await Geolocator.getCurrentPosition();
       final places = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
@@ -950,7 +953,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               trailing: Icon(
                 Icons.refresh_rounded,
                 size: 14,
-                color: EaAdaptiveColor.border(context),
+                color: EaColor.fore,
               ),
               onTap: _refreshOutsideTemperature,
             ),
@@ -964,7 +967,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               trailing: Icon(
                 Icons.my_location_rounded,
                 size: 14,
-                color: EaAdaptiveColor.border(context),
+                color: EaColor.fore,
               ),
               onTap: _refreshCurrentLocation,
             ),
@@ -1008,7 +1011,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 ),
-                if (trailing != null) trailing,
+                ?trailing,
               ],
             ),
             const SizedBox(height: 8),
@@ -1067,7 +1070,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                 ],
               ),
             ),
-            if (action != null) action,
+            ?action,
           ],
         ),
       ),
@@ -1075,55 +1078,43 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   }
 
   Widget _profileUpdateButton() {
-    final borderColor = EaAdaptiveColor.border(context);
-    return SizedBox(
-      height: 32,
-      child: Stack(
-        children: [
-          if (_locationRefreshing)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _updatePulse,
-                  builder: (_, _) {
-                    return CustomPaint(
-                      painter: _UpdateBorderPainter(
-                        progress: _updatePulse.value,
-                        color: borderColor,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          Positioned.fill(
-            child: OutlinedButton.icon(
-              onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
-              icon: Icon(
-                Icons.my_location_rounded,
-                size: 14,
-                color: borderColor,
-              ),
-              label: Text(
-                EaI18n.t(context, 'Update'),
-                style: EaText.small.copyWith(
-                  color: EaAdaptiveColor.bodyText(context),
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(
-                  color: _locationRefreshing ? Colors.transparent : borderColor,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                foregroundColor: borderColor,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-            ),
-          ),
-        ],
+    final borderColor = EaColor.fore;
+    final button = OutlinedButton.icon(
+      onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
+      icon: Icon(Icons.my_location_rounded, size: 14, color: borderColor),
+      label: Text(
+        EaI18n.t(context, 'Update'),
+        style: EaText.small.copyWith(color: EaAdaptiveColor.bodyText(context)),
       ),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(
+          color: _locationRefreshing ? Colors.transparent : borderColor,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        foregroundColor: borderColor,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+    );
+
+    return SizedBox(
+      width: 118,
+      height: 32,
+      child: _locationRefreshing
+          ? RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: _updatePulse,
+                builder: (_, _) {
+                  return CustomPaint(
+                    painter: _UpdateBorderPainter(
+                      progress: _updatePulse.value,
+                      color: borderColor,
+                    ),
+                    child: button,
+                  );
+                },
+              ),
+            )
+          : button,
     );
   }
 
@@ -1182,7 +1173,11 @@ class _UpdateBorderPainter extends CustomPainter {
     canvas.drawRRect(rrect, base);
 
     final path = Path()..addRRect(rrect);
-    final metric = path.computeMetrics().first;
+    final metrics = path.computeMetrics();
+    if (!metrics.iterator.moveNext()) {
+      return;
+    }
+    final metric = metrics.iterator.current;
     final length = metric.length;
 
     final segment = length * .22;
@@ -1844,7 +1839,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonFormField<String>(
-        value: value,
         dropdownColor: EaAdaptiveColor.surface(context),
         style: EaText.secondary.copyWith(
           color: EaAdaptiveColor.bodyText(context),
@@ -1940,11 +1934,14 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
     } catch (_) {}
 
     _updatedAt = DateTime.now();
+    final updatedAt = _updatedAt;
     await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
-    await prefs.setInt(
-      _kOutsideTempUpdatedAt,
-      _updatedAt!.millisecondsSinceEpoch,
-    );
+    if (updatedAt != null) {
+      await prefs.setInt(
+        _kOutsideTempUpdatedAt,
+        updatedAt.millisecondsSinceEpoch,
+      );
+    }
     if (mounted) setState(() {});
   }
 
@@ -1979,7 +1976,7 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
                         ? EaI18n.t(context, 'Sem atualização registrada.')
                         : EaI18n.t(context, 'Atualizado às {time}', {
                             'time':
-                                '${_updatedAt!.hour.toString().padLeft(2, '0')}:${_updatedAt!.minute.toString().padLeft(2, '0')}',
+                                '${_updatedAt?.hour.toString().padLeft(2, '0') ?? '--'}:${_updatedAt?.minute.toString().padLeft(2, '0') ?? '--'}',
                           }),
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),

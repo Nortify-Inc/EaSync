@@ -371,7 +371,7 @@ class _SettingsState extends State<Settings> {
           color: EaAdaptiveColor.secondaryText(context),
         ),
       ),
-      activeColor: EaColor.fore,
+      activeThumbColor: EaColor.fore,
       value: value,
       onChanged: onChanged,
     );

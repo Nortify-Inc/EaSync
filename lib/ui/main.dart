@@ -28,7 +28,7 @@ class EaSync extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: EaAppSettings.instance,
-      builder: (_, __) {
+      builder: (_, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           localizationsDelegates: const [
