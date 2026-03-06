@@ -280,7 +280,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     } catch (e) {
       if (!mounted) return;
       setState(() => discovering = false);
-      _showTopErrorSnack('Discovery failed: $e');
+      _showTopErrorSnack(
+        EaI18n.t(context, 'Discovery failed: {error}', {'error': '$e'}),
+      );
     }
   }
 
@@ -299,7 +301,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           child: discoveredDevices.isEmpty
               ? Center(
                   child: Text(
-                    'No devices discovered on network.',
+                    EaI18n.t(context, 'No devices discovered on network.'),
                     style: EaText.secondary.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
                     ),
@@ -365,7 +367,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                             ),
                           ),
                           IconButton(
-                            tooltip: 'Verify now',
+                            tooltip: EaI18n.t(context, 'Verify now'),
                             onPressed: () => _verifyDiscovered(d),
                             icon: const Icon(Icons.fact_check_outlined),
                             color: EaColor.fore,
@@ -381,7 +383,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                               }),
                             ),
                             child: Text(
-                              'Add',
+                              EaI18n.t(context, 'Add'),
                               style: EaText.secondary.copyWith(
                                 color: EaColor.fore,
                               ),
@@ -401,9 +403,19 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     final ok = await Bridge.verifyDiscoveredDevice(d);
     if (!mounted) return;
     if (ok) {
-      _showBottomSnack('${d.name} is reachable on ${d.host}:${d.port}.');
+      _showBottomSnack(
+        EaI18n.t(context, '{name} is reachable on {host}:{port}.', {
+          'name': d.name,
+          'host': d.host,
+          'port': '${d.port}',
+        }),
+      );
     } else {
-      _showTopErrorSnack('Could not verify ${d.name} right now.');
+      _showTopErrorSnack(
+        EaI18n.t(context, 'Could not verify {name} right now.', {
+          'name': d.name,
+        }),
+      );
     }
   }
 
@@ -415,7 +427,11 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       if (!verified) {
         if (mounted) {
           _showTopErrorSnack(
-            'Could not validate ${d.name} on ${d.host}:${d.port}. Try again closer to the device.',
+            EaI18n.t(
+              context,
+              'Could not validate {name} on {host}:{port}. Try again closer to the device.',
+              {'name': d.name, 'host': d.host, 'port': '${d.port}'},
+            ),
           );
         }
         return;
@@ -436,7 +452,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
 
       if (mounted) {
         Navigator.pop(context);
-        _showBottomSnack('${d.name} was added.');
+        _showBottomSnack(
+          EaI18n.t(context, '{name} was added.', {'name': d.name}),
+        );
       }
 
       _loadDevices();
@@ -469,19 +487,19 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     onPressed: () => _renameDeviceNickname(device),
                     icon: const Icon(Icons.edit_outlined),
                     color: EaColor.fore,
-                    tooltip: 'Rename custom name',
+                    tooltip: EaI18n.t(context, 'Rename custom name'),
                   ),
                   IconButton(
                     onPressed: () => _confirmRemoveDevice(device),
                     icon: const Icon(Icons.delete_outline),
                     color: Colors.redAccent,
-                    tooltip: 'Remove device',
+                    tooltip: EaI18n.t(context, 'Remove device'),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                'UUID',
+                EaI18n.t(context, 'UUID'),
                 style: EaText.secondary.copyWith(
                   color: EaColor.fore,
                   fontSize: 15,
@@ -497,7 +515,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 12),
               Text(
-                'Protocol',
+                EaI18n.t(context, 'Protocol'),
                 style: EaText.secondary.copyWith(
                   color: EaColor.fore,
                   fontSize: 15,
@@ -513,7 +531,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               ),
               const SizedBox(height: 12),
               Text(
-                'Connection',
+                EaI18n.t(context, 'Connection'),
                 style: EaText.secondary.copyWith(
                   color: EaColor.fore,
                   fontSize: 15,
@@ -538,7 +556,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               if ((Bridge.endpointForDevice(device.uuid) ?? '').isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Endpoint: ${Bridge.endpointForDevice(device.uuid)}',
+                  EaI18n.t(context, 'Endpoint: {endpoint}', {
+                    'endpoint': '${Bridge.endpointForDevice(device.uuid)}',
+                  }),
                   style: EaText.secondary.copyWith(
                     color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 12,
@@ -553,7 +573,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   OutlinedButton.icon(
                     onPressed: () => _retryConnection(device),
                     icon: const Icon(Icons.sync),
-                    label: const Text('Retry connection'),
+                    label: Text(EaI18n.t(context, 'Retry connection')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: EaColor.fore,
                       side: const BorderSide(color: EaColor.fore),
@@ -562,7 +582,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   OutlinedButton.icon(
                     onPressed: () => _openDiagnostics(device),
                     icon: const Icon(Icons.analytics_outlined),
-                    label: const Text('Diagnostics'),
+                    label: Text(EaI18n.t(context, 'Diagnostics')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: EaColor.fore,
                       side: const BorderSide(color: EaColor.fore),
@@ -572,7 +592,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     OutlinedButton.icon(
                       onPressed: () => _retryWifiProvisioning(device),
                       icon: const Icon(Icons.wifi),
-                      label: const Text('Retry provisioning'),
+                      label: Text(EaI18n.t(context, 'Retry provisioning')),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: EaColor.fore,
                         side: const BorderSide(color: EaColor.fore),
@@ -583,7 +603,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               if (device.protocol == CoreProtocol.CORE_PROTOCOL_WIFI) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'Provisioning',
+                  EaI18n.t(context, 'Provisioning'),
                   style: EaText.secondary.copyWith(
                     color: EaColor.fore,
                     fontSize: 15,
@@ -602,7 +622,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     .isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'SSID: ${Bridge.wifiProvisioningSsid(device.uuid)}',
+                    EaI18n.t(context, 'SSID: {ssid}', {
+                      'ssid': '${Bridge.wifiProvisioningSsid(device.uuid)}',
+                    }),
                     style: EaText.secondary.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
                       fontSize: 12,
@@ -612,7 +634,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               ],
               const SizedBox(height: 12),
               Text(
-                'Capabilities',
+                EaI18n.t(context, 'Capabilities'),
                 style: EaText.secondary.copyWith(color: EaColor.fore),
               ),
               const SizedBox(height: 8),
@@ -639,14 +661,17 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: EaColor.back,
-          title: Text('Rename nickname', style: EaText.primary),
+          title: Text(
+            EaI18n.t(context, 'Rename nickname'),
+            style: EaText.primary,
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
             cursorColor: EaColor.fore,
             style: EaText.secondary.copyWith(color: EaColor.textPrimary),
             decoration: InputDecoration(
-              hintText: 'Enter new nickname',
+              hintText: EaI18n.t(context, 'Enter new nickname'),
               hintStyle: EaText.secondary.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
               ),
@@ -665,12 +690,12 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: EaText.secondary),
+              child: Text(EaI18n.t(context, 'Cancel'), style: EaText.secondary),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
               child: Text(
-                'Save',
+                EaI18n.t(context, 'Save'),
                 style: EaText.secondary.copyWith(color: EaColor.fore),
               ),
             ),
@@ -687,7 +712,11 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       Bridge.renameDevice(device.uuid, nickname);
       if (mounted) {
         Navigator.pop(context);
-        _showBottomSnack('Nickname updated to "$nickname".');
+        _showBottomSnack(
+          EaI18n.t(context, 'Nickname updated to "{nickname}".', {
+            'nickname': nickname,
+          }),
+        );
       }
       _loadDevices();
     } catch (e) {
@@ -703,9 +732,14 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: EaColor.back,
-          title: Text('Remove device', style: EaText.primary),
+          title: Text(
+            EaI18n.t(context, 'Remove device'),
+            style: EaText.primary,
+          ),
           content: Text(
-            'Do you want to remove "${device.name}"?',
+            EaI18n.t(context, 'Do you want to remove "{name}"?', {
+              'name': device.name,
+            }),
             style: EaText.secondary.copyWith(
               color: EaAdaptiveColor.secondaryText(context),
             ),
@@ -713,12 +747,12 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: EaText.secondary),
+              child: Text(EaI18n.t(context, 'Cancel'), style: EaText.secondary),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text(
-                'Remove',
+              child: Text(
+                EaI18n.t(context, 'Remove'),
                 style: TextStyle(color: Colors.redAccent),
               ),
             ),
@@ -733,7 +767,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       Bridge.removeDevice(device.uuid);
       if (mounted) {
         Navigator.pop(context);
-        _showBottomSnack('Device was removed.');
+        _showBottomSnack(EaI18n.t(context, 'Device was removed.'));
       }
       _loadDevices();
     } catch (e) {
@@ -750,9 +784,17 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     );
     if (mounted) {
       if (ok) {
-        _showBottomSnack('Connection established for ${device.name}.');
+        _showBottomSnack(
+          EaI18n.t(context, 'Connection established for {name}.', {
+            'name': device.name,
+          }),
+        );
       } else {
-        _showTopErrorSnack('Unable to establish connection for ${device.name}');
+        _showTopErrorSnack(
+          EaI18n.t(context, 'Unable to establish connection for {name}', {
+            'name': device.name,
+          }),
+        );
       }
     }
     _loadDevices();
@@ -773,7 +815,10 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           ),
           child: logs.isEmpty
               ? Center(
-                  child: Text('No diagnostics yet.', style: EaText.secondary),
+                  child: Text(
+                    EaI18n.t(context, 'No diagnostics yet.'),
+                    style: EaText.secondary,
+                  ),
                 )
               : Column(
                   mainAxisSize: MainAxisSize.min,
@@ -786,7 +831,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                           Navigator.pop(context);
                           _openDiagnostics(device);
                         },
-                        child: const Text('Clear'),
+                        child: Text(EaI18n.t(context, 'Clear')),
                       ),
                     ),
                     Flexible(
@@ -831,7 +876,10 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: EaColor.back,
-          title: Text('Retry Wi-Fi provisioning', style: EaText.primary),
+          title: Text(
+            EaI18n.t(context, 'Retry Wi-Fi provisioning'),
+            style: EaText.primary,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -841,7 +889,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   color: EaAdaptiveColor.secondaryText(context),
                 ),
                 decoration: InputDecoration(
-                  labelText: 'SSID',
+                  labelText: EaI18n.t(context, 'SSID'),
                   labelStyle: EaText.secondary,
                 ),
               ),
@@ -853,7 +901,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   color: EaAdaptiveColor.secondaryText(context),
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: EaI18n.t(context, 'Password'),
                   labelStyle: EaText.secondary,
                 ),
               ),
@@ -862,11 +910,11 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: EaText.secondary),
+              child: Text(EaI18n.t(context, 'Cancel'), style: EaText.secondary),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Provision'),
+              child: Text(EaI18n.t(context, 'Provision')),
             ),
           ],
         );
@@ -887,7 +935,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
 
     if (ssid.isEmpty || password.length < 8) {
       if (mounted) {
-        _showTopErrorSnack('Invalid SSID/password.');
+        _showTopErrorSnack(EaI18n.t(context, 'Invalid SSID/password.'));
       }
       return;
     }
@@ -899,7 +947,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         password: password,
       );
       if (mounted) {
-        _showBottomSnack('Wi-Fi was provisioned successfully.');
+        _showBottomSnack(
+          EaI18n.t(context, 'Wi-Fi was provisioned successfully.'),
+        );
       }
       _loadDevices();
     } catch (e) {
@@ -958,13 +1008,13 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       icon: const Icon(Icons.radar),
                       label: discovering
                           ? Text(
-                              'Discovering...',
+                              EaI18n.t(context, 'Discovering...'),
                               style: EaText.secondary.copyWith(
                                 color: EaAdaptiveColor.bodyText(context),
                               ),
                             )
                           : Text(
-                              'Discover',
+                              EaI18n.t(context, 'Discover'),
                               style: EaText.secondary.copyWith(
                                 color: EaAdaptiveColor.bodyText(context),
                               ),
@@ -994,7 +1044,10 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               child: ElevatedButton.icon(
                 onPressed: () => _openEditor(),
                 icon: const Icon(Icons.add),
-                label: Text("Add device", style: EaText.primaryBack),
+                label: Text(
+                  EaI18n.t(context, 'Add device'),
+                  style: EaText.primaryBack,
+                ),
                 style: EaButtonStyle.gradientFilled(
                   context: context,
                   borderRadius: BorderRadius.circular(12),
@@ -1023,14 +1076,14 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
             const Icon(Icons.add_circle_outline, size: 36, color: EaColor.fore),
             const SizedBox(height: 8),
             Text(
-              "Add your first device",
+              EaI18n.t(context, 'Add your first device'),
               style: EaText.primary.copyWith(
                 color: EaAdaptiveColor.bodyText(context),
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              "Let EaSync to discover him or add manually.",
+              EaI18n.t(context, 'Let EaSync to discover him or add manually.'),
               style: EaText.secondary.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
               ),
@@ -1053,7 +1106,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
             ),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search, color: EaColor.fore),
-              hintText: "Search devices...",
+              hintText: EaI18n.t(context, 'Search devices...'),
               hintStyle: EaText.secondary,
               filled: true,
               fillColor: EaColor.back,
@@ -1071,7 +1124,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         SizedBox(height: 8),
         Expanded(
           child: filteredDevices.isEmpty
-              ? const Center(child: Text("No matching devices"))
+              ? Center(child: Text(EaI18n.t(context, 'No matching devices')))
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   itemCount: filteredDevices.length,
@@ -1159,29 +1212,29 @@ Widget _chip(String text) {
 String _capLabel(int cap) {
   switch (cap) {
     case CoreCapability.CORE_CAP_POWER:
-      return "Power";
+      return EaI18n.tSystem('Power');
     case CoreCapability.CORE_CAP_BRIGHTNESS:
-      return "Brightness";
+      return EaI18n.tSystem('Brightness');
     case CoreCapability.CORE_CAP_COLOR:
-      return "Color";
+      return EaI18n.tSystem('Color');
     case CoreCapability.CORE_CAP_TEMPERATURE:
-      return "Temperature";
+      return EaI18n.tSystem('Temperature');
     case CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE:
-      return "Fridge";
+      return EaI18n.tSystem('Fridge');
     case CoreCapability.CORE_CAP_TEMPERATURE_FREEZER:
-      return "Freezer";
+      return EaI18n.tSystem('Freezer');
     case CoreCapability.CORE_CAP_TIMESTAMP:
-      return "Schedule";
+      return EaI18n.tSystem('Schedule');
     case CoreCapability.CORE_CAP_COLOR_TEMPERATURE:
-      return "Color Temp";
+      return EaI18n.tSystem('Color Temp');
     case CoreCapability.CORE_CAP_LOCK:
-      return "Lock";
+      return EaI18n.tSystem('Lock');
     case CoreCapability.CORE_CAP_MODE:
-      return "Mode";
+      return EaI18n.tSystem('Mode');
     case CoreCapability.CORE_CAP_POSITION:
-      return "Position";
+      return EaI18n.tSystem('Position');
     default:
-      return "Unk";
+      return EaI18n.tSystem('Other');
   }
 }
 
@@ -1360,7 +1413,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
   Future<void> _save() async {
     if (selectedTemplate == null) {
-      _showError("Select a model");
+      _showError(EaI18n.t(context, 'Select a model'));
       return;
     }
 
@@ -1371,18 +1424,26 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     if (isWifi) {
       if (!apConfirmed) {
         _showError(
-          "Please confirm you're connected to the device Access Point.",
+          EaI18n.t(
+            context,
+            "Please confirm you're connected to the device Access Point.",
+          ),
         );
         return;
       }
 
       if (ssid.isEmpty) {
-        _showError("Please enter your home Wi-Fi SSID.");
+        _showError(EaI18n.t(context, 'Please enter your home Wi-Fi SSID.'));
         return;
       }
 
       if (password.trim().isEmpty || password.length < 8) {
-        _showError("Please enter a Wi-Fi password with at least 8 characters.");
+        _showError(
+          EaI18n.t(
+            context,
+            'Please enter a Wi-Fi password with at least 8 characters.',
+          ),
+        );
         return;
       }
     }
@@ -1426,7 +1487,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         if (!connected) {
           if (mounted) {
             _showBottomSnack(
-              'Device was added. Connection will be retried automatically in background.',
+              EaI18n.t(
+                context,
+                'Device was added. Connection will be retried automatically in background.',
+              ),
             );
           }
         }
@@ -1473,10 +1537,13 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       }
 
       _showError(
-        "Automatic network settings opening is not supported on this system.",
+        EaI18n.t(
+          context,
+          'Automatic network settings opening is not supported on this system.',
+        ),
       );
     } catch (_) {
-      _showError("Could not open network settings.");
+      _showError(EaI18n.t(context, 'Could not open network settings.'));
     }
   }
 
@@ -1490,13 +1557,15 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       'heated_floors': 'Heated Floors',
       'mocks': 'Mock Devices',
     };
-    return names[raw] ??
-        raw
-            .split('_')
-            .map(
-              (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}',
-            )
-            .join(' ');
+    return EaI18n.tSystem(
+      names[raw] ??
+          raw
+              .split('_')
+              .map(
+                (w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}',
+              )
+              .join(' '),
+    );
   }
 
   int _mapCapability(String cap) {
@@ -1661,7 +1730,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "New Device",
+                EaI18n.t(context, 'New Device'),
                 style: EaText.primary.copyWith(
                   color: EaAdaptiveColor.bodyText(context),
                 ),
@@ -1679,7 +1748,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     Icons.search,
                     color: EaAdaptiveColor.secondaryText(context),
                   ),
-                  hintText: "Search brand, model or capability",
+                  hintText: EaI18n.t(
+                    context,
+                    'Search brand, model or capability',
+                  ),
                   filled: true,
                   fillColor: EaAdaptiveColor.field(context),
                   hintStyle: EaText.secondary.copyWith(
@@ -1710,7 +1782,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                 child: filteredTemplates.isEmpty
                     ? Center(
                         child: Text(
-                          "No templates found",
+                          EaI18n.t(context, 'No templates found'),
                           style: EaText.secondary.copyWith(
                             color: EaAdaptiveColor.secondaryText(context),
                           ),
@@ -1816,7 +1888,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Wi-Fi Provisioning",
+                        EaI18n.t(context, 'Wi-Fi Provisioning'),
                         style: EaText.primary.copyWith(fontSize: 14),
                       ),
                       SwitchListTile(
@@ -1827,7 +1899,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         contentPadding: EdgeInsets.zero,
                         activeThumbColor: EaColor.fore,
                         title: Text(
-                          "Remember Wi-Fi credentials",
+                          EaI18n.t(context, 'Remember Wi-Fi credentials'),
                           style: EaText.secondary.copyWith(
                             color: EaAdaptiveColor.secondaryText(context),
                           ),
@@ -1835,7 +1907,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your Wi-Fi credentials.",
+                        EaI18n.t(
+                          context,
+                          'Before saving, open network settings, connect to the device Access Point, return to the app and then submit your Wi-Fi credentials.',
+                        ),
                         style: EaText.secondary.copyWith(
                           color: EaAdaptiveColor.secondaryText(context),
                         ),
@@ -1844,7 +1919,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                       OutlinedButton.icon(
                         onPressed: _openNetworkSettings,
                         icon: const Icon(Icons.wifi),
-                        label: const Text("Open Network Settings"),
+                        label: Text(EaI18n.t(context, 'Open Network Settings')),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: EaColor.fore,
                           side: const BorderSide(color: EaColor.fore),
@@ -1860,7 +1935,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         controlAffinity: ListTileControlAffinity.leading,
                         activeColor: EaColor.fore,
                         title: Text(
-                          "I've already connected to the device's Access Point",
+                          EaI18n.t(
+                            context,
+                            "I've already connected to the device's Access Point",
+                          ),
                           style: EaText.secondary.copyWith(
                             color: EaAdaptiveColor.secondaryText(context),
                           ),
@@ -1874,7 +1952,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                           color: EaAdaptiveColor.secondaryText(context),
                         ),
                         decoration: InputDecoration(
-                          labelText: "Network Name/SSID",
+                          labelText: EaI18n.t(context, 'Network Name/SSID'),
                           labelStyle: EaText.secondary,
                           filled: true,
                           fillColor: EaColor.back,
@@ -1901,7 +1979,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                           color: EaAdaptiveColor.secondaryText(context),
                         ),
                         decoration: InputDecoration(
-                          labelText: "Network Password",
+                          labelText: EaI18n.t(context, 'Network Password'),
                           labelStyle: EaText.secondary,
                           filled: true,
                           fillColor: EaColor.back,
@@ -1934,7 +2012,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                   color: EaAdaptiveColor.bodyText(context),
                 ),
                 decoration: InputDecoration(
-                  labelText: "Device Custom Name",
+                  labelText: EaI18n.t(context, 'Device Custom Name'),
                   labelStyle: EaText.secondary.copyWith(
                     color: EaAdaptiveColor.secondaryText(context),
                   ),
@@ -1973,7 +2051,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     ),
                     onPressed: _save,
                     child: Text(
-                      "Save",
+                      EaI18n.t(context, 'Save'),
                       style: EaText.primaryBack.copyWith(
                         fontWeight: FontWeight.w700,
                       ),

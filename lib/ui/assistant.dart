@@ -339,7 +339,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         _appendAssistantChat(backendReply, animate: false);
       }
     } catch (_) {
-      _appendAssistantChat('Backend AI execution error.', animate: false);
+      _appendAssistantChat(
+        EaI18n.t(context, 'Backend AI execution error.'),
+        animate: false,
+      );
     }
   }
 
@@ -357,7 +360,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           ),
           backgroundColor: EaColor.back,
           content: Text(
-            'Voice recognition is only available on Android for now.',
+            EaI18n.t(
+              context,
+              'Voice recognition is only available on Android for now.',
+            ),
             style: EaText.secondary,
           ),
         ),
@@ -423,8 +429,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       if (!mounted) return;
       setState(() => _isRecordingAudio = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Voice recognition is not available right now.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Voice recognition is not available right now.'),
+          ),
         ),
       );
     }
@@ -684,14 +692,20 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       builder: (ctx) {
         return AlertDialog(
           backgroundColor: EaColor.back,
-          title: Text('Your location', style: EaText.primary),
+          title: Text(
+            EaI18n.t(context, 'Your location'),
+            style: EaText.primary,
+          ),
           content: TextField(
             controller: controller,
             autofocus: true,
             cursorColor: EaColor.fore,
             style: EaText.secondary.copyWith(color: EaColor.textPrimary),
             decoration: InputDecoration(
-              hintText: 'City or city,country (e.g. London,UK)',
+              hintText: EaI18n.t(
+                context,
+                'City or city,country (e.g. London,UK)',
+              ),
               hintStyle: EaText.secondaryTranslucent,
               filled: true,
               fillColor: EaColor.secondaryBack,
@@ -708,11 +722,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: EaText.secondary),
+              child: Text(EaI18n.t(context, 'Cancel'), style: EaText.secondary),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-              child: Text('Save', style: EaText.accent),
+              child: Text(EaI18n.t(context, 'Save'), style: EaText.accent),
             ),
           ],
         );
@@ -957,8 +971,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (!_allowDeviceControl) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Device control is disabled in Assistant Data.'),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Device control is disabled in Assistant Data.'),
+          ),
         ),
       );
       return;
@@ -980,7 +996,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
     if (target.uuid.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No temperature-capable device found.')),
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'No temperature-capable device found.'),
+          ),
+        ),
       );
       return;
     }
@@ -993,7 +1013,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Suggestion applied to ${target.name} (${preferred.toStringAsFixed(0)}°C).',
+            EaI18n.t(context, 'Suggestion applied to {name} ({temp}°C).', {
+              'name': target.name,
+              'temp': preferred.toStringAsFixed(0),
+            }),
           ),
         ),
       );
@@ -1081,8 +1104,19 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
         SnackBar(
           content: Text(
             automatic
-                ? 'Assistant auto-routine applied on ${target.name}.'
-                : 'Arrival routine applied on ${target.name} (${targetTemp.toStringAsFixed(0)}°C).',
+                ? EaI18n.t(
+                    context,
+                    'Assistant auto-routine applied on {name}.',
+                    {'name': target.name},
+                  )
+                : EaI18n.t(
+                    context,
+                    'Arrival routine applied on {name} ({temp}°C).',
+                    {
+                      'name': target.name,
+                      'temp': targetTemp.toStringAsFixed(0),
+                    },
+                  ),
           ),
         ),
       );
@@ -1139,9 +1173,12 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       ListTile(
         contentPadding: EdgeInsets.zero,
         leading: const Icon(Icons.tune_rounded, color: EaColor.fore),
-        title: Text('Assistant temperament', style: EaText.secondary),
+        title: Text(
+          EaI18n.t(context, 'Assistant temperament'),
+          style: EaText.secondary,
+        ),
         subtitle: Text(
-          'Controls tone of generated answers.',
+          EaI18n.t(context, 'Controls tone of generated answers.'),
           style: EaText.secondaryTranslucent,
         ),
         trailing: DropdownButton<int>(
@@ -1152,7 +1189,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               .map(
                 (entry) => DropdownMenuItem<int>(
                   value: entry.key,
-                  child: Text(entry.value),
+                  child: Text(EaI18n.t(context, entry.value)),
                 ),
               )
               .toList(),
@@ -1175,9 +1212,15 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           }
           await _persistState();
         },
-        title: Text('Allow AI to consume location', style: EaText.secondary),
+        title: Text(
+          EaI18n.t(context, 'Allow AI to consume location'),
+          style: EaText.secondary,
+        ),
         subtitle: Text(
-          'Use device GPS when available, otherwise network-based location.',
+          EaI18n.t(
+            context,
+            'Use device GPS when available, otherwise network-based location.',
+          ),
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1195,11 +1238,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           }
         },
         title: Text(
-          'Allow AI to consume weather data',
+          EaI18n.t(context, 'Allow AI to consume weather data'),
           style: EaText.secondary,
         ),
         subtitle: Text(
-          'Weather informs climate and arrival suggestions.',
+          EaI18n.t(context, 'Weather informs climate and arrival suggestions.'),
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1214,11 +1257,14 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           _persistState();
         },
         title: Text(
-          'Allow AI to consume usage history',
+          EaI18n.t(context, 'Allow AI to consume usage history'),
           style: EaText.secondary,
         ),
         subtitle: Text(
-          'Lets Assistant learn open/arrival patterns over time.',
+          EaI18n.t(
+            context,
+            'Lets Assistant learn open/arrival patterns over time.',
+          ),
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1232,9 +1278,15 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           setState(() => _allowDeviceControl = v);
           _persistState();
         },
-        title: Text('Allow AI to control devices', style: EaText.secondary),
+        title: Text(
+          EaI18n.t(context, 'Allow AI to control devices'),
+          style: EaText.secondary,
+        ),
         subtitle: Text(
-          'Enables command execution and suggestion apply buttons.',
+          EaI18n.t(
+            context,
+            'Enables command execution and suggestion apply buttons.',
+          ),
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1249,11 +1301,14 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           _persistState();
         },
         title: Text(
-          'Allow AI to run automatic routines',
+          EaI18n.t(context, 'Allow AI to run automatic routines'),
           style: EaText.secondary,
         ),
         subtitle: Text(
-          'Allows periodic auto-arrival automation near learned time.',
+          EaI18n.t(
+            context,
+            'Allows periodic auto-arrival automation near learned time.',
+          ),
           style: EaText.secondaryTranslucent,
         ),
         controlAffinity: ListTileControlAffinity.leading,
@@ -1267,9 +1322,14 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
           setState(() => _autoArrivalEnabled = v);
           _persistState();
         },
-        title: Text('Enable auto-arrival routine', style: EaText.secondary),
+        title: Text(
+          EaI18n.t(context, 'Enable auto-arrival routine'),
+          style: EaText.secondary,
+        ),
         subtitle: Text(
-          'Auto run near ${_hourLabel(_topHour(_powerOnByHour))} when weather is warm.',
+          EaI18n.t(context, 'Auto run near {hour} when weather is warm.', {
+            'hour': _hourLabel(_topHour(_powerOnByHour)),
+          }),
           style: EaText.secondaryTranslucent,
         ),
         secondary: const Icon(Icons.auto_mode, color: EaColor.fore),
@@ -1285,12 +1345,13 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       backend = const [];
     }
     if (backend.isEmpty) {
-      return const [
+      return [
         _AnnotationModel(
           icon: Icons.auto_awesome_outlined,
-          title: 'Learning in progress',
-          description:
-              'Assistant backend is still collecting behavior signals from app usage, commands and profiles.',
+          title: EaI18n.tSystem('Learning in progress'),
+          description: EaI18n.tSystem(
+            'Assistant backend is still collecting behavior signals from app usage, commands and profiles.',
+          ),
         ),
       ];
     }
@@ -1302,10 +1363,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
       mapped.add(
         _AnnotationModel(
           icon: Icons.psychology_outlined,
-          title: 'Behavior insight',
+          title: EaI18n.t(context, 'Behavior insight'),
           description: lines[i],
           onApply: (i == 0 && canRun) ? _runArrivalRoutine : null,
-          actionLabel: (i == 0 && canRun) ? 'Run now' : null,
+          actionLabel: (i == 0 && canRun) ? EaI18n.t(context, 'Run now') : null,
         ),
       );
     }
@@ -1330,7 +1391,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                 Row(
                   children: [
                     Text(
-                      'All annotations',
+                      EaI18n.t(context, 'All annotations'),
                       style: EaText.primary.copyWith(fontSize: 17),
                     ),
                     const Spacer(),
@@ -1360,7 +1421,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                                   a.onApply?.call();
                                 },
                                 child: Text(
-                                  a.actionLabel ?? 'Apply',
+                                  a.actionLabel ?? EaI18n.t(context, 'Apply'),
                                   style: EaText.accent,
                                 ),
                               ),
@@ -1511,7 +1572,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                   Row(
                     children: [
                       Text(
-                        'Chat',
+                        EaI18n.t(context, 'Chat'),
                         style: EaText.primary.copyWith(fontSize: 17),
                       ),
                       const SizedBox(width: 8),
@@ -1542,8 +1603,10 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                       const SizedBox(width: 8),
                       Text(
                         _assistantThinking
-                            ? 'Thinking...'
-                            : (_isRecordingAudio ? 'Listening...' : 'Online'),
+                            ? EaI18n.t(context, 'Thinking...')
+                            : (_isRecordingAudio
+                                  ? EaI18n.t(context, 'Listening...')
+                                  : EaI18n.t(context, 'Online')),
                         style: EaText.secondaryTranslucent,
                       ),
                     ],
@@ -1595,8 +1658,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                     ),
                     decoration: InputDecoration(
                       hintText: _isRecordingAudio
-                          ? 'Listening... speak now'
-                          : 'Ask anything about your home…',
+                          ? EaI18n.t(context, 'Listening... speak now')
+                          : EaI18n.t(context, 'Ask anything about your home…'),
                       hintStyle: EaText.secondaryTranslucent,
                       filled: true,
                       fillColor: EaColor.secondaryBack,
@@ -1623,7 +1686,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                           child: ElevatedButton.icon(
                             onPressed: _submitCurrentCommand,
                             icon: const Icon(Icons.send_rounded),
-                            label: const Text('Send'),
+                            label: Text(EaI18n.t(context, 'Send')),
                             style: EaButtonStyle.gradientFilled(
                               context: context,
                               borderRadius: BorderRadius.circular(12),
@@ -1638,7 +1701,11 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                         icon: Icon(
                           _isRecordingAudio ? Icons.stop_circle : Icons.mic,
                         ),
-                        label: Text(_isRecordingAudio ? 'Stop' : 'Rec'),
+                        label: Text(
+                          _isRecordingAudio
+                              ? EaI18n.t(context, 'Stop')
+                              : EaI18n.t(context, 'Rec'),
+                        ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: EaColor.fore,
                           side: const BorderSide(color: EaColor.fore),
@@ -1764,7 +1831,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                   _initAssistant();
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(EaI18n.t(context, 'Retry')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: EaColor.fore,
                   side: const BorderSide(color: EaColor.fore),
@@ -1794,7 +1861,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Assistant Data',
+                  EaI18n.t(context, 'Assistant Data'),
                   style: EaText.primary.copyWith(fontSize: 18),
                 ),
                 const SizedBox(height: 10),
@@ -1812,7 +1879,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                           Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
-                              'Outside temperature',
+                              EaI18n.t(context, 'Outside temperature'),
                               style: EaText.secondary,
                             ),
                           ),
@@ -1872,7 +1939,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                               icon: const Icon(Icons.place_outlined, size: 18),
                               label: Text(
                                 _locationQuery.trim().isEmpty
-                                    ? 'Set location'
+                                    ? EaI18n.t(context, 'Set location')
                                     : _locationQuery,
                                 overflow: TextOverflow.ellipsis,
                                 style: EaText.secondary,
@@ -1944,7 +2011,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                   children: [
                     Expanded(
                       child: Text(
-                        'Annotations',
+                        EaI18n.t(context, 'Annotations'),
                         style: EaText.primary.copyWith(fontSize: 18),
                       ),
                     ),
@@ -1952,7 +2019,7 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                       onPressed: () =>
                           _showAllAnnotationsBottomSheet(annotations),
                       child: Text(
-                        'View details',
+                        EaI18n.t(context, 'View details'),
                         style: EaText.secondary.copyWith(fontSize: 12),
                       ),
                     ),
@@ -2005,7 +2072,8 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                                   : TextButton(
                                       onPressed: a.onApply,
                                       child: Text(
-                                        a.actionLabel ?? 'Apply',
+                                        a.actionLabel ??
+                                            EaI18n.t(context, 'Apply'),
                                         style: EaText.accent,
                                       ),
                                     ),

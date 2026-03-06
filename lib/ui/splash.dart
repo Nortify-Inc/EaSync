@@ -68,7 +68,7 @@ class _SplashState extends State<Splash> {
     return Row(
       children: [
         Text(
-          "Powered by",
+          EaI18n.t(context, 'Powered by'),
           style: EaText.secondary.copyWith(
             color: EaAdaptiveColor.secondaryText(context),
           ),
@@ -130,7 +130,7 @@ class _SplashState extends State<Splash> {
                 const SizedBox(height: 16),
 
                 Text(
-                  "Everything connected.\nOne interface.",
+                  EaI18n.t(context, 'Everything connected.\nOne interface.'),
                   style: EaText.secondary.copyWith(
                     color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 16,
