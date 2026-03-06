@@ -297,7 +297,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       key: ValueKey(
                         'filter-summary-${_selectedCapabilityFilter ?? -1}-$selectedCount',
                       ),
-                      style: EaText.secondaryTranslucent.copyWith(fontSize: 12),
+                      style: EaText.secondary.copyWith(
+                        fontSize: 12,
+                        color: EaAdaptiveColor.secondaryText(context),
+                      ),
                     ),
                   ),
                 ],
@@ -339,7 +342,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                           child: Text(
                             'No devices match this capability filter.',
                             textAlign: TextAlign.center,
-                            style: EaText.secondaryTranslucent,
+                            style: EaText.secondary.copyWith(
+                              color: EaAdaptiveColor.secondaryText(context),
+                            ),
                           ),
                         )
                       : Wrap(
@@ -613,14 +618,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: EaDecoration.roundOrbGradient(),
+                gradient: EaDecoration.roundOrbGradient(context),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.tungsten, size: 30, color: EaColor.fore),
-                  Icon(Icons.color_lens, size: 30, color: EaColor.fore),
-                  Icon(Icons.thermostat, size: 30, color: EaColor.fore),
+                  Icon(Icons.tungsten, size: 30, color: EaColor.back),
+                  Icon(Icons.color_lens, size: 30, color: EaColor.back),
+                  Icon(Icons.thermostat, size: 30, color: EaColor.back),
                 ],
               ),
             ),
@@ -1150,24 +1155,40 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                                               ),
 
                                               const SizedBox(height: 16),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  final rgb =
-                                                      selected.toARGB32() &
-                                                      0xFFFFFFFF;
-                                                  Bridge.setColor(
-                                                    device.uuid,
-                                                    rgb,
-                                                  );
-                                                  setState(() {});
-                                                  Navigator.pop(context);
-                                                },
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: EaColor.fore,
-                                                ),
-                                                child: Text(
-                                                  "Apply",
-                                                  style: EaText.secondary,
+                                              EaGradientButtonFrame(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                                child: ElevatedButton(
+                                                  onPressed: () {
+                                                    final rgb =
+                                                        selected.toARGB32() &
+                                                        0xFFFFFFFF;
+                                                    Bridge.setColor(
+                                                      device.uuid,
+                                                      rgb,
+                                                    );
+                                                    setState(() {});
+                                                    Navigator.pop(context);
+                                                  },
+                                                  style: EaButtonStyle.gradientFilled(
+                                                    context: context,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          12,
+                                                        ),
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          vertical: 11,
+                                                          horizontal: 18,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    "Apply",
+                                                    style: EaText.secondary
+                                                        .copyWith(
+                                                          color: EaColor.back,
+                                                        ),
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -1782,7 +1803,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 duration: const Duration(milliseconds: 360),
                 curve: Curves.easeOutSine,
                 builder: (_, animatedColor, child) {
-                  final effectiveRingColor = animatedColor ?? ringColorTarget;
+                  final isLightTheme =
+                      Theme.of(context).brightness == Brightness.light;
+                  final ringBaseColor = isLightTheme
+                      ? Colors.white
+                      : EaColor.background;
+                  final effectiveRingColor = isLightTheme
+                      ? EaColor.back
+                      : (animatedColor ?? ringColorTarget);
                   final isTargetZero = target <= 0.000001;
                   final fadeBase = begin <= 0.000001 ? 1.0 : begin;
                   final normalizedToBegin = (animated / fadeBase).clamp(
@@ -1799,14 +1827,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        CustomPaint(
-                          size: Size(size + 30, size + 30),
-                          painter: _RingPainter(
-                            ringColor: effectiveRingColor,
-                            progress: animated,
-                            showDot: true,
-                            dotOpacity: dotOpacity,
-                            syncDotToGradient: syncDotToGradient,
+                        ClipOval(
+                          child: CustomPaint(
+                            size: Size(size + 30, size + 30),
+                            painter: _RingPainter(
+                              ringColor: effectiveRingColor,
+                              baseColor: ringBaseColor,
+                              progress: animated,
+                              showDot: true,
+                              dotOpacity: dotOpacity,
+                              syncDotToGradient: syncDotToGradient,
+                              lightTheme: isLightTheme,
+                            ),
                           ),
                         ),
                         GestureDetector(
@@ -1936,7 +1968,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: EaText.secondary.copyWith(fontSize: 12, height: 1.2),
+              style: EaText.secondary.copyWith(
+                fontSize: 12,
+                height: 1.2,
+                color: EaAdaptiveColor.bodyText(context),
+              ),
             ),
           ),
         ],
@@ -1947,18 +1983,22 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
 class _RingPainter extends CustomPainter {
   final Color ringColor;
+  final Color baseColor;
   final double progress;
   final bool showDot;
   final double dotOpacity;
   final bool syncDotToGradient;
+  final bool lightTheme;
   double ringWidth = 6;
 
   _RingPainter({
     required this.ringColor,
+    required this.baseColor,
     required this.progress,
     required this.showDot,
     this.dotOpacity = 1.0,
     this.syncDotToGradient = false,
+    this.lightTheme = false,
   });
 
   @override
@@ -1967,21 +2007,31 @@ class _RingPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     final maxR = min(size.width, size.height) / 2;
-    final radius = maxR - ringWidth / 2 - 4;
+    final dotRadius = ringWidth * 1.4;
+    final radius = maxR - max(ringWidth / 2, dotRadius) - 4;
 
-    final glowPaint = Paint()
-      ..shader = RadialGradient(
-        colors: [EaColor.back, EaColor.background],
-      ).createShader(Rect.fromCircle(center: center, radius: radius * 1.2));
+    if (radius <= 0) return;
 
-    canvas.drawCircle(center, radius * 1.2, glowPaint);
+    if (!lightTheme) {
+      final glowPaint = Paint()
+        ..shader = RadialGradient(
+          colors: [EaColor.back, EaColor.background],
+        ).createShader(Rect.fromCircle(center: center, radius: radius * 1.2));
+
+      canvas.drawCircle(center, radius * 1.2, glowPaint);
+    }
+
+    final baseRingColor = baseColor;
 
     final baseRing = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = ringWidth
-      ..color = EaColor.background;
+      ..color = baseRingColor;
 
     canvas.drawCircle(center, radius, baseRing);
+
+    final gradientStart = baseRingColor;
+    final gradientEnd = ringColor;
 
     final start = (5 * pi) / 4;
     final end = (6 * pi) / 4;
@@ -2002,11 +2052,11 @@ class _RingPainter extends CustomPainter {
           ..strokeWidth = ringWidth
           ..strokeCap = StrokeCap.butt
           ..isAntiAlias = true
-          ..color = EaColor.background;
+          ..color = baseRingColor;
 
         canvas.drawArc(localRect, 0, sweep, false, solidPaint);
         if (syncDotToGradient) {
-          dotBaseColor = EaColor.background;
+          dotBaseColor = baseRingColor;
         }
       } else {
         const totalSegments = 720;
@@ -2017,7 +2067,7 @@ class _RingPainter extends CustomPainter {
         if (syncDotToGradient) {
           final dotT = (sweep / end).clamp(0.0, 1.0);
           dotBaseColor =
-              Color.lerp(EaColor.background, ringColor, dotT) ?? ringColor;
+              Color.lerp(gradientStart, gradientEnd, dotT) ?? gradientEnd;
         }
 
         for (int i = 0; i < visibleSegments; i++) {
@@ -2026,7 +2076,7 @@ class _RingPainter extends CustomPainter {
               : (visibleSegments == 1 ? 1.0 : i / (visibleSegments - 1));
 
           final segmentColor =
-              Color.lerp(EaColor.background, ringColor, t) ?? ringColor;
+              Color.lerp(gradientStart, gradientEnd, t) ?? gradientEnd;
 
           final segmentPaint = Paint()
             ..style = PaintingStyle.stroke
@@ -2068,15 +2118,17 @@ class _RingPainter extends CustomPainter {
     final dotPaint = Paint()
       ..color = dotBaseColor.withValues(alpha: effectiveDotOpacity);
 
-    canvas.drawCircle(dotOffset, ringWidth * 1.4, dotPaint);
+    canvas.drawCircle(dotOffset, dotRadius, dotPaint);
   }
 
   @override
   bool shouldRepaint(covariant _RingPainter old) {
     return old.progress != progress ||
         old.ringColor != ringColor ||
+        old.baseColor != baseColor ||
         old.showDot != showDot ||
         old.dotOpacity != dotOpacity ||
-        old.syncDotToGradient != syncDotToGradient;
+        old.syncDotToGradient != syncDotToGradient ||
+        old.lightTheme != lightTheme;
   }
 }

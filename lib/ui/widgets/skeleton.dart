@@ -62,7 +62,7 @@ class _EaSkeletonState extends State<EaSkeleton>
   }
 }
 
-class EaFadeSlideIn extends StatelessWidget {
+class EaFadeSlideIn extends StatefulWidget {
   final Widget child;
   final Duration duration;
   final Offset begin;
@@ -75,20 +75,59 @@ class EaFadeSlideIn extends StatelessWidget {
   });
 
   @override
+  State<EaFadeSlideIn> createState() => _EaFadeSlideInState();
+}
+
+class _EaFadeSlideInState extends State<EaFadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  );
+
+  late Animation<double> _fade;
+  late Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _bindAnimations();
+    if (widget.duration == Duration.zero) {
+      _controller.value = 1;
+    } else {
+      _controller.forward();
+    }
+  }
+
+  void _bindAnimations() {
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _slide = Tween<Offset>(
+      begin: Offset(widget.begin.dx * 0.6, widget.begin.dy * 0.6),
+      end: Offset.zero,
+    ).animate(_fade);
+  }
+
+  @override
+  void didUpdateWidget(covariant EaFadeSlideIn oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.duration != widget.duration ||
+        oldWidget.begin != widget.begin) {
+      _controller.duration = widget.duration;
+      _bindAnimations();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: duration,
-      curve: Curves.easeOutCubic,
-      builder: (context, t, _) {
-        return Opacity(
-          opacity: t,
-          child: Transform.translate(
-            offset: Offset(begin.dx * (1 - t) * 30, begin.dy * (1 - t) * 30),
-            child: child,
-          ),
-        );
-      },
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }

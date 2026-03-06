@@ -200,61 +200,64 @@ class _AssistantChatState extends State<AssistantChat>
           begin: const Offset(0, 0.015),
           duration: _settings.animationsEnabled
               ? EaMotion.normal
-            child: EaFadeSlideIn(
-              begin: const Offset(0, 0.015),
-              duration: _settings.animationsEnabled
-                  ? EaMotion.normal
-                  : Duration.zero,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: EaAdaptiveColor.surface(context),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: EaAdaptiveColor.border(context)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Stack(
-                    clipBehavior: Clip.hardEdge,
+              : Duration.zero,
+          child: Container(
+            decoration: BoxDecoration(
+              color: EaAdaptiveColor.surface(context),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: EaAdaptiveColor.border(context)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: Stack(
+                clipBehavior: Clip.hardEdge,
+                children: [
+                  Column(
                     children: [
-                      Column(
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: EaAdaptiveColor.surface(context),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: EaAdaptiveColor.border(context)),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            tooltip: _sidebarOpen ? 'Hide chats' : 'Show chats',
-                            onPressed: () =>
-                                setState(() => _sidebarOpen = !_sidebarOpen),
-                            icon: Icon(
-                              _sidebarOpen
-                                  ? Icons.menu_open_rounded
-                                  : Icons.menu_rounded,
-                              color: EaColor.fore,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (_typingIndicator)
-                            FadeTransition(
-                              opacity: CurvedAnimation(
-                                parent: _thinkingPulse,
-                                curve: Curves.easeInOut,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
+                        child: Row(
+                          children: [
+                            IconButton(
+                              tooltip: _sidebarOpen
+                                  ? 'Hide chats'
+                                  : 'Show chats',
+                              onPressed: () =>
+                                  setState(() => _sidebarOpen = !_sidebarOpen),
+                              icon: Icon(
+                                _sidebarOpen
+                                    ? Icons.menu_open_rounded
+                                    : Icons.menu_rounded,
+                                color: EaColor.fore,
                               ),
-                              child: Text(
-                                'Thinking...',
-                                style: EaText.small.copyWith(
-                                  color: EaAdaptiveColor.secondaryText(context),
+                            ),
+                            const Spacer(),
+                            if (_typingIndicator)
+                              FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: _thinkingPulse,
+                                  curve: Curves.easeInOut,
+                                ),
+                                child: Text(
+                                  'Thinking...',
+                                  style: EaText.small.copyWith(
+                                    color: EaAdaptiveColor.secondaryText(
+                                      context,
+                                    ),
+                                  ),
                                 ),
                               ),
+                          ],
+                        ),
+                      ),
+                      Divider(
+                        height: 1,
+                        color: EaAdaptiveColor.border(context),
+                      ),
+                      Expanded(child: _buildMessageList()),
+                      _composer(),
+                    ],
+                  ),
                   if (_sidebarOpen)
                     Positioned.fill(
                       child: GestureDetector(
@@ -276,7 +279,9 @@ class _AssistantChatState extends State<AssistantChat>
                         decoration: BoxDecoration(
                           color: EaAdaptiveColor.surface(context),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: EaAdaptiveColor.border(context)),
+                          border: Border.all(
+                            color: EaAdaptiveColor.border(context),
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.16),
@@ -288,19 +293,10 @@ class _AssistantChatState extends State<AssistantChat>
                         child: _buildSidebar(),
                       ),
                     ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.16),
-                          blurRadius: 20,
-                          offset: const Offset(4, 0),
-                        ),
-                      ],
-                    ),
-                    child: _buildSidebar(),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

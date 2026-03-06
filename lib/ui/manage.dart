@@ -217,7 +217,10 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         SnackBar(
           content: Text(
             message,
-            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+            style: EaText.secondary.copyWith(
+              color: EaColor.textPrimary,
+              fontSize: 12,
+            ),
           ),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -288,15 +291,18 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       builder: (_) {
         return Container(
           padding: const EdgeInsets.all(20),
-          decoration: const BoxDecoration(
-            color: EaColor.back,
+          decoration: BoxDecoration(
+            color: EaAdaptiveColor.surface(context),
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border.all(color: EaAdaptiveColor.border(context)),
           ),
           child: discoveredDevices.isEmpty
               ? Center(
                   child: Text(
                     'No devices discovered on network.',
-                    style: EaText.secondary,
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.secondaryText(context),
+                    ),
                   ),
                 )
               : ListView.separated(
@@ -309,7 +315,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: EaColor.border),
+                        border: Border.all(
+                          color: EaAdaptiveColor.border(context),
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -323,6 +331,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                                   d.name,
                                   style: EaText.secondary.copyWith(
                                     fontSize: 16,
+                                    color: EaAdaptiveColor.bodyText(context),
                                   ),
                                 ),
 
@@ -330,6 +339,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                                   '${d.host}:${d.port}',
                                   style: EaText.secondary.copyWith(
                                     fontSize: 12,
+                                    color: EaAdaptiveColor.secondaryText(
+                                      context,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
@@ -337,12 +349,17 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                                   'Confidence ${(d.confidence * 100).toStringAsFixed(0)}% • ${d.vendor}',
                                   style: EaText.secondary.copyWith(
                                     fontSize: 12,
+                                    color: EaAdaptiveColor.bodyText(context),
                                   ),
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
                                   d.hint,
-                                  style: EaText.secondaryTranslucent,
+                                  style: EaText.secondary.copyWith(
+                                    color: EaAdaptiveColor.secondaryText(
+                                      context,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -474,7 +491,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               SelectableText(
                 device.uuid,
                 style: EaText.secondary.copyWith(
-                  color: EaColor.textSecondary,
+                  color: EaAdaptiveColor.secondaryText(context),
                   fontSize: 12,
                 ),
               ),
@@ -490,7 +507,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               Text(
                 _protocolLabel(device.protocol),
                 style: EaText.secondary.copyWith(
-                  color: EaColor.textSecondary,
+                  color: EaAdaptiveColor.secondaryText(context),
                   fontSize: 12,
                 ),
               ),
@@ -506,7 +523,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               Text(
                 Bridge.connectionLabel(device.uuid),
                 style: EaText.secondary.copyWith(
-                  color: EaColor.textSecondary,
+                  color: EaAdaptiveColor.secondaryText(context),
                   fontSize: 12,
                 ),
               ),
@@ -514,7 +531,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               Text(
                 Bridge.healthLabel(device.uuid),
                 style: EaText.secondary.copyWith(
-                  color: EaColor.textSecondary,
+                  color: EaAdaptiveColor.secondaryText(context),
                   fontSize: 12,
                 ),
               ),
@@ -523,7 +540,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                 Text(
                   'Endpoint: ${Bridge.endpointForDevice(device.uuid)}',
                   style: EaText.secondary.copyWith(
-                    color: EaColor.textSecondary,
+                    color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 12,
                   ),
                 ),
@@ -576,7 +593,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                 Text(
                   Bridge.wifiProvisioningLabel(device.uuid),
                   style: EaText.secondary.copyWith(
-                    color: EaColor.textSecondary,
+                    color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 12,
                   ),
                 ),
@@ -587,7 +604,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   Text(
                     'SSID: ${Bridge.wifiProvisioningSsid(device.uuid)}',
                     style: EaText.secondary.copyWith(
-                      color: EaColor.textSecondary,
+                      color: EaAdaptiveColor.secondaryText(context),
                       fontSize: 12,
                     ),
                   ),
@@ -630,7 +647,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
             style: EaText.secondary.copyWith(color: EaColor.textPrimary),
             decoration: InputDecoration(
               hintText: 'Enter new nickname',
-              hintStyle: EaText.secondaryTranslucent,
+              hintStyle: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
               filled: true,
               fillColor: EaColor.secondaryBack,
               border: OutlineInputBorder(
@@ -687,7 +706,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           title: Text('Remove device', style: EaText.primary),
           content: Text(
             'Do you want to remove "${device.name}"?',
-            style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.secondaryText(context),
+            ),
           ),
           actions: [
             TextButton(
@@ -781,7 +802,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                             children: [
                               Text(
                                 '[${log.category}] ${log.timestamp.toIso8601String()}',
-                                style: EaText.secondaryTranslucent,
+                                style: EaText.secondary.copyWith(
+                                  color: EaAdaptiveColor.secondaryText(context),
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(log.message, style: EaText.secondary),
@@ -814,7 +837,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
             children: [
               TextField(
                 controller: ssidController,
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                ),
                 decoration: InputDecoration(
                   labelText: 'SSID',
                   labelStyle: EaText.secondary,
@@ -824,7 +849,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               TextField(
                 controller: passwordController,
                 obscureText: true,
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                ),
                 decoration: InputDecoration(
                   labelText: 'Password',
                   labelStyle: EaText.secondary,
@@ -962,16 +989,16 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => _openEditor(),
-              icon: const Icon(Icons.add),
-              label: Text("Add device", style: EaText.primaryBack),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: EaColor.fore,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
+            child: EaGradientButtonFrame(
+              borderRadius: BorderRadius.circular(12),
+              child: ElevatedButton.icon(
+                onPressed: () => _openEditor(),
+                icon: const Icon(Icons.add),
+                label: Text("Add device", style: EaText.primaryBack),
+                style: EaButtonStyle.gradientFilled(
+                  context: context,
                   borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
               ),
             ),
@@ -1021,7 +1048,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           child: TextField(
             controller: deviceSearchController,
             cursorColor: EaColor.fore,
-            style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.secondaryText(context),
+            ),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search, color: EaColor.fore),
               hintText: "Search devices...",
@@ -1586,7 +1615,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         SnackBar(
           content: Text(
             message,
-            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+            style: EaText.secondary.copyWith(
+              color: EaColor.textPrimary,
+              fontSize: 12,
+            ),
           ),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -1618,8 +1650,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: EaColor.back,
+          color: EaAdaptiveColor.surface(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: EaAdaptiveColor.border(context)),
         ),
         child: SizedBox(
           height: maxHeight,
@@ -1627,22 +1660,42 @@ class _DeviceEditorState extends State<_DeviceEditor> {
             mainAxisSize: MainAxisSize.max,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("New Device", style: EaText.primary),
+              Text(
+                "New Device",
+                style: EaText.primary.copyWith(
+                  color: EaAdaptiveColor.bodyText(context),
+                ),
+              ),
               const SizedBox(height: 16),
 
               TextField(
                 controller: searchController,
                 cursorColor: EaColor.fore,
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.bodyText(context),
+                ),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, color: EaColor.border),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
                   hintText: "Search brand, model or capability",
                   filled: true,
-                  fillColor: Colors.white,
-                  hintStyle: EaText.secondary.copyWith(color: Colors.black45),
+                  fillColor: EaAdaptiveColor.field(context),
+                  hintStyle: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: EaColor.border),
+                    borderSide: BorderSide(
+                      color: EaAdaptiveColor.border(context),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(18),
+                    borderSide: BorderSide(
+                      color: EaAdaptiveColor.border(context),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
@@ -1658,7 +1711,9 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     ? Center(
                         child: Text(
                           "No templates found",
-                          style: EaText.secondaryTranslucent,
+                          style: EaText.secondary.copyWith(
+                            color: EaAdaptiveColor.secondaryText(context),
+                          ),
                         ),
                       )
                     : ListView.separated(
@@ -1686,12 +1741,12 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                               decoration: BoxDecoration(
                                 color: selected
                                     ? EaColor.fore.withAlpha(25)
-                                    : EaColor.back,
+                                    : EaAdaptiveColor.field(context),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: selected
                                       ? EaColor.fore
-                                      : EaColor.border,
+                                      : EaAdaptiveColor.border(context),
                                 ),
                               ),
                               child: Row(
@@ -1712,14 +1767,19 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                                           "${t.brand} ${t.model}",
                                           style: EaText.secondary.copyWith(
                                             fontSize: 16,
-                                            color: EaColor.textPrimary,
+                                            color: EaAdaptiveColor.bodyText(
+                                              context,
+                                            ),
                                           ),
                                         ),
                                         Text(
                                           _prettyCategory(t.category),
                                           style: EaText.secondary.copyWith(
                                             fontSize: 12,
-                                            color: EaColor.textSecondary,
+                                            color:
+                                                EaAdaptiveColor.secondaryText(
+                                                  context,
+                                                ),
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -1769,7 +1829,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         title: Text(
                           "Remember Wi-Fi credentials",
                           style: EaText.secondary.copyWith(
-                            color: EaColor.textSecondary,
+                            color: EaAdaptiveColor.secondaryText(context),
                           ),
                         ),
                       ),
@@ -1777,7 +1837,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                       Text(
                         "Before saving, open network settings, connect to the device Access Point, return to the app and then submit your Wi-Fi credentials.",
                         style: EaText.secondary.copyWith(
-                          color: EaColor.textSecondary,
+                          color: EaAdaptiveColor.secondaryText(context),
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -1802,7 +1862,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         title: Text(
                           "I've already connected to the device's Access Point",
                           style: EaText.secondary.copyWith(
-                            color: EaColor.textSecondary,
+                            color: EaAdaptiveColor.secondaryText(context),
                           ),
                         ),
                       ),
@@ -1811,7 +1871,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         controller: wifiSsidController,
                         cursorColor: EaColor.fore,
                         style: EaText.secondary.copyWith(
-                          color: EaColor.textSecondary,
+                          color: EaAdaptiveColor.secondaryText(context),
                         ),
                         decoration: InputDecoration(
                           labelText: "Network Name/SSID",
@@ -1838,7 +1898,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         obscureText: true,
                         cursorColor: EaColor.fore,
                         style: EaText.secondary.copyWith(
-                          color: EaColor.textSecondary,
+                          color: EaAdaptiveColor.secondaryText(context),
                         ),
                         decoration: InputDecoration(
                           labelText: "Network Password",
@@ -1870,19 +1930,27 @@ class _DeviceEditorState extends State<_DeviceEditor> {
               TextField(
                 controller: nameController,
                 cursorColor: EaColor.fore,
-                style: EaText.secondary.copyWith(color: EaColor.textSecondary),
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.bodyText(context),
+                ),
                 decoration: InputDecoration(
                   labelText: "Device Custom Name",
-                  labelStyle: EaText.secondary,
+                  labelStyle: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
                   filled: true,
-                  fillColor: EaColor.back,
+                  fillColor: EaAdaptiveColor.field(context),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: EaColor.fore),
+                    borderSide: BorderSide(
+                      color: EaAdaptiveColor.border(context),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: EaColor.fore),
+                    borderSide: BorderSide(
+                      color: EaAdaptiveColor.border(context),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -1895,20 +1963,20 @@ class _DeviceEditorState extends State<_DeviceEditor> {
 
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: EaColor.fore,
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
+                child: EaGradientButtonFrame(
+                  borderRadius: BorderRadius.circular(14),
+                  child: ElevatedButton(
+                    style: EaButtonStyle.gradientFilled(
+                      context: context,
                       borderRadius: BorderRadius.circular(14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: _save,
-                  child: Text(
-                    "Save",
-                    style: EaText.primaryBack.copyWith(
-                      fontWeight: FontWeight.w700,
+                    onPressed: _save,
+                    child: Text(
+                      "Save",
+                      style: EaText.primaryBack.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),

@@ -8,9 +8,12 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pinput/pinput.dart';
 
@@ -35,6 +38,14 @@ class _AccountState extends State<Account> {
   static const String _kAuthPhoto = 'account.auth.photo';
   static const String _kAuthProvider = 'account.auth.provider';
   static const String _kFingerprintEnabled = 'account.security.fingerprint';
+  static const String _kLanguage = 'profile.language';
+  static const String _kRegion = 'profile.region';
+  static const String _kAddressStreet = 'profile.address.street';
+  static const String _kAddressCity = 'profile.address.city';
+  static const String _kAddressPostal = 'profile.address.postal';
+  static const String _kAddressCountry = 'profile.address.country';
+  static const String _kAddressFull = 'profile.address.full';
+  static const String _kProfileLocation = 'profile.location';
 
   final EaAppSettings _settings = EaAppSettings.instance;
   final ImagePicker _picker = ImagePicker();
@@ -54,6 +65,11 @@ class _AccountState extends State<Account> {
   bool _hasPassword = false;
   double _outsideTemp = 25.0;
   DateTime? _outsideUpdatedAt;
+  bool _outsideTempRefreshing = false;
+  String _language = 'Português';
+  String _region = 'Brasil';
+  String _fullLocation = 'Localização desconhecida';
+  bool _locationRefreshing = false;
 
   @override
   void initState() {
@@ -96,6 +112,25 @@ class _AccountState extends State<Account> {
     }
 
     _fingerprintEnabled = prefs.getBool(_kFingerprintEnabled) ?? false;
+    _language = prefs.getString(_kLanguage) ?? _language;
+    _region = prefs.getString(_kRegion) ?? _region;
+    final fallbackProfileLocation = (prefs.getString(_kProfileLocation) ?? '')
+        .trim();
+
+    final parts = <String>[
+      (prefs.getString(_kAddressStreet) ?? '').trim(),
+      (prefs.getString(_kAddressCity) ?? '').trim(),
+      (prefs.getString(_kAddressPostal) ?? '').trim(),
+      (prefs.getString(_kAddressCountry) ?? '').trim(),
+    ].where((e) => e.isNotEmpty).toList();
+    final savedAddressFull = (prefs.getString(_kAddressFull) ?? '').trim();
+    _fullLocation = savedAddressFull.isNotEmpty
+        ? savedAddressFull
+        : (parts.isNotEmpty
+              ? parts.join(', ')
+              : (fallbackProfileLocation.isNotEmpty
+                    ? fallbackProfileLocation
+                    : 'Localização desconhecida'));
 
     final savedPassword = await _secureStorage.read(key: 'account.password');
     _hasPassword = savedPassword != null && savedPassword.trim().isNotEmpty;
@@ -128,6 +163,152 @@ class _AccountState extends State<Account> {
     return 25.0;
   }
 
+  String _buildWeatherQueryFromPrefs(SharedPreferences prefs) {
+    final addressFull = (prefs.getString(_kAddressFull) ?? '').trim();
+    if (addressFull.isNotEmpty && addressFull != 'Localização desconhecida') {
+      return addressFull;
+    }
+
+    final profileLocation = (prefs.getString(_kProfileLocation) ?? '').trim();
+    if (profileLocation.isNotEmpty) return profileLocation;
+
+    final city = (prefs.getString(_kAddressCity) ?? '').trim();
+    final country = (prefs.getString(_kAddressCountry) ?? '').trim();
+    if (city.isNotEmpty && country.isNotEmpty) return '$city, $country';
+    if (city.isNotEmpty) return city;
+
+    final current = _fullLocation.trim();
+    if (current.isNotEmpty && current != 'Localização desconhecida') {
+      return current;
+    }
+    return '';
+  }
+
+  Future<double?> _fetchOutsideTempFromQuery(String query) async {
+    if (query.trim().isEmpty) return null;
+    HttpClient? client;
+    try {
+      final encoded = Uri.encodeComponent(query.trim());
+      final uri = Uri.parse('https://wttr.in/$encoded?format=j1');
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+      final req = await client.getUrl(uri);
+      req.headers.set(HttpHeaders.userAgentHeader, 'easync-account/1.0');
+      final res = await req.close().timeout(const Duration(seconds: 6));
+      final raw = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 6));
+
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final current = decoded['current_condition'];
+      if (current is! List || current.isEmpty) return null;
+      final first = current.first;
+      if (first is! Map) return null;
+      final tempRaw = first['temp_C']?.toString() ?? '';
+      return double.tryParse(tempRaw);
+    } catch (_) {
+      return null;
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
+  double _estimateTemperatureFromCoordinates(double lat, double lon) {
+    final month = DateTime.now().month;
+    final southernHemisphere = lat < 0;
+    final isSummer = southernHemisphere
+        ? (month == 12 || month <= 2)
+        : (month >= 6 && month <= 8);
+    final seasonOffset = isSummer ? 6.0 : -2.0;
+    final latitudeCooling = (lat.abs() * 0.28).clamp(0.0, 13.0);
+    final continentality = (lon.abs() % 30) * 0.06;
+    return (27.5 + seasonOffset - latitudeCooling + continentality).clamp(
+      -8.0,
+      44.0,
+    );
+  }
+
+  Future<void> _refreshOutsideTemperature() async {
+    if (_outsideTempRefreshing) return;
+    setState(() => _outsideTempRefreshing = true);
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final query = _buildWeatherQueryFromPrefs(prefs);
+
+      double? parsed = await _fetchOutsideTempFromQuery(query);
+
+      if (parsed == null && query.isNotEmpty) {
+        try {
+          final locations = await locationFromAddress(query);
+          if (locations.isNotEmpty) {
+            final l = locations.first;
+            parsed = await _fetchOutsideTempFromQuery(
+              '${l.latitude.toStringAsFixed(4)},${l.longitude.toStringAsFixed(4)}',
+            );
+            parsed ??= _estimateTemperatureFromCoordinates(
+              l.latitude,
+              l.longitude,
+            );
+          }
+        } catch (_) {}
+      }
+
+      parsed ??= _inferOutsideTemperature();
+
+      _outsideTemp = parsed;
+      _outsideUpdatedAt = DateTime.now();
+      await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
+      await prefs.setInt(
+        _kOutsideTempUpdatedAt,
+        _outsideUpdatedAt!.millisecondsSinceEpoch,
+      );
+
+      if (!mounted) return;
+      setState(() {});
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar a temperatura agora.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _outsideTempRefreshing = false);
+    }
+  }
+
+  Future<String?> _resolveLocationFromTypedField() async {
+    final prefs = await SharedPreferences.getInstance();
+    final typed = (prefs.getString(_kProfileLocation) ?? '').trim();
+    if (typed.isEmpty) return null;
+
+    try {
+      final forward = await locationFromAddress(typed);
+      if (forward.isEmpty) return typed;
+
+      final point = forward.first;
+      final places = await placemarkFromCoordinates(
+        point.latitude,
+        point.longitude,
+      );
+      final p = places.isNotEmpty ? places.first : Placemark();
+      final normalized = <String>[
+        (p.street ?? '').trim(),
+        (p.subLocality ?? '').trim(),
+        (p.locality ?? '').trim(),
+        (p.administrativeArea ?? '').trim(),
+        (p.postalCode ?? '').trim(),
+        (p.country ?? '').trim(),
+      ].where((e) => e.isNotEmpty).toList().join(', ');
+
+      return normalized.isEmpty ? typed : normalized;
+    } catch (_) {
+      return typed;
+    }
+  }
+
   Future<void> _persistAuthFromFirebaseUser(
     User user, {
     String? provider,
@@ -151,7 +332,7 @@ class _AccountState extends State<Account> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Firebase is not configured yet on this build.'),
+          content: Text('Firebase ainda não está configurado nesta build.'),
         ),
       );
       return;
@@ -175,7 +356,7 @@ class _AccountState extends State<Account> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Firebase is not configured yet on this build.'),
+          content: Text('Firebase ainda não está configurado nesta build.'),
         ),
       );
       return;
@@ -209,9 +390,9 @@ class _AccountState extends State<Account> {
       setState(() {});
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Could not pick image: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível escolher a imagem: $e')),
+      );
     }
   }
 
@@ -236,6 +417,101 @@ class _AccountState extends State<Account> {
     setState(() {});
   }
 
+  Future<void> _refreshCurrentLocation() async {
+    if (_locationRefreshing) return;
+    setState(() => _locationRefreshing = true);
+
+    final prefs = await SharedPreferences.getInstance();
+    final fallbackProfileLocation = (prefs.getString(_kProfileLocation) ?? '')
+        .trim();
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Location service is disabled.';
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw 'Location permission denied.';
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final places = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      final p = places.isNotEmpty ? places.first : Placemark();
+      final full = <String>[
+        (p.street ?? '').trim(),
+        (p.subLocality ?? '').trim(),
+        (p.locality ?? '').trim(),
+        (p.administrativeArea ?? '').trim(),
+        (p.postalCode ?? '').trim(),
+        (p.country ?? '').trim(),
+      ].where((e) => e.isNotEmpty).toList().join(', ');
+
+      final safe = full.isEmpty
+          ? (fallbackProfileLocation.isEmpty
+                ? 'Localização desconhecida'
+                : fallbackProfileLocation)
+          : full;
+      await prefs.setString(_kAddressFull, safe);
+
+      if (!mounted) return;
+      setState(() => _fullLocation = safe);
+      await _refreshOutsideTemperature();
+    } on MissingPluginException {
+      final geocoded = await _resolveLocationFromTypedField();
+      final safe = (geocoded ?? fallbackProfileLocation).trim().isEmpty
+          ? _fullLocation
+          : (geocoded ?? fallbackProfileLocation).trim();
+      await prefs.setString(_kAddressFull, safe);
+      if (!mounted) return;
+      setState(() => _fullLocation = safe);
+      await _refreshOutsideTemperature();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            kIsWeb
+                ? 'GPS indisponível na Web. Usando o campo Localização como fallback.'
+                : 'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.',
+          ),
+        ),
+      );
+    } catch (e) {
+      final geocoded = await _resolveLocationFromTypedField();
+      if (geocoded != null && geocoded.trim().isNotEmpty) {
+        final safe = geocoded.trim();
+        await prefs.setString(_kAddressFull, safe);
+        if (mounted) {
+          setState(() => _fullLocation = safe);
+        }
+        await _refreshOutsideTemperature();
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            geocoded == null
+                ? 'Não foi possível atualizar localização: $e'
+                : 'Localização atualizada com fallback do campo digitado.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _locationRefreshing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pad = _settings.compactMode ? 14.0 : 20.0;
@@ -251,38 +527,17 @@ class _AccountState extends State<Account> {
           children: [
             _accountSummary(),
             const SizedBox(height: 10),
-            _sectionTitle('Environment'),
+            _sectionTitle('Perfil e ambiente'),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
                 children: [
-                  _AccountTile(
-                    icon: Icons.thermostat_outlined,
-                    title: 'Outside temperature',
-                    subtitle:
-                        '${_outsideTemp.toStringAsFixed(1)} °C${_outsideUpdatedAt == null ? '' : ' • ${_outsideUpdatedAt!.hour.toString().padLeft(2, '0')}:${_outsideUpdatedAt!.minute.toString().padLeft(2, '0')}'}',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const OutsideTemperaturePage(),
-                        ),
-                      ).then((_) => _loadAccountState());
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            _sectionTitle('Profile'),
-            const SizedBox(height: 6),
-            EaFadeSlideIn(
-              child: _block(
-                children: [
+                  _profileEnvironmentSummary(),
+                  Divider(height: 1, color: EaAdaptiveColor.border(context)),
                   _AccountTile(
                     icon: Icons.badge_outlined,
-                    title: 'Personal info',
-                    subtitle: 'Name, email and phone',
+                    title: 'Informações pessoais',
+                    subtitle: 'Nome, email e telefone',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -292,45 +547,44 @@ class _AccountState extends State<Account> {
                       ).then((_) => _loadAccountState());
                     },
                   ),
-                  _AccountTile(
-                    icon: Icons.apartment_outlined,
-                    title: 'Address and location',
-                    subtitle: 'Home and room context',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AddressLocationPage(),
-                        ),
-                      ).then((_) => _loadAccountState());
-                    },
-                  ),
-                  _AccountTile(
+                  const SizedBox(height: 2),
+                  _profileInfoRow(
                     icon: Icons.language_outlined,
-                    title: 'Language and region',
-                    subtitle: 'Locale and formatting',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LanguageRegionPage(),
-                        ),
-                      ).then((_) => _loadAccountState());
-                    },
+                    label: 'Idioma',
+                    value: '$_language • $_region',
                   ),
+                  _profileInfoRow(
+                    icon: Icons.place_outlined,
+                    label: 'Localização completa',
+                    value: _fullLocation,
+                    action: TextButton.icon(
+                      onPressed: _locationRefreshing
+                          ? null
+                          : _refreshCurrentLocation,
+                      icon: _locationRefreshing
+                          ? const SizedBox(
+                              width: 13,
+                              height: 13,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.my_location_rounded, size: 14),
+                      label: const Text('Atualizar'),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Security'),
+            _sectionTitle('Segurança'),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
                 children: [
                   _AccountTile(
                     icon: Icons.lock_outline_rounded,
-                    title: 'Password & passkeys',
-                    subtitle: 'Credential management',
+                    title: 'Senha e passkeys',
+                    subtitle: 'Gerenciamento de credenciais',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -342,8 +596,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.shield_moon_outlined,
-                    title: '2-step verification',
-                    subtitle: 'Additional sign-in protection',
+                    title: 'Verificação em 2 etapas',
+                    subtitle: 'Proteção adicional de acesso',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -355,8 +609,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.devices_other_outlined,
-                    title: 'Trusted devices',
-                    subtitle: 'Current and recent sessions',
+                    title: 'Dispositivos confiáveis',
+                    subtitle: 'Sessões atuais e recentes',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -370,7 +624,7 @@ class _AccountState extends State<Account> {
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Subscription'),
+            _sectionTitle('Assinatura'),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
@@ -378,7 +632,7 @@ class _AccountState extends State<Account> {
                   _AccountTile(
                     icon: Icons.workspace_premium_outlined,
                     title: 'EaSync Pro',
-                    subtitle: 'Plan details and benefits',
+                    subtitle: 'Detalhes do plano e benefícios',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -390,8 +644,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.receipt_long_outlined,
-                    title: 'Billing history',
-                    subtitle: 'Invoices and payment methods',
+                    title: 'Histórico de cobranças',
+                    subtitle: 'Faturas e meios de pagamento',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -403,15 +657,15 @@ class _AccountState extends State<Account> {
               ),
             ),
             const SizedBox(height: 10),
-            _sectionTitle('Data controls'),
+            _sectionTitle('Controle de dados'),
             const SizedBox(height: 6),
             EaFadeSlideIn(
               child: _block(
                 children: [
                   _AccountTile(
                     icon: Icons.download_outlined,
-                    title: 'Export account data',
-                    subtitle: 'Portable backup package',
+                    title: 'Exportar dados da conta',
+                    subtitle: 'Pacote de backup portátil',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -423,8 +677,8 @@ class _AccountState extends State<Account> {
                   ),
                   _AccountTile(
                     icon: Icons.delete_forever_outlined,
-                    title: 'Delete account',
-                    subtitle: 'Permanent removal workflow',
+                    title: 'Excluir conta',
+                    subtitle: 'Fluxo de remoção permanente',
                     danger: true,
                     onTap: () {
                       Navigator.push(
@@ -467,7 +721,7 @@ class _AccountState extends State<Account> {
                     children: [
                       Text(
                         _authName?.trim().isEmpty ?? true
-                            ? 'Authenticated account'
+                            ? 'Conta autenticada'
                             : _authName!,
                         style: EaText.secondary.copyWith(
                           fontSize: 16,
@@ -487,7 +741,7 @@ class _AccountState extends State<Account> {
                 TextButton.icon(
                   onPressed: _signOut,
                   icon: const Icon(Icons.logout, size: 16),
-                  label: const Text('Sign out'),
+                  label: const Text('Sair'),
                 ),
               ],
             )
@@ -496,7 +750,7 @@ class _AccountState extends State<Account> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'You are not authenticated yet.',
+                  'Você ainda não está autenticado.',
                   style: EaText.secondary.copyWith(
                     color: EaAdaptiveColor.bodyText(context),
                   ),
@@ -505,14 +759,18 @@ class _AccountState extends State<Account> {
                 Row(
                   children: [
                     Expanded(
-                      child: FilledButton.icon(
-                        style: FilledButton.styleFrom(
-                          backgroundColor: EaColor.fore,
-                          foregroundColor: EaColor.back,
+                      child: EaGradientButtonFrame(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: EaColor.back,
+                            shadowColor: Colors.transparent,
+                          ),
+                          onPressed: _openSignIn,
+                          icon: const Icon(Icons.login_rounded),
+                          label: const Text('Entrar'),
                         ),
-                        onPressed: _openSignIn,
-                        icon: const Icon(Icons.login_rounded),
-                        label: const Text('Sign-in'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -527,7 +785,7 @@ class _AccountState extends State<Account> {
                         ),
                         onPressed: _openSignUp,
                         icon: const Icon(Icons.person_add_alt_1_rounded),
-                        label: const Text('Sign-up'),
+                        label: const Text('Criar conta'),
                       ),
                     ),
                   ],
@@ -541,15 +799,15 @@ class _AccountState extends State<Account> {
             children: [
               _chip(
                 Icons.verified_user_outlined,
-                _isAuthenticated ? 'Authenticated' : 'Guest',
+                _isAuthenticated ? 'Autenticado' : 'Convidado',
               ),
               _chip(
                 Icons.security_outlined,
-                _hasPassword ? 'Password set' : 'No password',
+                _hasPassword ? 'Senha definida' : 'Sem senha',
               ),
               _chip(
                 Icons.fingerprint,
-                _fingerprintEnabled ? 'Fingerprint on' : 'Fingerprint off',
+                _fingerprintEnabled ? 'Digital ativada' : 'Digital desativada',
               ),
               if (_authProvider != null)
                 _chip(Icons.account_circle_outlined, _authProvider!),
@@ -630,6 +888,142 @@ class _AccountState extends State<Account> {
     );
   }
 
+  Widget _profileEnvironmentSummary() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: _summaryTile(
+              icon: Icons.thermostat,
+              label: 'Outside',
+              value: '${_outsideTemp.toStringAsFixed(1)} °C',
+              trailing: _outsideTempRefreshing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.refresh_rounded, size: 14),
+              onTap: _refreshOutsideTemperature,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _summaryTile(
+              icon: Icons.place_outlined,
+              label: 'Location',
+              value: _fullLocation,
+              trailing: _locationRefreshing
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location_rounded, size: 14),
+              onTap: _refreshCurrentLocation,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryTile({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+    Widget? trailing,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: EaAdaptiveColor.field(context),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: EaAdaptiveColor.border(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 15, color: EaColor.fore),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.small.copyWith(
+                      color: EaAdaptiveColor.secondaryText(context),
+                    ),
+                  ),
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.bodyText(context),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _profileInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    Widget? action,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: EaColor.fore),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: EaText.small.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.bodyText(context),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (action != null) action,
+        ],
+      ),
+    );
+  }
+
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -699,10 +1093,7 @@ class _AccountTile extends StatelessWidget {
             color: EaAdaptiveColor.secondaryText(context),
           ),
         ),
-        trailing: const Icon(
-          Icons.chevron_right_rounded,
-          color: EaColor.textSecondary,
-        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: EaColor.fore),
         onTap: onTap,
       ),
     );
@@ -733,7 +1124,9 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Firebase is not configured for this platform yet.'),
+          content: Text(
+            'Firebase ainda não está configurado para esta plataforma.',
+          ),
         ),
       );
       return;
@@ -751,12 +1144,12 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Sign-in failed.')));
+      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Falha ao entrar.')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Sign-in failed: $e')));
+      ).showSnackBar(SnackBar(content: Text('Falha ao entrar: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -765,24 +1158,32 @@ class _FirebaseSignInPageState extends State<FirebaseSignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign-in')),
+      appBar: AppBar(title: const Text('Entrar')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _authField(_email, 'Email', false),
           const SizedBox(height: 10),
-          _authField(_password, 'Password', true),
+          _authField(_password, 'Senha', true),
           const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: _loading ? null : _submit,
-            icon: _loading
-                ? const SizedBox(
-                    width: 14,
-                    height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.login_rounded),
-            label: const Text('Continue'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _loading ? null : _submit,
+              icon: _loading
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.login_rounded),
+              label: const Text('Continuar'),
+            ),
           ),
         ],
       ),
@@ -837,7 +1238,7 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
       _awaitingPin = true;
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Demo verification code: $generated')),
+      SnackBar(content: Text('Código de verificação (demo): $generated')),
     );
   }
 
@@ -846,7 +1247,9 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Firebase is not configured for this platform yet.'),
+          content: Text(
+            'Firebase ainda não está configurado para esta plataforma.',
+          ),
         ),
       );
       return;
@@ -854,7 +1257,7 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
 
     if (_pin.text.trim() != _expectedPin) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid verification PIN.')),
+        const SnackBar(content: Text('PIN de verificação inválido.')),
       );
       return;
     }
@@ -870,14 +1273,14 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
       Navigator.pop(context, result);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'Sign-up failed.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'Falha ao criar conta.')),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Sign-up failed: $e')));
+      ).showSnackBar(SnackBar(content: Text('Falha ao criar conta: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -886,25 +1289,33 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign-up')),
+      appBar: AppBar(title: const Text('Criar conta')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _authField(_name, 'Display name', false),
+          _authField(_name, 'Nome de exibição', false),
           const SizedBox(height: 10),
           _authField(_email, 'Email', false),
           const SizedBox(height: 10),
-          _authField(_password, 'Password', true),
+          _authField(_password, 'Senha', true),
           const SizedBox(height: 12),
           if (!_awaitingPin)
-            FilledButton.icon(
-              onPressed: _requestVerificationPin,
-              icon: const Icon(Icons.pin_outlined),
-              label: const Text('Send verification PIN'),
+            EaGradientButtonFrame(
+              borderRadius: BorderRadius.circular(12),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: EaColor.back,
+                  shadowColor: Colors.transparent,
+                ),
+                onPressed: _requestVerificationPin,
+                icon: const Icon(Icons.pin_outlined),
+                label: const Text('Enviar PIN de verificação'),
+              ),
             )
           else ...[
             Text(
-              'Enter the 6-digit PIN to complete sign-up',
+              'Digite o PIN de 6 dígitos para concluir o cadastro',
               style: EaText.small.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
               ),
@@ -927,16 +1338,24 @@ class _FirebaseSignUpPageState extends State<FirebaseSignUpPage> {
               ),
             ),
             const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: _loading ? null : _submitSignUp,
-              icon: _loading
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle_outline),
-              label: const Text('Create account'),
+            EaGradientButtonFrame(
+              borderRadius: BorderRadius.circular(12),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: EaColor.back,
+                  shadowColor: Colors.transparent,
+                ),
+                onPressed: _loading ? null : _submitSignUp,
+                icon: _loading
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_circle_outline),
+                label: const Text('Criar conta'),
+              ),
             ),
           ],
         ],
@@ -972,10 +1391,66 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   static const _kLanguage = 'profile.language';
   static const _kRegion = 'profile.region';
 
+  static const List<String> _languageOptions = [
+    'Português',
+    'English',
+    'Español',
+    'Français',
+    'Deutsch',
+    'Italiano',
+  ];
+
+  static const List<String> _regionOptions = [
+    'Brasil',
+    'Portugal',
+    'United States',
+    'Argentina',
+    'Uruguay',
+    'Chile',
+    'Spain',
+    'France',
+    'Germany',
+    'Italy',
+    'United Kingdom',
+    'Canada',
+  ];
+
+  static const List<String> _locationSeed = [
+    'Pelotas, Rio Grande do Sul, Brasil',
+    'Porto Alegre, Rio Grande do Sul, Brasil',
+    'Rio Grande, Rio Grande do Sul, Brasil',
+    'Caxias do Sul, Rio Grande do Sul, Brasil',
+    'Florianópolis, Santa Catarina, Brasil',
+    'Curitiba, Paraná, Brasil',
+    'São Paulo, São Paulo, Brasil',
+    'Campinas, São Paulo, Brasil',
+    'Rio de Janeiro, Rio de Janeiro, Brasil',
+    'Belo Horizonte, Minas Gerais, Brasil',
+    'Brasília, Distrito Federal, Brasil',
+    'Salvador, Bahia, Brasil',
+    'Recife, Pernambuco, Brasil',
+    'Fortaleza, Ceará, Brasil',
+    'Montevideo, Uruguay',
+    'Buenos Aires, Argentina',
+    'Santiago, Chile',
+    'Lisboa, Portugal',
+    'Porto, Portugal',
+    'Madrid, Spain',
+    'Paris, France',
+    'Berlin, Germany',
+    'Rome, Italy',
+    'London, United Kingdom',
+    'New York, United States',
+    'San Francisco, United States',
+    'Toronto, Canada',
+  ];
+
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
-  final _languageController = TextEditingController();
-  final _regionController = TextEditingController();
+  final _locationFocusNode = FocusNode();
+
+  String _selectedLanguage = 'Português';
+  String _selectedRegion = 'Brasil';
 
   @override
   void initState() {
@@ -987,8 +1462,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
-    _languageController.dispose();
-    _regionController.dispose();
+    _locationFocusNode.dispose();
     super.dispose();
   }
 
@@ -996,27 +1470,52 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     final prefs = await SharedPreferences.getInstance();
     _nameController.text = prefs.getString(_kFullName) ?? '';
     _locationController.text = prefs.getString(_kLocation) ?? '';
-    _languageController.text = prefs.getString(_kLanguage) ?? '';
-    _regionController.text = prefs.getString(_kRegion) ?? '';
+    final savedLanguage = (prefs.getString(_kLanguage) ?? '').trim();
+    final savedRegion = (prefs.getString(_kRegion) ?? '').trim();
+    _selectedLanguage = savedLanguage.isEmpty ? 'Português' : savedLanguage;
+    _selectedRegion = savedRegion.isEmpty ? 'Brasil' : savedRegion;
     if (mounted) setState(() {});
   }
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
+    final manualLocation = _locationController.text.trim();
     await prefs.setString(_kFullName, _nameController.text.trim());
-    await prefs.setString(_kLocation, _locationController.text.trim());
-    await prefs.setString(_kLanguage, _languageController.text.trim());
-    await prefs.setString(_kRegion, _regionController.text.trim());
+    await prefs.setString(_kLocation, manualLocation);
+    if (manualLocation.isNotEmpty) {
+      await prefs.setString('profile.address.full', manualLocation);
+    }
+    await prefs.setString(_kLanguage, _selectedLanguage.trim());
+    await prefs.setString(_kRegion, _selectedRegion.trim());
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Dados salvos localmente.')));
   }
 
+  Iterable<String> _locationSuggestions(TextEditingValue value) {
+    final query = value.text.trim().toLowerCase();
+    if (query.isEmpty) return _locationSeed.take(8);
+
+    final startsWith = <String>[];
+    final contains = <String>[];
+
+    for (final option in _locationSeed) {
+      final normalized = option.toLowerCase();
+      if (normalized.startsWith(query)) {
+        startsWith.add(option);
+      } else if (normalized.contains(query)) {
+        contains.add(option);
+      }
+    }
+
+    return [...startsWith, ...contains].take(8);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Personal info')),
+      appBar: AppBar(title: const Text('Informações pessoais')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1031,20 +1530,114 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               child: Column(
                 children: [
                   _field(_nameController, 'Full name'),
-                  _field(_locationController, 'Location'),
-                  _field(_languageController, 'Language'),
-                  _field(_regionController, 'Region'),
+                  _locationAutocompleteField(),
+                  _dropdownField(
+                    label: 'Idioma',
+                    value: _selectedLanguage,
+                    options: _languageOptions,
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => _selectedLanguage = v);
+                    },
+                  ),
+                  _dropdownField(
+                    label: 'Região',
+                    value: _selectedRegion,
+                    options: _regionOptions,
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() => _selectedRegion = v);
+                    },
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Save changes'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _save,
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Salvar alterações'),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _locationAutocompleteField() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: RawAutocomplete<String>(
+        textEditingController: _locationController,
+        focusNode: _locationFocusNode,
+        optionsBuilder: _locationSuggestions,
+        onSelected: (value) => _locationController.text = value,
+        fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.bodyText(context),
+            ),
+            decoration: _fieldDecoration('Localização').copyWith(
+              hintText: 'Digite cidade, estado ou país',
+              hintStyle: EaText.small.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
+            ),
+            onSubmitted: (_) => onSubmitted(),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, options) {
+          return Align(
+            alignment: Alignment.topLeft,
+            child: Material(
+              color: EaAdaptiveColor.surface(context),
+              elevation: 6,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: MediaQuery.of(context).size.width - 64,
+                constraints: const BoxConstraints(maxHeight: 220),
+                decoration: BoxDecoration(
+                  color: EaAdaptiveColor.surface(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: EaAdaptiveColor.border(context)),
+                ),
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  shrinkWrap: true,
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final option = options.elementAt(index);
+                    return InkWell(
+                      onTap: () => onSelected(option),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        child: Text(
+                          option,
+                          style: EaText.small.copyWith(
+                            color: EaAdaptiveColor.bodyText(context),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1057,21 +1650,62 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
         style: EaText.secondary.copyWith(
           color: EaAdaptiveColor.bodyText(context),
         ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: EaText.small.copyWith(
-            color: EaAdaptiveColor.secondaryText(context),
-          ),
-          filled: true,
-          fillColor: EaAdaptiveColor.field(context),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
-          ),
+        decoration: _fieldDecoration(label),
+      ),
+    );
+  }
+
+  Widget _dropdownField({
+    required String label,
+    required String value,
+    required List<String> options,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final items = options.contains(value) ? options : [value, ...options];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: DropdownButtonFormField<String>(
+        value: value,
+        dropdownColor: EaAdaptiveColor.surface(context),
+        style: EaText.secondary.copyWith(
+          color: EaAdaptiveColor.bodyText(context),
+        ),
+        decoration: _fieldDecoration(label),
+        items: items
+            .map(
+              (item) => DropdownMenuItem<String>(
+                value: item,
+                child: Text(item, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: EaText.small.copyWith(
+        color: EaAdaptiveColor.secondaryText(context),
+      ),
+      filled: true,
+      fillColor: EaAdaptiveColor.field(context),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: EaColor.fore.withValues(alpha: 0.85),
+          width: 1.2,
         ),
       ),
     );
@@ -1139,7 +1773,7 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Outside temperature')),
+      appBar: AppBar(title: const Text('Temperatura externa')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1171,10 +1805,18 @@ class _OutsideTemperaturePageState extends State<OutsideTemperaturePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: _refreshFromDevices,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Refresh from devices'),
+                  EaGradientButtonFrame(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: EaColor.back,
+                        shadowColor: Colors.transparent,
+                      ),
+                      onPressed: _refreshFromDevices,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Atualizar pelos dispositivos'),
+                    ),
                   ),
                 ],
               ),
@@ -1243,7 +1885,7 @@ class _AddressLocationPageState extends State<AddressLocationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Address and location')),
+      appBar: AppBar(title: const Text('Endereço e localização')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1257,19 +1899,27 @@ class _AddressLocationPageState extends State<AddressLocationPage> {
               ),
               child: Column(
                 children: [
-                  _textField(_street, 'Street'),
-                  _textField(_city, 'City'),
-                  _textField(_postal, 'Postal code'),
-                  _textField(_country, 'Country'),
+                  _textField(_street, 'Rua'),
+                  _textField(_city, 'Cidade'),
+                  _textField(_postal, 'CEP'),
+                  _textField(_country, 'País'),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Save address'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _save,
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Salvar endereço'),
+            ),
           ),
         ],
       ),
@@ -1336,7 +1986,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Language and region')),
+      appBar: AppBar(title: const Text('Idioma e região')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1350,7 +2000,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
               child: Column(
                 children: [
                   ListTile(
-                    title: const Text('Language'),
+                    title: const Text('Idioma'),
                     trailing: DropdownButton<String>(
                       value: _language,
                       items: const [
@@ -1360,7 +2010,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                         ),
                         DropdownMenuItem(
                           value: 'English',
-                          child: Text('English'),
+                          child: Text('Inglês'),
                         ),
                         DropdownMenuItem(
                           value: 'Español',
@@ -1374,7 +2024,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                     ),
                   ),
                   ListTile(
-                    title: const Text('Region'),
+                    title: const Text('Região'),
                     trailing: DropdownButton<String>(
                       value: _region,
                       items: const [
@@ -1388,7 +2038,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                         ),
                         DropdownMenuItem(
                           value: 'United States',
-                          child: Text('United States'),
+                          child: Text('Estados Unidos'),
                         ),
                       ],
                       onChanged: (v) {
@@ -1399,7 +2049,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                   ),
                   SwitchListTile.adaptive(
                     value: _time24h,
-                    title: const Text('24-hour format'),
+                    title: const Text('Formato 24 horas'),
                     onChanged: (v) => setState(() => _time24h = v),
                   ),
                 ],
@@ -1407,10 +2057,18 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_rounded),
-            label: const Text('Save preferences'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _save,
+              icon: const Icon(Icons.save_rounded),
+              label: const Text('Salvar preferências'),
+            ),
           ),
         ],
       ),
@@ -1454,23 +2112,23 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Password & passkeys')),
+      appBar: AppBar(title: const Text('Senha e passkeys')),
       body: ListView(
         children: [
           SwitchListTile.adaptive(
             value: _fingerprintEnabled,
-            title: const Text('Enable fingerprint unlock'),
+            title: const Text('Ativar desbloqueio por digital'),
             subtitle: const Text(
-              'Device-level biometric gate (no local_auth).',
+              'Barreira biométrica no dispositivo (sem local_auth).',
             ),
             onChanged: _setFingerprint,
           ),
           ListTile(
             leading: const Icon(Icons.password_rounded),
             title: Text(
-              _hasPassword ? 'Change login password' : 'Create login password',
+              _hasPassword ? 'Alterar senha de login' : 'Criar senha de login',
             ),
-            subtitle: const Text('Configure your local login password'),
+            subtitle: const Text('Configurar sua senha local de login'),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {
               Navigator.push(
@@ -1533,25 +2191,33 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login password')),
+      appBar: AppBar(title: const Text('Senha de login')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _pwd,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'New password'),
+            decoration: const InputDecoration(labelText: 'Nova senha'),
           ),
           const SizedBox(height: 10),
           TextField(
             controller: _confirm,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Confirm password'),
+            decoration: const InputDecoration(labelText: 'Confirmar senha'),
           ),
           const SizedBox(height: 12),
-          FilledButton(
-            onPressed: _savePassword,
-            child: const Text('Save password'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _savePassword,
+              child: const Text('Salvar senha'),
+            ),
           ),
         ],
       ),
@@ -1604,7 +2270,7 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('2-step verification')),
+      appBar: AppBar(title: const Text('Verificação em 2 etapas')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1619,17 +2285,17 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
                 children: [
                   SwitchListTile.adaptive(
                     value: _app,
-                    title: const Text('Authenticator app'),
+                    title: const Text('Aplicativo autenticador'),
                     onChanged: (v) => setState(() => _app = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _sms,
-                    title: const Text('SMS verification'),
+                    title: const Text('Verificação por SMS'),
                     onChanged: (v) => setState(() => _sms = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _email,
-                    title: const Text('Email verification'),
+                    title: const Text('Verificação por email'),
                     onChanged: (v) => setState(() => _email = v),
                   ),
                 ],
@@ -1637,10 +2303,18 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
             ),
           ),
           const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.shield_outlined),
-            label: const Text('Save 2FA settings'),
+          EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: EaColor.back,
+                shadowColor: Colors.transparent,
+              ),
+              onPressed: _save,
+              icon: const Icon(Icons.shield_outlined),
+              label: const Text('Salvar configurações de 2FA'),
+            ),
           ),
         ],
       ),
@@ -1687,7 +2361,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Trusted devices')),
+      appBar: AppBar(title: const Text('Dispositivos confiáveis')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1696,20 +2370,41 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
               child: Card(
                 child: ListTile(
                   leading: const Icon(
-                    Icons.devices_outlined,
+                    Icons.devices_other_outlined,
                     color: EaColor.fore,
                   ),
                   title: Text(_devices[i]),
-                  subtitle: Text(
-                    'Session ativa',
-                    style: EaText.small.copyWith(
-                      color: EaAdaptiveColor.secondaryText(context),
-                    ),
+                  subtitle: Text(i == 0 ? 'Sessão atual' : 'Sessão confiável'),
+                  trailing: i == 0
+                      ? const Icon(Icons.verified_rounded, color: EaColor.fore)
+                      : IconButton(
+                          icon: const Icon(
+                            Icons.logout_rounded,
+                            color: Colors.redAccent,
+                          ),
+                          tooltip: 'Remover dispositivo',
+                          onPressed: () => _removeAt(i),
+                        ),
+                  onTap: i == 0 ? null : () => _removeAt(i),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => _removeAt(i),
+                  tileColor: EaAdaptiveColor.surface(context),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
                   ),
+                  dense: false,
+                  visualDensity: VisualDensity.standard,
+                  isThreeLine: false,
+                  horizontalTitleGap: 12,
+                  minLeadingWidth: 0,
+                  minVerticalPadding: 8,
+                  enabled: true,
+                  selected: false,
+                  selectedTileColor: EaAdaptiveColor.surface(context),
+                  selectedColor: EaAdaptiveColor.bodyText(context),
+                  iconColor: EaAdaptiveColor.bodyText(context),
                 ),
               ),
             );
@@ -1773,14 +2468,14 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Current plan: $_plan',
+                    'Plano atual: $_plan',
                     style: EaText.primary.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Automations, analytics and advanced assistant controls.',
+                    'Automações, análises e controles avançados do assistente.',
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
                     ),
@@ -1790,8 +2485,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             ),
           ),
           const SizedBox(height: 12),
-          _planTile('Free', 'Basic device and assistant controls'),
-          _planTile('Pro', 'Advanced automations and full AI modes'),
+          _planTile('Free', 'Controles básicos de dispositivos e assistente'),
+          _planTile('Pro', 'Automações avançadas e modos completos de IA'),
         ],
       ),
     );
@@ -1837,7 +2532,7 @@ class _BillingPageState extends State<BillingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Billing history')),
+      appBar: AppBar(title: const Text('Histórico de cobranças')),
       body: _items.isEmpty
           ? Center(
               child: Text(
@@ -1905,30 +2600,38 @@ class _DataExportPageState extends State<DataExportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Export account data')),
+      appBar: AppBar(title: const Text('Exportar dados da conta')),
       body: ListView(
         children: [
           CheckboxListTile(
             value: _includeProfile,
             onChanged: (v) => setState(() => _includeProfile = v ?? false),
-            title: const Text('Profile data'),
+            title: const Text('Dados de perfil'),
           ),
           CheckboxListTile(
             value: _includeUsage,
             onChanged: (v) => setState(() => _includeUsage = v ?? false),
-            title: const Text('Usage data'),
+            title: const Text('Dados de uso'),
           ),
           CheckboxListTile(
             value: _includeSecurity,
             onChanged: (v) => setState(() => _includeSecurity = v ?? false),
-            title: const Text('Security settings'),
+            title: const Text('Configurações de segurança'),
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: FilledButton.icon(
-              onPressed: _export,
-              icon: const Icon(Icons.file_download_outlined),
-              label: const Text('Generate export'),
+            child: EaGradientButtonFrame(
+              borderRadius: BorderRadius.circular(12),
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: EaColor.back,
+                  shadowColor: Colors.transparent,
+                ),
+                onPressed: _export,
+                icon: const Icon(Icons.file_download_outlined),
+                label: const Text('Gerar exportação'),
+              ),
             ),
           ),
         ],
@@ -1977,7 +2680,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Delete account')),
+      appBar: AppBar(title: const Text('Excluir conta')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1998,20 +2701,20 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
           TextField(
             controller: _confirmController,
             decoration: const InputDecoration(
-              labelText: 'Type DELETE to confirm',
+              labelText: 'Digite DELETE para confirmar',
             ),
           ),
           CheckboxListTile(
             value: _understand,
             onChanged: (v) => setState(() => _understand = v ?? false),
-            title: const Text('I understand this operation is irreversible'),
+            title: const Text('Entendo que esta operação é irreversível'),
           ),
           const SizedBox(height: 8),
           FilledButton.icon(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: _delete,
             icon: const Icon(Icons.delete_forever_rounded),
-            label: const Text('Delete local account data'),
+            label: const Text('Excluir dados locais da conta'),
           ),
         ],
       ),
