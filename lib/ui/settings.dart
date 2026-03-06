@@ -105,16 +105,6 @@ class _SettingsState extends State<Settings> {
                   },
                 ),
                 _switchTile(
-                  icon: Icons.view_quilt_outlined,
-                  title: 'Skeleton loading',
-                  subtitle: 'Animated loading visuals while data is fetched',
-                  value: _settings.skeletonEnabled,
-                  onChanged: (v) async {
-                    setState(() => _settings.skeletonEnabled = v);
-                    await _persistAll();
-                  },
-                ),
-                _switchTile(
                   icon: Icons.compress_outlined,
                   title: 'Compact mode',
                   subtitle: 'Reduced paddings and denser tiles',
@@ -193,20 +183,26 @@ class _SettingsState extends State<Settings> {
                 ListTile(
                   leading: const Icon(Icons.tune_rounded, color: EaColor.fore),
                   title: Text('AI temperament', style: EaText.secondary),
-                  subtitle: Slider(
-                    value: _settings.aiTemperament.toDouble(),
-                    min: 0,
-                    max: 2,
-                    divisions: 2,
-                    label: switch (_settings.aiTemperament) {
-                      0 => 'Balanced',
-                      1 => 'Fast',
-                      _ => 'Conservative',
-                    },
-                    onChanged: (v) async {
-                      setState(() => _settings.aiTemperament = v.round());
-                      await _persistAll();
-                    },
+                  subtitle: Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 220,
+                      child: Slider(
+                        value: _settings.aiTemperament.toDouble(),
+                        min: 0,
+                        max: 2,
+                        divisions: 2,
+                        label: switch (_settings.aiTemperament) {
+                          0 => 'Balanced',
+                          1 => 'Fast',
+                          _ => 'Conservative',
+                        },
+                        onChanged: (v) async {
+                          setState(() => _settings.aiTemperament = v.round());
+                          await _persistAll();
+                        },
+                      ),
+                    ),
                   ),
                   trailing: Text(
                     switch (_settings.aiTemperament) {

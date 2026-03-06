@@ -140,6 +140,30 @@ class EaTheme {
           return EaColor.textDisabled;
         }),
       ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        foregroundColor: EaColor.textPrimary,
+        titleTextStyle: EaText.primary.copyWith(
+          fontSize: 19,
+          color: EaColor.textPrimary,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: EaColor.back,
+        elevation: 0,
+        contentTextStyle: EaText.secondary.copyWith(
+          fontSize: 12,
+          color: EaColor.textPrimary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: EaColor.fore),
+        ),
+      ),
     );
 
     return base.copyWith(
@@ -174,6 +198,30 @@ class EaTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
           side: const BorderSide(color: Color(0xFFE1E6F2)),
+        ),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        foregroundColor: const Color(0xFF1A2134),
+        titleTextStyle: EaText.primary.copyWith(
+          fontSize: 19,
+          color: const Color(0xFF1A2134),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: EaColor.back,
+        elevation: 0,
+        contentTextStyle: EaText.secondary.copyWith(
+          fontSize: 12,
+          color: EaColor.textPrimary,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: EaColor.fore),
         ),
       ),
     );
@@ -219,20 +267,80 @@ class EaAdaptiveColor {
 
   static Color secondaryText(BuildContext context) =>
       _dark(context) ? EaColor.textSecondary : const Color(0xFF5C667F);
-      static Color scrim(BuildContext context) => _dark(context)
-          ? Colors.black.withOpacity(0.32)
-          : const Color(0xFF2A3458).withOpacity(0.18);
-    }
 
-    class EaDecoration {
-      static LinearGradient roundOrbGradient() {
-        return LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [EaColor.fore.withOpacity(0.24), EaColor.back],
-        );
-      }
-    }
+  static Color scrim(BuildContext context) => _dark(context)
+      ? Colors.black.withOpacity(0.32)
+      : const Color(0xFF2A3458).withOpacity(0.18);
+}
+
+class EaDecoration {
+  static LinearGradient primaryButtonGradient() {
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      stops: [0.0, 0.52, 1.0],
+      colors: [Color(0xFF9AAEFF), EaColor.fore, Color(0xFF3E4A86)],
+    );
+  }
+
+  static LinearGradient roundOrbGradient(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      stops: const [0.0, 0.46, 1.0],
+      colors: dark
+          ? [
+              EaColor.fore.withValues(alpha: 0.85),
+              const Color(0xFF59639C),
+              EaColor.back,
+            ]
+          : [
+              const Color(0xFFAEBBFF),
+              const Color(0xFF8190E4),
+              const Color(0xFF59639C),
+            ],
+    );
+  }
+}
+
+class EaButtonStyle {
+  static ButtonStyle gradientFilled({
+    required BuildContext context,
+    BorderRadius borderRadius = const BorderRadius.all(Radius.circular(12)),
+    EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 14),
+  }) {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.transparent,
+      foregroundColor: EaColor.back,
+      shadowColor: Colors.transparent,
+      padding: padding,
+      shape: RoundedRectangleBorder(borderRadius: borderRadius),
+    );
+  }
+}
+
+class EaGradientButtonFrame extends StatelessWidget {
+  final Widget child;
+  final BorderRadius borderRadius;
+
+  const EaGradientButtonFrame({
+    super.key,
+    required this.child,
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: EaDecoration.primaryButtonGradient(),
+        borderRadius: borderRadius,
+      ),
+      child: ClipRRect(borderRadius: borderRadius, child: child),
+    );
+  }
 }
 
 class EaColor {

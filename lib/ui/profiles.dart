@@ -177,7 +177,10 @@ class _ProfilesState extends State<Profiles>
         SnackBar(
           content: Text(
             message,
-            style: EaText.secondary.copyWith(color: EaColor.textPrimary),
+            style: EaText.secondary.copyWith(
+              color: EaColor.textPrimary,
+              fontSize: 12,
+            ),
           ),
           behavior: SnackBarBehavior.floating,
           margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -524,7 +527,9 @@ class _ProfilesState extends State<Profiles>
                     overflow: TextOverflow.ellipsis,
                     style: EaText.secondary.copyWith(
                       fontSize: 11,
-                      color: EaColor.textSecondary.withValues(alpha: .78),
+                      color: EaAdaptiveColor.secondaryText(
+                        context,
+                      ).withValues(alpha: .9),
                     ),
                   ),
                   const SizedBox(height: 1),
@@ -544,7 +549,7 @@ class _ProfilesState extends State<Profiles>
                     overflow: TextOverflow.ellipsis,
                     style: EaText.secondary.copyWith(
                       fontSize: 12,
-                      color: EaColor.textSecondary,
+                      color: EaAdaptiveColor.secondaryText(context),
                     ),
                   ),
                 ],
@@ -600,16 +605,16 @@ class _ProfilesState extends State<Profiles>
       padding: const EdgeInsets.all(16),
       child: SizedBox(
         width: double.infinity,
-        child: ElevatedButton.icon(
-          onPressed: () => _openEditor(),
-          icon: const Icon(Icons.add),
-          label: Text("New profile", style: EaText.primaryBack),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: EaColor.fore,
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
+        child: EaGradientButtonFrame(
+          borderRadius: BorderRadius.circular(12),
+          child: ElevatedButton.icon(
+            onPressed: () => _openEditor(),
+            icon: const Icon(Icons.add),
+            label: Text("New profile", style: EaText.primaryBack),
+            style: EaButtonStyle.gradientFilled(
+              context: context,
               borderRadius: BorderRadius.circular(12),
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
         ),
@@ -639,9 +644,9 @@ class _ProfilesState extends State<Profiles>
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: EaDecoration.roundOrbGradient(),
+                gradient: EaDecoration.roundOrbGradient(context),
               ),
-              child: const Icon(Icons.tune, size: 42, color: EaColor.fore),
+              child: const Icon(Icons.tune, size: 42, color: EaColor.back),
             ),
             const SizedBox(height: 24),
             Text(
@@ -967,8 +972,9 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       child: Container(
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: EaColor.back,
+          color: EaAdaptiveColor.surface(context),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: EaAdaptiveColor.border(context)),
         ),
         child: SliderTheme(
           data: SliderTheme.of(context).copyWith(
@@ -1011,23 +1017,38 @@ class _ProfileEditorState extends State<_ProfileEditor> {
   Widget _title() {
     return Text(
       widget.profile == null ? "New Profile" : "Edit Profile",
-      style: EaText.primary.copyWith(fontWeight: FontWeight.w600),
+      style: EaText.primary.copyWith(
+        fontWeight: FontWeight.w600,
+        color: EaAdaptiveColor.bodyText(context),
+      ),
     );
   }
 
   Widget _nameField() {
     return TextField(
       controller: nameController,
-      style: EaText.secondary,
+      style: EaText.secondary.copyWith(
+        color: EaAdaptiveColor.bodyText(context),
+      ),
       decoration: InputDecoration(
         hintText: "e.g Focus Mode, Movie Time, Relax Moment",
-        hintStyle: EaText.secondaryBack,
+        hintStyle: EaText.secondary.copyWith(
+          color: EaAdaptiveColor.secondaryText(context),
+        ),
 
         labelText: "Profile name",
-        labelStyle: EaText.secondary,
+        labelStyle: EaText.secondary.copyWith(
+          color: EaAdaptiveColor.secondaryText(context),
+        ),
+        filled: true,
+        fillColor: EaAdaptiveColor.field(context),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: EaColor.border),
+          borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -1055,15 +1076,19 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               decoration: BoxDecoration(
                 color: selected
                     ? EaColor.fore.withValues(alpha: .25)
-                    : EaColor.back,
+                    : EaAdaptiveColor.field(context),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: selected ? EaColor.fore : EaColor.border,
+                  color: selected
+                      ? EaColor.fore
+                      : EaAdaptiveColor.border(context),
                 ),
               ),
               child: Icon(
                 icon,
-                color: selected ? EaColor.fore : EaColor.textSecondary,
+                color: selected
+                    ? EaColor.fore
+                    : EaAdaptiveColor.secondaryText(context),
               ),
             ),
           );
@@ -1074,7 +1099,12 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
   Widget _actions() {
     return widget.devices.isEmpty
-        ? Text("No devices yet", style: EaText.secondaryTranslucent)
+        ? Text(
+            "No devices yet",
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.secondaryText(context),
+            ),
+          )
         : Column(children: actions.map(_actionCard).toList());
   }
 
@@ -1289,19 +1319,21 @@ class _ProfileEditorState extends State<_ProfileEditor> {
 
                               const SizedBox(height: 16),
 
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: EaColor.fore,
-                                  foregroundColor: EaColor.background,
+                              EaGradientButtonFrame(
+                                borderRadius: BorderRadius.circular(12),
+                                child: ElevatedButton(
+                                  style: EaButtonStyle.gradientFilled(
+                                    context: context,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  onPressed: () {
+                                    final rgb =
+                                        selected.toARGB32() & 0x00FFFFFF;
+                                    setState(() => a.color = rgb);
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text("Apply"),
                                 ),
-
-                                onPressed: () {
-                                  final rgb = selected.toARGB32() & 0x00FFFFFF;
-                                  setState(() => a.color = rgb);
-                                  Navigator.pop(context);
-                                },
-
-                                child: const Text("Apply"),
                               ),
                             ],
                           ),
@@ -1783,15 +1815,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     if (widget.profile == null) {
       return SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          onPressed: _save,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: EaColor.fore,
-            shape: RoundedRectangleBorder(
+        child: EaGradientButtonFrame(
+          borderRadius: BorderRadius.circular(18),
+          child: ElevatedButton(
+            onPressed: _save,
+            style: EaButtonStyle.gradientFilled(
+              context: context,
               borderRadius: BorderRadius.circular(18),
             ),
+            child: Text("Save Profile", style: EaText.primaryBack),
           ),
-          child: Text("Save Profile", style: EaText.primaryBack),
         ),
       );
     }
@@ -1812,15 +1845,16 @@ class _ProfileEditorState extends State<_ProfileEditor> {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: ElevatedButton(
-            onPressed: _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: EaColor.fore,
-              shape: RoundedRectangleBorder(
+          child: EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(18),
+            child: ElevatedButton(
+              onPressed: _save,
+              style: EaButtonStyle.gradientFilled(
+                context: context,
                 borderRadius: BorderRadius.circular(18),
               ),
+              child: Text("Save Profile", style: EaText.primaryBack),
             ),
-            child: Text("Save Profile", style: EaText.primaryBack),
           ),
         ),
       ],

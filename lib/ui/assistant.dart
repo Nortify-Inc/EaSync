@@ -1618,13 +1618,17 @@ class _AssistantState extends State<Assistant> with TickerProviderStateMixin {
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _submitCurrentCommand,
-                          icon: const Icon(Icons.send_rounded),
-                          label: const Text('Send'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: EaColor.fore,
-                            foregroundColor: Colors.black,
+                        child: EaGradientButtonFrame(
+                          borderRadius: BorderRadius.circular(12),
+                          child: ElevatedButton.icon(
+                            onPressed: _submitCurrentCommand,
+                            icon: const Icon(Icons.send_rounded),
+                            label: const Text('Send'),
+                            style: EaButtonStyle.gradientFilled(
+                              context: context,
+                              borderRadius: BorderRadius.circular(12),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
                       ),
