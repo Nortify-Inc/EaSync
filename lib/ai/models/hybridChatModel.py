@@ -14,13 +14,13 @@ class HybridChatModel(nn.Module):
         styleClasses: int,
         capabilityClasses: int,
         operationClasses: int,
-        dModel: int = 256,
-        nHead: int = 8,
-        encoderLayers: int = 4,
-        ffDim: int = 768,
-        lstmHidden: int = 320,
+        dModel: int = 128,
+        nHead: int = 4,
+        encoderLayers: int = 2,
+        ffDim: int = 320,
+        lstmHidden: int = 160,
         maxLen: int = 96,
-        dropout: float = 0.2,
+        dropout: float = 0.16,
     ):
         super().__init__()
         self.maxLen = maxLen

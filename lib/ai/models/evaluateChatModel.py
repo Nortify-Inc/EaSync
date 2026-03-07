@@ -62,6 +62,8 @@ for text, intent in [
 for text in [
     "write a poem about stars",
     "who won world cup 2002",
+    "agora who won the world cup in 2002",
+    "before changing my lights, who won world cup 2002",
     "qual a capital da frança",
     "best stock to buy",
     "me explica buracos negros",
@@ -96,6 +98,15 @@ def checkCase(case: dict[str, Any], prediction: dict[str, Any]) -> bool:
     response = str(prediction.get("generatedResponse") or "").strip()
     if len(response.split()) < 2:
         return False
+
+    if case["intent"] == "outOfDomain":
+        lower = response.lower()
+        if (
+            "outside home-automation scope" not in lower
+            and "outside smart-home automation scope" not in lower
+            and "fora do escopo" not in lower
+        ):
+            return False
 
     return True
 

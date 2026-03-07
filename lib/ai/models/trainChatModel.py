@@ -24,9 +24,9 @@ ARTIFACT_DIR = ROOT / "models" / "artifacts" / "chat"
 
 MAX_INPUT = 96
 MAX_RESPONSE = 72
-BATCH_SIZE = 80
-EPOCHS = 12
-LEARNING_RATE = 8e-4
+BATCH_SIZE = 96
+EPOCHS = 8
+LEARNING_RATE = 1.1e-3
 
 
 @dataclass
@@ -157,7 +157,7 @@ def main() -> int:
 
     tokenizer = ChatTokenizer.build(
         [r.text for r in rows] + [r.targetResponse for r in rows],
-        maxVocab=90000,
+        maxVocab=36000,
         minFreq=2,
     )
 
@@ -184,10 +184,16 @@ def main() -> int:
     ).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=2e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer,
+        T_max=max(1, EPOCHS * max(1, len(trainLoader))),
+        eta_min=LEARNING_RATE * 0.25,
+    )
     padId = tokenizer.tokenToIndex[PAD]
 
     bestScore = -1.0
     bestState: dict[str, Any] | None = None
+    patience = 0
 
     for epoch in range(1, EPOCHS + 1):
         model.train()
@@ -220,6 +226,7 @@ def main() -> int:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
+            scheduler.step()
 
             lossSum += float(loss.item())
             steps += 1
@@ -272,6 +279,12 @@ def main() -> int:
         if score > bestScore:
             bestScore = score
             bestState = {k: v.detach().cpu() for k, v in model.state_dict().items()}
+            patience = 0
+        else:
+            patience += 1
+            if patience >= 3:
+                print("earlyStopping=true")
+                break
 
     if bestState is not None:
         model.load_state_dict(bestState)
@@ -297,12 +310,12 @@ def main() -> int:
 
     modelConfig = {
         "architecture": "transformerEncoderPlusLstmDecoder",
-        "dModel": 256,
-        "nHead": 8,
-        "encoderLayers": 4,
-        "ffDim": 768,
-        "lstmHidden": 320,
-        "dropout": 0.2,
+        "dModel": 128,
+        "nHead": 4,
+        "encoderLayers": 2,
+        "ffDim": 320,
+        "lstmHidden": 160,
+        "dropout": 0.16,
         "seed": SEED,
     }
     with (ARTIFACT_DIR / "modelConfig.json").open("w", encoding="utf-8") as f:

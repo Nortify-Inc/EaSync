@@ -6,9 +6,9 @@
  * @author Erick Radmann
  */
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui';
 import 'handler.dart';
 
 List<DeviceInfo> devices = [];
@@ -20,44 +20,82 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with TickerProviderStateMixin {
   static const String _kAuthPhoto = 'account.auth.photo';
+  static const int _kLoopItemCount = 1000000;
+  static const int _kLoopSeed = 500000;
+  static const double _kDragMinDistance = 14.0;
+  static const double _kTransitionBlurSigma = 11.0;
 
   int selectedIndex = 0;
-  int _transitionDirection = 1;
-  int _transitionDurationMs = 300;
-  double _dragVisualOffset = 0;
-  StreamSubscription<CoreEventData>? _eventSub;
+  late final PageController _pageController;
+  late int _virtualPage;
+  bool _pageAnimating = false;
+  double _dragAccumulatedDx = 0;
+  bool _dragTriggered = false;
+  bool _transitionBlurVisible = false;
+  final EaAppSettings _settings = EaAppSettings.instance;
 
-  late double screenWidth;
+  late final AnimationController _transitionBlurController =
+      AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 110),
+        reverseDuration: const Duration(milliseconds: 140),
+      );
+
   String? _profilePhoto;
-  double dragStartX = 0;
-  double dragDelta = 0;
-  double _dragPeakDelta = 0;
+  late final List<bool> _pageReady;
+  final Set<int> _warmingPages = <int>{};
 
   final List<Widget> pages = [
     const Dashboard(),
     const Profiles(),
-    const AssistantChat(),
     const Manage(),
+    const AssistantChat(),
     const Account(),
   ];
 
   final List<String> tabs = [
     'Dashboard',
     'Profiles',
-    'Assistant',
     'Manage',
+    'Assistant',
     'Account',
   ];
 
   @override
   void initState() {
     super.initState();
+    _virtualPage = (_kLoopSeed - (_kLoopSeed % pages.length)) + selectedIndex;
+    _pageController = PageController(initialPage: _virtualPage);
+    _pageReady = List<bool>.filled(pages.length, false);
+    _warmInitialPages();
     _loadProfilePhoto();
-    _eventSub = Bridge.onEvents.listen((_) {
-      setState(() {});
-    });
+  }
+
+  int _realIndexFromVirtual(int virtualIndex) {
+    return virtualIndex % pages.length;
+  }
+
+  Future<void> _warmInitialPages() async {
+    await _ensurePageReady(selectedIndex);
+    _warmNeighborPages(selectedIndex);
+  }
+
+  void _warmNeighborPages(int center) {
+    _ensurePageReady((center - 1 + pages.length) % pages.length);
+    _ensurePageReady((center + 1) % pages.length);
+  }
+
+  Future<void> _ensurePageReady(int index) async {
+    if (_pageReady[index] || _warmingPages.contains(index)) return;
+    _warmingPages.add(index);
+
+    await Future<void>.delayed(const Duration(milliseconds: 90));
+
+    if (!mounted) return;
+    setState(() => _pageReady[index] = true);
+    _warmingPages.remove(index);
   }
 
   Future<void> _loadProfilePhoto() async {
@@ -66,134 +104,176 @@ class _HomeState extends State<Home> {
     if (mounted) setState(() {});
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    screenWidth = MediaQuery.of(context).size.width;
-  }
-
   void goNext() {
-    _commitTransition((selectedIndex + 1) % pages.length, direction: 1);
+    _goToIndex((selectedIndex + 1) % pages.length);
   }
 
   void goPrev() {
-    _commitTransition(
-      (selectedIndex - 1 + pages.length) % pages.length,
-      direction: -1,
-    );
+    _goToIndex((selectedIndex - 1 + pages.length) % pages.length);
   }
 
-  void _goToIndex(int index) {
-    if (index == selectedIndex) return;
-    _commitTransition(index, direction: index > selectedIndex ? 1 : -1);
-    _loadProfilePhoto();
+  Future<void> _goToIndex(int index) async {
+    if (index == selectedIndex || _pageAnimating) return;
+    _pageAnimating = true;
+
+    if (_settings.animationsEnabled && mounted) {
+      setState(() => _transitionBlurVisible = true);
+      _transitionBlurController.forward(from: 0);
+    }
+
+    await _ensurePageReady(index);
+    _warmNeighborPages(index);
+
+    final currentReal = _realIndexFromVirtual(_virtualPage);
+    var delta = index - currentReal;
+    if (delta > pages.length / 2) delta -= pages.length;
+    if (delta < -pages.length / 2) delta += pages.length;
+    final targetVirtual = _virtualPage + delta;
+
+    try {
+      await _pageController.animateToPage(
+        targetVirtual,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        selectedIndex = index;
+        _virtualPage = targetVirtual;
+      });
+      _loadProfilePhoto();
+
+      if (_settings.animationsEnabled && mounted) {
+        await _transitionBlurController.reverse();
+        if (mounted) {
+          setState(() => _transitionBlurVisible = false);
+        }
+      }
+    } finally {
+      if (_settings.animationsEnabled && _transitionBlurVisible && mounted) {
+        _transitionBlurController.value = 0;
+        setState(() => _transitionBlurVisible = false);
+      }
+      _pageAnimating = false;
+    }
   }
 
-  void _commitTransition(
-    int nextIndex, {
-    required int direction,
-    double velocity = 0,
-  }) {
-    final absV = velocity.abs();
-    final ms = absV > 2200
-        ? 180
-        : absV > 1400
-        ? 220
-        : absV > 700
-        ? 260
-        : 320;
+  void _onHorizontalDragStart(DragStartDetails details) {
+    _dragAccumulatedDx = 0;
+    _dragTriggered = false;
+  }
 
-    _transitionDirection = direction;
-    setState(() {
-      _transitionDurationMs = ms;
-      _dragVisualOffset = 0;
-      selectedIndex = nextIndex;
-    });
-    _loadProfilePhoto();
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    if (_dragTriggered || _pageAnimating) return;
+    _dragAccumulatedDx += details.delta.dx;
+
+    if (_dragAccumulatedDx.abs() < _kDragMinDistance) return;
+    _dragTriggered = true;
+
+    if (_dragAccumulatedDx < 0) {
+      goNext();
+    } else {
+      goPrev();
+    }
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    _dragAccumulatedDx = 0;
+    _dragTriggered = false;
   }
 
   @override
   void dispose() {
-    _eventSub?.cancel();
+    _pageController.dispose();
+    _transitionBlurController.dispose();
     super.dispose();
   }
 
-  Widget _buildBlurTitle() {
-    final title = EaI18n.t(context, tabs[selectedIndex]);
+  int _safeSelectedIndex() {
+    if (pages.isEmpty) return 0;
+    if (selectedIndex < 0) return 0;
+    if (selectedIndex >= pages.length) {
+      return selectedIndex % pages.length;
+    }
+    return selectedIndex;
+  }
 
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(title),
-      tween: Tween<double>(begin: 3, end: 0),
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOut,
-      builder: (context, blur, _) {
-        return ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Text(
-            title,
-            style: EaText.primary.copyWith(
-              color: EaAdaptiveColor.bodyText(context),
-            ),
-          ),
-        );
-      },
+  Widget _buildBlurTitle() {
+    final idx = _safeSelectedIndex();
+    final title = EaI18n.t(context, tabs[idx]);
+
+    return EaBlurFadeSwitcher(
+      marker: title,
+      child: Text(
+        title,
+        style: EaText.primary.copyWith(
+          color: EaAdaptiveColor.bodyText(context),
+        ),
+      ),
     );
   }
 
   Widget _buildAppBar() {
+    final idx = _safeSelectedIndex();
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            height: 56,
-            alignment: Alignment.centerLeft,
-            child: Row(
-              children: [
-                const Spacer(flex: 1),
-                _buildBlurTitle(),
-                const Spacer(flex: 100),
-                if (selectedIndex == 4)
-                  IconButton(
-                    tooltip: EaI18n.t(context, 'Settings'),
-                    icon: const Icon(
-                      Icons.settings_outlined,
-                      color: EaColor.fore,
+      child: EaBlurFadeSwitcher(
+        marker: idx,
+        duration: const Duration(milliseconds: 140),
+        beginBlur: 4,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              height: 56,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  const Spacer(flex: 1),
+                  _buildBlurTitle(),
+                  const Spacer(flex: 100),
+                  if (idx == 4)
+                    IconButton(
+                      tooltip: EaI18n.t(context, 'Settings'),
+                      icon: const Icon(
+                        Icons.settings_outlined,
+                        color: EaColor.fore,
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const Settings()),
+                        );
+                      },
+                    )
+                  else
+                    GestureDetector(
+                      onTap: () {
+                        _goToIndex(4);
+                      },
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: EaColor.fore.withValues(alpha: 0.18),
+                        backgroundImage: (_profilePhoto ?? '').trim().isEmpty
+                            ? null
+                            : (_profilePhoto!.startsWith('http')
+                                  ? NetworkImage(_profilePhoto!)
+                                  : FileImage(File(_profilePhoto!))
+                                        as ImageProvider),
+                        child: (_profilePhoto ?? '').trim().isEmpty
+                            ? const Icon(
+                                Icons.person_outline_rounded,
+                                size: 14,
+                                color: EaColor.fore,
+                              )
+                            : null,
+                      ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const Settings()),
-                      );
-                    },
-                  )
-                else
-                  GestureDetector(
-                    onTap: () {
-                      _goToIndex(4);
-                    },
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: EaColor.fore.withValues(alpha: 0.18),
-                      backgroundImage: (_profilePhoto ?? '').trim().isEmpty
-                          ? null
-                          : (_profilePhoto!.startsWith('http')
-                                ? NetworkImage(_profilePhoto!)
-                                : FileImage(File(_profilePhoto!))
-                                      as ImageProvider),
-                      child: (_profilePhoto ?? '').trim().isEmpty
-                          ? const Icon(
-                              Icons.person_outline_rounded,
-                              size: 14,
-                              color: EaColor.fore,
-                            )
-                          : null,
-                    ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -206,18 +286,23 @@ class _HomeState extends State<Home> {
       bottom: 0,
       left: 0,
       right: 0,
-      child: SizedBox(
-        height: 36,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(pages.length, (index) => _buildDot(index)),
+      child: EaBlurFadeSwitcher(
+        marker: _safeSelectedIndex(),
+        duration: const Duration(milliseconds: 140),
+        beginBlur: 4,
+        child: SizedBox(
+          height: 36,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(pages.length, (index) => _buildDot(index)),
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDot(int index) {
-    final bool active = index == selectedIndex;
+    final bool active = index == _safeSelectedIndex();
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
@@ -256,182 +341,113 @@ class _HomeState extends State<Home> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onHorizontalDragStart: (d) {
-              dragStartX = d.globalPosition.dx;
-              dragDelta = 0;
-              _dragPeakDelta = 0;
-            },
-            onHorizontalDragUpdate: (d) {
-              dragDelta = d.globalPosition.dx - dragStartX;
-              if (dragDelta.abs() > _dragPeakDelta.abs()) {
-                _dragPeakDelta = dragDelta;
-              }
-              setState(() => _dragVisualOffset = dragDelta.clamp(-86, 86));
-            },
-            onHorizontalDragEnd: (d) {
-              final vx = d.primaryVelocity ?? 0;
-              final hasDistanceIntent = _dragPeakDelta.abs() > 40;
-              final hasVelocityIntent = vx.abs() > 900;
-
-              if (!hasVelocityIntent && !hasDistanceIntent) {
-                setState(() => _dragVisualOffset = 0);
-                dragDelta = 0;
-                _dragPeakDelta = 0;
-                return;
-              }
-
-              final direction = hasDistanceIntent
-                  ? (_dragPeakDelta < 0 ? 1 : -1)
-                  : (vx < 0 ? 1 : -1);
-
-              if (direction == 1) {
-                _commitTransition(
-                  (selectedIndex + 1) % pages.length,
-                  direction: 1,
-                  velocity: vx,
-                );
-              } else {
-                _commitTransition(
-                  (selectedIndex - 1 + pages.length) % pages.length,
-                  direction: -1,
-                  velocity: vx,
-                );
-              }
-
-              dragDelta = 0;
-              _dragPeakDelta = 0;
-            },
-            child: Padding(
-              padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
-              child: ClipRect(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: _dragVisualOffset),
-                  duration: const Duration(milliseconds: 120),
-                  curve: Curves.easeOut,
-                  builder: (context, dragVisual, child) {
-                    return Transform.translate(
-                      offset: Offset(dragVisual * 0.16, 0),
-                      child: child,
-                    );
+          Padding(
+            padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
+            child: ClipRect(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: _onHorizontalDragStart,
+                onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (virtualIndex) {
+                    if (!mounted) return;
+                    final realIndex = _realIndexFromVirtual(virtualIndex);
+                    setState(() {
+                      selectedIndex = realIndex;
+                      _virtualPage = virtualIndex;
+                    });
+                    _ensurePageReady(realIndex);
+                    _warmNeighborPages(realIndex);
+                    _loadProfilePhoto();
                   },
-                  child: AnimatedSwitcher(
-                    duration: Duration(milliseconds: _transitionDurationMs),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInOutCubic,
-                    transitionBuilder: (child, animation) {
-                      final key = child.key;
-                      final isIncoming =
-                          key is ValueKey<int> && key.value == selectedIndex;
+                  itemCount: _kLoopItemCount,
+                  itemBuilder: (context, virtualIndex) {
+                    final realIndex = _realIndexFromVirtual(virtualIndex);
+                    return AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, child) {
+                        double page = _virtualPage.toDouble();
+                        if (_pageController.hasClients &&
+                            _pageController.position.hasPixels) {
+                          page =
+                              _pageController.page ?? _virtualPage.toDouble();
+                        }
+                        final distance = (virtualIndex - page).abs();
+                        const fadeWindow = 0.34;
+                        final opacity = distance >= fadeWindow
+                            ? 0.0
+                            : (1 - (distance / fadeWindow)).clamp(0.0, 1.0);
 
-                      final fade = CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOut,
-                      );
-
-                      final eased = CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeInOutCubicEmphasized,
-                      );
-
-                      final horizontalShift =
-                          Tween<Offset>(
-                            begin: isIncoming
-                                ? Offset(_transitionDirection * 0.14, 0)
-                                : Offset.zero,
-                            end: isIncoming
-                                ? Offset.zero
-                                : Offset(-_transitionDirection * 0.12, 0),
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeInOutCubic,
-                            ),
-                          );
-
-                      final subtleLift =
-                          Tween<Offset>(
-                            begin: isIncoming
-                                ? const Offset(0, 0.02)
-                                : Offset.zero,
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOut,
-                            ),
-                          );
-
-                      final scale =
-                          Tween<double>(
-                            begin: isIncoming ? 0.975 : 1.0,
-                            end: isIncoming ? 1.0 : 0.985,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeInOutCubic,
-                            ),
-                          );
-
-                      final blurSigma = Tween<double>(
-                        begin: isIncoming ? 6.0 : 0.0,
-                        end: isIncoming ? 0.0 : 2.5,
-                      ).animate(eased);
-
-                      final tilt = Tween<double>(
-                        begin: isIncoming
-                            ? (-_transitionDirection * 0.045)
-                            : 0.0,
-                        end: isIncoming ? 0.0 : (_transitionDirection * 0.025),
-                      ).animate(eased);
-
-                      return FadeTransition(
-                        opacity: fade,
-                        child: SlideTransition(
-                          position: horizontalShift,
-                          child: SlideTransition(
-                            position: subtleLift,
-                            child: ScaleTransition(
-                              scale: scale,
-                              child: AnimatedBuilder(
-                                animation: eased,
-                                builder: (context, _) {
-                                  final m = Matrix4.identity()
-                                    ..setEntry(3, 2, 0.001)
-                                    ..rotateY(tilt.value);
-
-                                  return Transform(
-                                    alignment: Alignment.center,
-                                    transform: m,
-                                    child: ImageFiltered(
-                                      imageFilter: ImageFilter.blur(
-                                        sigmaX: blurSigma.value,
-                                        sigmaY: blurSigma.value * 0.55,
-                                      ),
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                        return IgnorePointer(
+                          ignoring: opacity < 0.99,
+                          child: Opacity(opacity: opacity, child: child),
+                        );
+                      },
+                      child: RepaintBoundary(
+                        child: ColoredBox(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          child: ClipRect(
+                            child: _pageReady[realIndex]
+                                ? pages[realIndex]
+                                : const _HomePageSkeleton(),
                           ),
                         ),
-                      );
-                    },
-                    child: KeyedSubtree(
-                      key: ValueKey(selectedIndex),
-                      child: SizedBox.expand(child: pages[selectedIndex]),
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
           ),
           _buildAppBar(),
           _buildIndicator(),
+          if (_transitionBlurVisible)
+            Positioned.fill(
+              child: IgnorePointer(
+                ignoring: true,
+                child: AnimatedBuilder(
+                  animation: _transitionBlurController,
+                  builder: (context, _) {
+                    final t = Curves.easeOut.transform(
+                      _transitionBlurController.value,
+                    );
+                    final sigma = t * _kTransitionBlurSigma;
+                    return BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.04 * t),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _HomePageSkeleton extends StatelessWidget {
+  const _HomePageSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        EaSkeleton(width: w * 0.55, height: 20),
+        const SizedBox(height: 12),
+        EaSkeleton(width: w - 32, height: 120),
+        const SizedBox(height: 12),
+        EaSkeleton(width: w - 32, height: 84),
+        const SizedBox(height: 12),
+        EaSkeleton(width: w - 32, height: 84),
+      ],
     );
   }
 }

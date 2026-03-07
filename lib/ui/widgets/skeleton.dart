@@ -7,6 +7,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'dart:ui';
 
 class EaSkeleton extends StatefulWidget {
   final double width;
@@ -76,6 +77,96 @@ class EaFadeSlideIn extends StatefulWidget {
 
   @override
   State<EaFadeSlideIn> createState() => _EaFadeSlideInState();
+}
+
+class EaBlurFadeIn extends StatefulWidget {
+  final Widget child;
+  final Duration duration;
+  final double beginBlur;
+
+  const EaBlurFadeIn({
+    super.key,
+    required this.child,
+    this.duration = const Duration(milliseconds: 220),
+    this.beginBlur = 6,
+  });
+
+  @override
+  State<EaBlurFadeIn> createState() => _EaBlurFadeInState();
+}
+
+class _EaBlurFadeInState extends State<EaBlurFadeIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  )..forward();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = Curves.easeOut.transform(_controller.value);
+        final sigma = (1 - t) * widget.beginBlur;
+        return Opacity(
+          opacity: t,
+          child: ImageFiltered(
+            imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class EaBlurFadeSwitcher extends StatelessWidget {
+  final Object marker;
+  final Widget child;
+  final Duration duration;
+  final double beginBlur;
+
+  const EaBlurFadeSwitcher({
+    super.key,
+    required this.marker,
+    required this.child,
+    this.duration = const Duration(milliseconds: 180),
+    this.beginBlur = 6,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: duration,
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, _) {
+            final t = Curves.easeOut.transform(animation.value);
+            final sigma = (1 - t) * beginBlur;
+            return Opacity(
+              opacity: t,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                child: child,
+              ),
+            );
+          },
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(marker), child: child),
+    );
+  }
 }
 
 class _EaFadeSlideInState extends State<EaFadeSlideIn>

@@ -20,14 +20,23 @@
 #include "core.h"
 #include "driver.hpp"
 #include "mock.hpp"
-#include "mqtt.hpp"
-#include "wifi.hpp"
-#include "zigbee.hpp"
 #include "ble.hpp"
 #include "payload_utility.hpp"
 #include "aiEngine.hpp"
 #include "chatModelRuntime.hpp"
 #include "chatCommandRouter.hpp"
+
+#ifdef EASYNC_ENABLE_MQTT_DRIVER
+#include "mqtt.hpp"
+#endif
+
+#ifdef EASYNC_ENABLE_WIFI_DRIVER
+#include "wifi.hpp"
+#endif
+
+#ifdef EASYNC_ENABLE_ZIGBEE_DRIVER
+#include "zigbee.hpp"
+#endif
 
 #include <unordered_map>
 #include <unordered_set>
@@ -126,6 +135,13 @@ static std::string capabilityToString(CoreCapability cap) {
         case CORE_CAP_BRIGHTNESS: return "Brightness";
         case CORE_CAP_COLOR: return "Color";
         case CORE_CAP_TEMPERATURE: return "Temperature";
+        case CORE_CAP_TEMPERATURE_FRIDGE: return "Fridge temperature";
+        case CORE_CAP_TEMPERATURE_FREEZER: return "Freezer temperature";
+        case CORE_CAP_COLOR_TEMP: return "Color temperature";
+        case CORE_CAP_TIMESTAMP: return "Timestamp";
+        case CORE_CAP_LOCK: return "Lock";
+        case CORE_CAP_MODE: return "Mode";
+        case CORE_CAP_POSITION: return "Position";
         default: return "UnknownCapability";
     }
 }
@@ -309,14 +325,20 @@ CoreContext* core_create(void) {
         context->drivers[CORE_PROTOCOL_MOCK] = 
             std::make_shared<drivers::MockDriver>();
 
-        context->drivers[CORE_PROTOCOL_MQTT] = 
+        #ifdef EASYNC_ENABLE_MQTT_DRIVER
+        context->drivers[CORE_PROTOCOL_MQTT] =
             std::make_shared<drivers::MqttDriver>();
+        #endif
 
-        context->drivers[CORE_PROTOCOL_WIFI] = 
+        #ifdef EASYNC_ENABLE_WIFI_DRIVER
+        context->drivers[CORE_PROTOCOL_WIFI] =
             std::make_shared<drivers::WifiDriver>();
+        #endif
 
-        context->drivers[CORE_PROTOCOL_ZIGBEE] = 
+        #ifdef EASYNC_ENABLE_ZIGBEE_DRIVER
+        context->drivers[CORE_PROTOCOL_ZIGBEE] =
             std::make_shared<drivers::ZigBeeDriver>();
+        #endif
 
         context->drivers[CORE_PROTOCOL_BLE] =
             std::make_shared<drivers::BleDriver>();
@@ -2245,6 +2267,54 @@ static std::vector<InternalDevice*> resolveTargets(CoreContext* core, const std:
     return targets;
 }
 
+static std::vector<CoreCapability> detectMentionedCapabilities(const std::string& clause)
+{
+    std::vector<CoreCapability> caps;
+    const std::string q = lowerCopy(clause);
+
+    auto add = [&](CoreCapability cap) {
+        for (auto c : caps) {
+            if (c == cap) {
+                return;
+            }
+        }
+        caps.push_back(cap);
+    };
+
+    if (containsAny(q, {"turn on", "turn off", "liga", "desliga", "power", "ligado", "desligado"})) {
+        add(CORE_CAP_POWER);
+    }
+    if (containsAny(q, {"brightness", "brilho", "%"})) {
+        add(CORE_CAP_BRIGHTNESS);
+    }
+    if (containsAny(q, {"color temperature", "temperatura de cor", "kelvin"})) {
+        add(CORE_CAP_COLOR_TEMP);
+    }
+    if (containsAny(q, {"color", "colour", "cor", "rgb(", "#", "0x"})) {
+        add(CORE_CAP_COLOR);
+    }
+    if (containsAny(q, {"temperature", "temperatura", "temp", "tempeature"})) {
+        if (containsAny(q, {"freezer", "congelador"})) {
+            add(CORE_CAP_TEMPERATURE_FREEZER);
+        } else if (containsAny(q, {"fridge", "geladeira", "refrigerator"})) {
+            add(CORE_CAP_TEMPERATURE_FRIDGE);
+        } else {
+            add(CORE_CAP_TEMPERATURE);
+        }
+    }
+    if (containsAny(q, {"lock", "unlock", "tranca", "trancar", "destrancar", "fechadura"})) {
+        add(CORE_CAP_LOCK);
+    }
+    if (containsAny(q, {"mode", "modo", "eco", "turbo", "sleep", "comfort", "auto"})) {
+        add(CORE_CAP_MODE);
+    }
+    if (containsAny(q, {"position", "posição", "posicao", "open", "close", "abrir", "fechar"})) {
+        add(CORE_CAP_POSITION);
+    }
+
+    return caps;
+}
+
 CoreResult core_ai_execute_command(CoreContext* core,
                                    const char* input,
                                    char* outResponse,
@@ -2415,6 +2485,8 @@ CoreResult core_ai_execute_command(CoreContext* core,
             std::vector<std::string> actions;
             std::vector<ActionRecord> records;
             std::vector<std::string> unresolved;
+            std::vector<std::string> unsupported;
+            std::unordered_set<std::string> unsupportedDedup;
 
             std::string normalized = q;
             size_t pos = 0;
@@ -2434,11 +2506,24 @@ CoreResult core_ai_execute_command(CoreContext* core,
                     continue;
                 }
 
+                const auto mentionedCaps = detectMentionedCapabilities(clause);
+
                 core->lastReferencedDeviceUuid = targets.front()->uuid;
 
                 for (auto* dev : targets) {
                     CoreDeviceState before = dev->state;
                     bool changed = false;
+
+                    for (auto cap : mentionedCaps) {
+                        if (!hasCapability(*dev, cap)) {
+                            std::ostringstream oss;
+                            oss << dev->name << " does not support " << capabilityToString(cap);
+                            const std::string issue = oss.str();
+                            if (unsupportedDedup.insert(issue).second) {
+                                unsupported.push_back(issue);
+                            }
+                        }
+                    }
 
                     if ((clause.find("turn on") != std::string::npos || clause.find("liga") != std::string::npos) &&
                         hasCapability(*dev, CORE_CAP_POWER)) {
@@ -2632,19 +2717,48 @@ CoreResult core_ai_execute_command(CoreContext* core,
                 }
             }
 
-            if (modelOk) {
-                reply = prediction.generatedResponse;
-            }
+            if (!actions.empty() || !unsupported.empty() || !unresolved.empty()) {
+                std::ostringstream composed;
 
-            if (reply.empty() && !actions.empty()) {
-                std::ostringstream applied;
-                for (size_t i = 0; i < actions.size(); ++i) {
-                    if (i > 0) {
-                        applied << "; ";
+                if (!actions.empty()) {
+                    composed << "Applied: ";
+                    for (size_t i = 0; i < actions.size(); ++i) {
+                        if (i > 0) {
+                            composed << "; ";
+                        }
+                        composed << actions[i];
                     }
-                    applied << actions[i];
                 }
-                reply = applied.str();
+
+                if (!unsupported.empty()) {
+                    if (composed.tellp() > 0) {
+                        composed << ". ";
+                    }
+                    composed << "Not supported: ";
+                    for (size_t i = 0; i < unsupported.size(); ++i) {
+                        if (i > 0) {
+                            composed << "; ";
+                        }
+                        composed << unsupported[i];
+                    }
+                }
+
+                if (!unresolved.empty() && actions.empty()) {
+                    if (composed.tellp() > 0) {
+                        composed << ". ";
+                    }
+                    composed << "Need clarification for: ";
+                    for (size_t i = 0; i < unresolved.size(); ++i) {
+                        if (i > 0) {
+                            composed << " | ";
+                        }
+                        composed << unresolved[i];
+                    }
+                }
+
+                reply = composed.str();
+            } else if (modelOk) {
+                reply = prediction.generatedResponse;
             }
         }
         }

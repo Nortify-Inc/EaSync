@@ -984,7 +984,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         children: [
           Expanded(
             child: SizedBox(
-              height: 32,
+              height: 48,
               child: Stack(
                 children: [
                   if (discovering)
@@ -1003,33 +1003,40 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       ),
                     ),
                   Positioned.fill(
-                    child: OutlinedButton.icon(
-                      onPressed: discovering ? null : _discoverDevices,
-                      icon: const Icon(Icons.radar),
-                      label: discovering
-                          ? Text(
-                              EaI18n.t(context, 'Discovering...'),
-                              style: EaText.secondary.copyWith(
-                                color: EaAdaptiveColor.bodyText(context),
+                    child: EaBlurFadeSwitcher(
+                      marker: discovering,
+                      beginBlur: 4,
+                      duration: const Duration(milliseconds: 140),
+                      child: OutlinedButton.icon(
+                        onPressed: discovering ? null : _discoverDevices,
+                        icon: const Icon(Icons.radar_rounded, size: 18),
+                        label: discovering
+                            ? Text(
+                                EaI18n.t(context, 'Discovering...'),
+                                style: EaText.secondary.copyWith(
+                                  color: EaAdaptiveColor.bodyText(context),
+                                ),
+                              )
+                            : Text(
+                                EaI18n.t(context, 'Discover'),
+                                style: EaText.secondary.copyWith(
+                                  color: EaAdaptiveColor.bodyText(context),
+                                ),
                               ),
-                            )
-                          : Text(
-                              EaI18n.t(context, 'Discover'),
-                              style: EaText.secondary.copyWith(
-                                color: EaAdaptiveColor.bodyText(context),
-                              ),
-                            ),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                          color: discovering
-                              ? Colors.transparent
-                              : EaColor.fore,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          alignment: Alignment.center,
+                          side: BorderSide(
+                            color: discovering
+                                ? Colors.transparent
+                                : EaColor.fore,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          foregroundColor: EaColor.fore,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        foregroundColor: EaColor.fore,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
@@ -1039,19 +1046,23 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
           ),
           const SizedBox(width: 15),
           Expanded(
-            child: EaGradientButtonFrame(
-              borderRadius: BorderRadius.circular(12),
-              child: ElevatedButton.icon(
-                onPressed: () => _openEditor(),
-                icon: const Icon(Icons.add),
-                label: Text(
-                  EaI18n.t(context, 'Add device'),
-                  style: EaText.primaryBack,
-                ),
-                style: EaButtonStyle.gradientFilled(
-                  context: context,
-                  borderRadius: BorderRadius.circular(12),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
+            child: EaBlurFadeIn(
+              beginBlur: 4,
+              duration: const Duration(milliseconds: 220),
+              child: EaGradientButtonFrame(
+                borderRadius: BorderRadius.circular(12),
+                child: ElevatedButton.icon(
+                  onPressed: () => _openEditor(),
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    EaI18n.t(context, 'Add device'),
+                    style: EaText.primaryBack,
+                  ),
+                  style: EaButtonStyle.gradientFilled(
+                    context: context,
+                    borderRadius: BorderRadius.circular(12),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
                 ),
               ),
             ),
