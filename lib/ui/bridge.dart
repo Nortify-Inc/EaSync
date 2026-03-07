@@ -2145,14 +2145,17 @@ class Bridge {
   }
 
   static void _invalidateAllStatesAndNotify() {
+    final uuids = <String>{
+      ..._stateCache.keys,
+      ..._protocolByDevice.keys,
+      ..._endpointByDevice.keys,
+      ..._healthByDevice.keys,
+    };
+
     _stateCache.clear();
-    try {
-      final devices = listDevices();
-      for (final d in devices) {
-        _stateController.add(d.uuid);
-      }
-    } catch (_) {
-      // best-effort refresh; ignore diagnostics failures
+
+    for (final uuid in uuids) {
+      _stateController.add(uuid);
     }
   }
 
