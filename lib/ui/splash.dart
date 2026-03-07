@@ -142,8 +142,8 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
                   children: [
                     Image(
                       image: const AssetImage("assets/images/easyncLogo.png"),
-                      width: 52,
-                      height: 52,
+                      width: 50,
+                      height: 50,
                     ),
                     Text(
                       "EaSync",

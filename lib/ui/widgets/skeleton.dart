@@ -7,7 +7,19 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'dart:ui';
+
+bool _enableHeavyBlurEffects() {
+  if (kIsWeb) return false;
+  switch (defaultTargetPlatform) {
+    case TargetPlatform.iOS:
+    case TargetPlatform.macOS:
+      return true;
+    default:
+      return false;
+  }
+}
 
 class EaSkeleton extends StatefulWidget {
   final double width;
@@ -97,6 +109,8 @@ class EaBlurFadeIn extends StatefulWidget {
 
 class _EaBlurFadeInState extends State<EaBlurFadeIn>
     with SingleTickerProviderStateMixin {
+  late final bool _canUseBlur = _enableHeavyBlurEffects();
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: widget.duration,
@@ -114,6 +128,9 @@ class _EaBlurFadeInState extends State<EaBlurFadeIn>
       animation: _controller,
       builder: (context, child) {
         final t = Curves.easeOut.transform(_controller.value);
+        if (!_canUseBlur) {
+          return Opacity(opacity: t, child: child);
+        }
         final sigma = (1 - t) * widget.beginBlur;
         return Opacity(
           opacity: t,
@@ -144,11 +161,15 @@ class EaBlurFadeSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canUseBlur = _enableHeavyBlurEffects();
     return AnimatedSwitcher(
       duration: duration,
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       transitionBuilder: (child, animation) {
+        if (!canUseBlur) {
+          return FadeTransition(opacity: animation, child: child);
+        }
         return AnimatedBuilder(
           animation: animation,
           builder: (context, _) {
