@@ -36,7 +36,7 @@ class _AssistantChatState extends State<AssistantChat>
   bool _sending = false;
   bool _typingIndicator = false;
   bool _sidebarOpen = false;
-  String _profileName = 'amigo';
+  String _profileName = '';
   String? _profilePhoto;
 
   static const double _chatDrawerWidth = 252;
@@ -45,6 +45,9 @@ class _AssistantChatState extends State<AssistantChat>
     vsync: this,
     duration: const Duration(milliseconds: 1100),
   )..repeat(reverse: true);
+  bool _isInTree = true;
+
+  bool get _canUpdateUi => mounted && _isInTree;
 
   _ChatSession? get _activeSession {
     if (_activeChatId == null) return null;
@@ -66,6 +69,18 @@ class _AssistantChatState extends State<AssistantChat>
     _commandController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    _isInTree = false;
+    super.deactivate();
+  }
+
+  @override
+  void activate() {
+    super.activate();
+    _isInTree = true;
   }
 
   Future<void> _loadState() async {
@@ -90,14 +105,14 @@ class _AssistantChatState extends State<AssistantChat>
     _activeChatId = prefs.getString(_kActiveChatId);
     _profileName = prefs.getString(_kAuthName)?.trim().isNotEmpty == true
         ? prefs.getString(_kAuthName)!.trim()
-        : 'amigo';
+        : '';
     _profilePhoto = prefs.getString(_kAuthPhoto);
 
     if (_activeSession == null && _sessions.isNotEmpty) {
       _activeChatId = _sessions.first.id;
     }
 
-    if (mounted) setState(() {});
+    if (_canUpdateUi) setState(() {});
   }
 
   Future<void> _persistState() async {
@@ -111,9 +126,9 @@ class _AssistantChatState extends State<AssistantChat>
     }
   }
 
-  Future<void> _createNewChat({String? fromText}) async {
+  Future<void> _createNewChat({String? fromText, String? fallbackTitle}) async {
     final title = (fromText ?? '').trim().isEmpty
-        ? EaI18n.t(context, 'New chat')
+        ? (fallbackTitle ?? 'New chat')
         : fromText!.trim().split('\n').first;
 
     final session = _ChatSession(
@@ -126,19 +141,28 @@ class _AssistantChatState extends State<AssistantChat>
     _sessions.insert(0, session);
     _activeChatId = session.id;
     await _persistState();
-    if (mounted) setState(() {});
+    if (_canUpdateUi) setState(() {});
   }
 
   Future<void> _send() async {
     final raw = _commandController.text.trim();
     if (raw.isEmpty || _sending) return;
+    final newChatText = EaI18n.t(context, 'New chat');
+    final noResponseText = EaI18n.t(
+      context,
+      'No response generated. Try rephrasing your request.',
+    );
+    final failedText = EaI18n.t(
+      context,
+      'Could not process this command right now. Please try again.',
+    );
 
     if (_settings.hapticsEnabled) {
       HapticFeedback.lightImpact();
     }
 
     if (_activeSession == null) {
-      await _createNewChat(fromText: raw);
+      await _createNewChat(fromText: raw, fallbackTitle: newChatText);
     }
 
     final session = _activeSession;
@@ -157,19 +181,20 @@ class _AssistantChatState extends State<AssistantChat>
     try {
       reply = (await Bridge.aiExecuteCommandAsync(raw)).trim();
       if (reply.isEmpty) {
-        reply = EaI18n.t(
-          context,
-          'No response generated. Try rephrasing your request.',
-        );
+        reply = noResponseText;
       }
     } catch (_) {
-      reply = EaI18n.t(
-        context,
-        'Could not process this command right now. Please try again.',
-      );
+      reply = failedText;
     }
 
     if (!mounted) return;
+    if (!_isInTree) {
+      _typingIndicator = false;
+      _sending = false;
+      session.messages.add(_ChatMessage(role: _Role.assistant, text: reply));
+      await _persistState();
+      return;
+    }
     setState(() {
       _typingIndicator = false;
       _sending = false;
@@ -181,7 +206,7 @@ class _AssistantChatState extends State<AssistantChat>
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
+      if (!mounted || !_isInTree || !_scrollController.hasClients) return;
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 220),
@@ -224,31 +249,41 @@ class _AssistantChatState extends State<AssistantChat>
                         padding: const EdgeInsets.fromLTRB(8, 10, 12, 8),
                         child: Row(
                           children: [
-                            IconButton(
-                              tooltip: _sidebarOpen
-                                  ? EaI18n.t(context, 'Hide chats')
-                                  : EaI18n.t(context, 'Show chats'),
-                              onPressed: () =>
-                                  setState(() => _sidebarOpen = !_sidebarOpen),
-                              icon: Icon(
-                                _sidebarOpen
-                                    ? Icons.menu_open_rounded
-                                    : Icons.menu_rounded,
-                                color: EaColor.fore,
+                            EaBlurFadeSwitcher(
+                              marker: _sidebarOpen,
+                              duration: const Duration(milliseconds: 150),
+                              beginBlur: 4,
+                              child: IconButton(
+                                tooltip: _sidebarOpen
+                                    ? EaI18n.t(context, 'Hide chats')
+                                    : EaI18n.t(context, 'Show chats'),
+                                onPressed: () => setState(
+                                  () => _sidebarOpen = !_sidebarOpen,
+                                ),
+                                icon: Icon(
+                                  _sidebarOpen
+                                      ? Icons.menu_open_rounded
+                                      : Icons.menu_rounded,
+                                  color: EaColor.fore,
+                                ),
                               ),
                             ),
                             const Spacer(),
                             if (_typingIndicator)
-                              FadeTransition(
-                                opacity: CurvedAnimation(
-                                  parent: _thinkingPulse,
-                                  curve: Curves.easeInOut,
-                                ),
-                                child: Text(
-                                  EaI18n.t(context, 'Thinking...'),
-                                  style: EaText.small.copyWith(
-                                    color: EaAdaptiveColor.secondaryText(
-                                      context,
+                              EaBlurFadeIn(
+                                duration: const Duration(milliseconds: 140),
+                                beginBlur: 4,
+                                child: FadeTransition(
+                                  opacity: CurvedAnimation(
+                                    parent: _thinkingPulse,
+                                    curve: Curves.easeInOut,
+                                  ),
+                                  child: Text(
+                                    EaI18n.t(context, 'Thinking...'),
+                                    style: EaText.small.copyWith(
+                                      color: EaAdaptiveColor.secondaryText(
+                                        context,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -320,7 +355,9 @@ class _AssistantChatState extends State<AssistantChat>
                 child: _railActionButton(
                   icon: Icons.add_comment_rounded,
                   label: EaI18n.t(context, 'New chat'),
-                  onTap: () => _createNewChat(),
+                  onTap: () => _createNewChat(
+                    fallbackTitle: EaI18n.t(context, 'New chat'),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -361,7 +398,7 @@ class _AssistantChatState extends State<AssistantChat>
                   onTap: () async {
                     setState(() => _activeChatId = s.id);
                     await _persistState();
-                    if (mounted) {
+                    if (_canUpdateUi) {
                       setState(() => _sidebarOpen = false);
                     }
                   },
@@ -379,18 +416,22 @@ class _AssistantChatState extends State<AssistantChat>
     required IconData icon,
     required VoidCallback onTap,
   }) {
-    return Tooltip(
-      message: tooltip,
-      child: Material(
-        color: EaAdaptiveColor.field(context),
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
+    return EaBlurFadeIn(
+      duration: const Duration(milliseconds: 140),
+      beginBlur: 4,
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: EaAdaptiveColor.field(context),
           borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: SizedBox(
-            width: 38,
-            height: 38,
-            child: Icon(icon, size: 20, color: EaColor.fore),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: SizedBox(
+              width: 38,
+              height: 38,
+              child: Icon(icon, size: 20, color: EaColor.fore),
+            ),
           ),
         ),
       ),
@@ -402,30 +443,34 @@ class _AssistantChatState extends State<AssistantChat>
     required String label,
     required VoidCallback onTap,
   }) {
-    return Material(
-      color: EaAdaptiveColor.field(context),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
+    return EaBlurFadeIn(
+      duration: const Duration(milliseconds: 140),
+      beginBlur: 4,
+      child: Material(
+        color: EaAdaptiveColor.field(context),
         borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-          child: Row(
-            children: [
-              Icon(icon, size: 18, color: EaColor.fore),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: EaText.small.copyWith(
-                    color: EaAdaptiveColor.bodyText(context),
-                    fontWeight: FontWeight.w700,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: EaColor.fore),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: EaText.small.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -438,17 +483,19 @@ class _AssistantChatState extends State<AssistantChat>
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 22),
-          child: Text(
-            EaI18n.t(
-              context,
-              '✨ No que posso ajudar você hoje, {_profileName}?',
-              {'_profileName': _profileName},
-            ),
-            textAlign: TextAlign.center,
-            style: EaText.secondary.copyWith(
-              fontSize: 18,
-              color: EaAdaptiveColor.secondaryText(context),
-              fontWeight: FontWeight.w600,
+          child: EaBlurFadeIn(
+            duration: const Duration(milliseconds: 180),
+            beginBlur: 6,
+            child: Text(
+              EaI18n.t(context, 'How can I help you {_profileName}?', {
+                '_profileName': _profileName,
+              }),
+              textAlign: TextAlign.center,
+              style: EaText.secondary.copyWith(
+                fontSize: 18,
+                color: EaAdaptiveColor.secondaryText(context),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -601,25 +648,30 @@ class _AssistantChatState extends State<AssistantChat>
             ),
           ),
           const SizedBox(width: 8),
-          AnimatedContainer(
-            duration: EaMotion.fast,
-            curve: Curves.easeOut,
-            decoration: BoxDecoration(
-              color: _sending ? EaColor.secondaryFore : EaColor.fore,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: IconButton(
-              onPressed: _sending ? null : _send,
-              icon: _sending
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: EaColor.back,
-                      ),
-                    )
-                  : const Icon(Icons.send_rounded, color: EaColor.back),
+          EaBlurFadeSwitcher(
+            marker: _sending,
+            duration: const Duration(milliseconds: 150),
+            beginBlur: 5,
+            child: AnimatedContainer(
+              duration: EaMotion.fast,
+              curve: Curves.easeOut,
+              decoration: BoxDecoration(
+                color: _sending ? EaColor.secondaryFore : EaColor.fore,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: IconButton(
+                onPressed: _sending ? null : _send,
+                icon: _sending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: EaColor.back,
+                        ),
+                      )
+                    : const Icon(Icons.send_rounded, color: EaColor.back),
+              ),
             ),
           ),
         ],

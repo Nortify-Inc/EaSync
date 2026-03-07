@@ -227,6 +227,38 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     }
   }
 
+  Future<double?> _fetchOutsideTempFromCoordinates(
+    double lat,
+    double lon,
+  ) async {
+    HttpClient? client;
+    try {
+      final uri = Uri.parse(
+        'https://api.open-meteo.com/v1/forecast?latitude=${lat.toStringAsFixed(5)}&longitude=${lon.toStringAsFixed(5)}&current=temperature_2m&timezone=auto',
+      );
+
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+      final req = await client.getUrl(uri);
+      req.headers.set(HttpHeaders.userAgentHeader, 'easync-account/1.0');
+      final res = await req.close().timeout(const Duration(seconds: 6));
+      final raw = await res
+          .transform(utf8.decoder)
+          .join()
+          .timeout(const Duration(seconds: 6));
+
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final current = decoded['current'];
+      if (current is! Map) return null;
+      final tempRaw = current['temperature_2m']?.toString() ?? '';
+      return double.tryParse(tempRaw);
+    } catch (_) {
+      return null;
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
   double _estimateTemperatureFromCoordinates(double lat, double lon) {
     final month = DateTime.now().month;
     final southernHemisphere = lat < 0;
@@ -242,22 +274,36 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     );
   }
 
-  Future<void> _refreshOutsideTemperature() async {
+  Future<void> _refreshOutsideTemperature({
+    double? gpsLat,
+    double? gpsLon,
+  }) async {
     if (_outsideTempRefreshing) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
     setState(() => _outsideTempRefreshing = true);
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final query = _buildWeatherQueryFromPrefs(prefs);
 
-      double? parsed = await _fetchOutsideTempFromQuery(query);
+      double? parsed;
+
+      if (gpsLat != null && gpsLon != null) {
+        parsed = await _fetchOutsideTempFromCoordinates(gpsLat, gpsLon);
+      }
+
+      parsed ??= await _fetchOutsideTempFromQuery(query);
 
       if (parsed == null && query.isNotEmpty) {
         try {
           final locations = await locationFromAddress(query);
           if (locations.isNotEmpty) {
             final l = locations.first;
-            parsed = await _fetchOutsideTempFromQuery(
+            parsed = await _fetchOutsideTempFromCoordinates(
+              l.latitude,
+              l.longitude,
+            );
+            parsed ??= await _fetchOutsideTempFromQuery(
               '${l.latitude.toStringAsFixed(4)},${l.longitude.toStringAsFixed(4)}',
             );
             parsed ??= _estimateTemperatureFromCoordinates(
@@ -285,7 +331,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       setState(() {});
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Text(
             EaI18n.t(
@@ -456,6 +502,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   Future<void> _refreshCurrentLocation() async {
     if (_locationRefreshing) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
     setState(() => _locationRefreshing = true);
 
     final prefs = await SharedPreferences.getInstance();
@@ -465,16 +512,57 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        throw 'Location service is disabled.';
+        messenger?.showSnackBar(
+          SnackBar(
+            content: Text(
+              EaI18n.t(
+                context,
+                'Ative o serviço de localização (GPS) para atualizar o endereço.',
+              ),
+            ),
+            action: SnackBarAction(
+              label: EaI18n.t(context, 'Abrir ajustes'),
+              onPressed: Geolocator.openLocationSettings,
+            ),
+          ),
+        );
+        return;
       }
 
       var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        throw 'Location permission denied.';
+      if (permission == LocationPermission.denied) {
+        messenger?.showSnackBar(
+          SnackBar(
+            content: Text(
+              EaI18n.t(
+                context,
+                'Permissão de localização negada. Permita o acesso para atualizar.',
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        messenger?.showSnackBar(
+          SnackBar(
+            content: Text(
+              EaI18n.t(
+                context,
+                'Permissão de localização bloqueada permanentemente. Libere nas configurações do app.',
+              ),
+            ),
+            action: SnackBarAction(
+              label: EaI18n.t(context, 'Abrir app'),
+              onPressed: Geolocator.openAppSettings,
+            ),
+          ),
+        );
+        return;
       }
 
       final position = await Geolocator.getCurrentPosition();
@@ -502,7 +590,10 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
       if (!mounted) return;
       setState(() => _fullLocation = safe);
-      await _refreshOutsideTemperature();
+      await _refreshOutsideTemperature(
+        gpsLat: position.latitude,
+        gpsLon: position.longitude,
+      );
     } on MissingPluginException {
       final geocoded = await _resolveLocationFromTypedField();
       final safe = (geocoded ?? fallbackProfileLocation).trim().isEmpty
@@ -512,7 +603,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       if (!mounted) return;
       setState(() => _fullLocation = safe);
       await _refreshOutsideTemperature();
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Text(
             kIsWeb
@@ -539,7 +630,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger?.showSnackBar(
         SnackBar(
           content: Text(
             geocoded == null
@@ -585,10 +676,10 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                 children: [
                   _profileEnvironmentSummary(),
                   Divider(height: 1, color: EaAdaptiveColor.border(context)),
-                  _AccountTile(
+                  _profileInfoRow(
                     icon: Icons.badge_outlined,
-                    title: EaI18n.t(context, 'Personal information'),
-                    subtitle: EaI18n.t(context, 'Name, email and phone'),
+                    label: EaI18n.t(context, 'Personal information'),
+                    value: EaI18n.t(context, 'Name and location'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -597,8 +688,15 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                         ),
                       ).then((_) => _loadAccountState());
                     },
+                    action: const SizedBox(
+                      width: 20,
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: EaColor.fore,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   _profileInfoRow(
                     icon: Icons.language_outlined,
                     label: EaI18n.t(context, 'Language'),
@@ -611,9 +709,12 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                         ),
                       ).then((_) => _loadAccountState());
                     },
-                    action: const Icon(
-                      Icons.chevron_right_rounded,
-                      color: EaColor.fore,
+                    action: const SizedBox(
+                      width: 20,
+                      child: Icon(
+                        Icons.chevron_right_rounded,
+                        color: EaColor.fore,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1011,7 +1112,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 ),
-                ?trailing,
+                if (trailing != null) trailing,
               ],
             ),
             const SizedBox(height: 8),
@@ -1559,32 +1660,6 @@ class PersonalInfoPage extends StatefulWidget {
 class _PersonalInfoPageState extends State<PersonalInfoPage> {
   static const _kFullName = 'profile.full_name';
   static const _kLocation = 'profile.location';
-  static const _kLanguage = 'profile.language';
-  static const _kRegion = 'profile.region';
-
-  static const List<String> _languageOptions = [
-    'Português',
-    'English',
-    'Español',
-    'Français',
-    'Deutsch',
-    'Italiano',
-  ];
-
-  static const List<String> _regionOptions = [
-    'Brasil',
-    'Portugal',
-    'United States',
-    'Argentina',
-    'Uruguay',
-    'Chile',
-    'Spain',
-    'France',
-    'Germany',
-    'Italy',
-    'United Kingdom',
-    'Canada',
-  ];
 
   static const List<String> _locationSeed = [
     'Pelotas, Rio Grande do Sul, Brasil',
@@ -1620,9 +1695,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   final _locationController = TextEditingController();
   final _locationFocusNode = FocusNode();
 
-  String _selectedLanguage = 'Português';
-  String _selectedRegion = 'Brasil';
-
   @override
   void initState() {
     super.initState();
@@ -1641,10 +1713,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     final prefs = await SharedPreferences.getInstance();
     _nameController.text = prefs.getString(_kFullName) ?? '';
     _locationController.text = prefs.getString(_kLocation) ?? '';
-    final savedLanguage = (prefs.getString(_kLanguage) ?? '').trim();
-    final savedRegion = (prefs.getString(_kRegion) ?? '').trim();
-    _selectedLanguage = savedLanguage.isEmpty ? 'Português' : savedLanguage;
-    _selectedRegion = savedRegion.isEmpty ? 'Brasil' : savedRegion;
     if (mounted) setState(() {});
   }
 
@@ -1656,9 +1724,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     if (manualLocation.isNotEmpty) {
       await prefs.setString('profile.address.full', manualLocation);
     }
-    await prefs.setString(_kLanguage, _selectedLanguage.trim());
-    await prefs.setString(_kRegion, _selectedRegion.trim());
-    EaAppSettings.instance.setLocaleFromProfileLanguage(_selectedLanguage);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(EaI18n.t(context, 'Dados salvos localmente.'))),
@@ -1703,24 +1768,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                 children: [
                   _field(_nameController, 'Full name'),
                   _locationAutocompleteField(),
-                  _dropdownField(
-                    label: EaI18n.t(context, 'Idioma'),
-                    value: _selectedLanguage,
-                    options: _languageOptions,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _selectedLanguage = v);
-                    },
-                  ),
-                  _dropdownField(
-                    label: EaI18n.t(context, 'Região'),
-                    value: _selectedRegion,
-                    options: _regionOptions,
-                    onChanged: (v) {
-                      if (v == null) return;
-                      setState(() => _selectedRegion = v);
-                    },
-                  ),
                 ],
               ),
             ),
@@ -1824,35 +1871,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
           color: EaAdaptiveColor.bodyText(context),
         ),
         decoration: _fieldDecoration(label),
-      ),
-    );
-  }
-
-  Widget _dropdownField({
-    required String label,
-    required String value,
-    required List<String> options,
-    required ValueChanged<String?> onChanged,
-  }) {
-    final items = options.contains(value) ? options : [value, ...options];
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: DropdownButtonFormField<String>(
-        dropdownColor: EaAdaptiveColor.surface(context),
-        style: EaText.secondary.copyWith(
-          color: EaAdaptiveColor.bodyText(context),
-        ),
-        decoration: _fieldDecoration(label),
-        items: items
-            .map(
-              (item) => DropdownMenuItem<String>(
-                value: item,
-                child: Text(item, overflow: TextOverflow.ellipsis),
-              ),
-            )
-            .toList(),
-        onChanged: onChanged,
       ),
     );
   }

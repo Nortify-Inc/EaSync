@@ -605,19 +605,23 @@ class _ProfilesState extends State<Profiles>
       padding: const EdgeInsets.all(16),
       child: SizedBox(
         width: double.infinity,
-        child: EaGradientButtonFrame(
-          borderRadius: BorderRadius.circular(12),
-          child: ElevatedButton.icon(
-            onPressed: () => _openEditor(),
-            icon: const Icon(Icons.add),
-            label: Text(
-              EaI18n.t(context, 'New profile'),
-              style: EaText.primaryBack,
-            ),
-            style: EaButtonStyle.gradientFilled(
-              context: context,
-              borderRadius: BorderRadius.circular(12),
-              padding: const EdgeInsets.symmetric(vertical: 14),
+        child: EaBlurFadeIn(
+          beginBlur: 4,
+          duration: const Duration(milliseconds: 220),
+          child: EaGradientButtonFrame(
+            borderRadius: BorderRadius.circular(12),
+            child: ElevatedButton.icon(
+              onPressed: () => _openEditor(),
+              icon: const Icon(Icons.add),
+              label: Text(
+                EaI18n.t(context, 'New profile'),
+                style: EaText.primaryBack,
+              ),
+              style: EaButtonStyle.gradientFilled(
+                context: context,
+                borderRadius: BorderRadius.circular(12),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
             ),
           ),
         ),

@@ -113,8 +113,8 @@ class EaI18n {
         'Não foi possível processar este comando agora. Tente novamente.',
     'Type a command or ask a question...':
         'Digite um comando ou faça uma pergunta...',
-    '✨ How can I help you today, {_profileName}?':
-        '✨ No que posso ajudar você hoje, {_profileName}?',
+    'How can I help you {_profileName}?':
+        'No que posso ajudar você {_profileName}?',
     'Chat': 'Chat',
     'Send': 'Enviar',
     'Listening...': 'Ouvindo...',

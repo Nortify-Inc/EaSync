@@ -124,6 +124,10 @@ For Android:
 flutter run -d android
 ```
 
+> On Android, `libeasync_core.so` is built and packaged into the APK via
+> `android/app/build.gradle.kts` + `lib/core/CMakeLists.txt`.
+> The host Linux install path (`/usr/lib`) is **not** used on device.
+
 ---
 
 ## 🧠 Assistant notes

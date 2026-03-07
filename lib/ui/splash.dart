@@ -15,22 +15,43 @@ class Splash extends StatefulWidget {
   State<Splash> createState() => _SplashState();
 }
 
-class _SplashState extends State<Splash> {
+class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
+  late final AnimationController _fadeController;
+  late final Animation<double> _fade;
+
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 420),
+    );
+    _fade = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _fadeController.forward();
     _startSplash();
   }
 
-  void _startSplash() {
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted || !Bridge.isReady) return;
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const Home()),
-      );
-    });
+  Future<void> _startSplash() async {
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    if (!Bridge.isReady) {
+      try {
+        await Bridge.init().timeout(const Duration(seconds: 5));
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const Home()),
+    );
   }
 
   @override
@@ -48,11 +69,11 @@ class _SplashState extends State<Splash> {
                 crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
-                  _brand(),
+                  FadeTransition(opacity: _fade, child: _brand()),
 
                   const SizedBox(height: 48),
 
-                  _headline(),
+                  FadeTransition(opacity: _fade, child: _headline()),
 
                   const Spacer(),
                 ],
@@ -117,18 +138,25 @@ class _SplashState extends State<Splash> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  "EaSync",
-                  style: EaText.primary.copyWith(
-                    color: EaAdaptiveColor.bodyText(context),
-                    fontSize: 48,
-                    height: 1.05,
-                    fontWeight: FontWeight.w700,
-                  ),
+                Row(
+                  children: [
+                    Image(
+                      image: const AssetImage("assets/images/easyncLogo.png"),
+                      width: 52,
+                      height: 52,
+                    ),
+                    Text(
+                      "EaSync",
+                      style: EaText.primary.copyWith(
+                        color: EaAdaptiveColor.bodyText(context),
+                        fontSize: 48,
+                        height: 1.05,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-
                 const SizedBox(height: 16),
-
                 Text(
                   EaI18n.t(context, 'Everything connected.\nOne interface.'),
                   style: EaText.secondary.copyWith(
