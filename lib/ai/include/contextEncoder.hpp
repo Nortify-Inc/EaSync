@@ -27,7 +27,7 @@ public:
     std::string encodeToken(const std::string& sensor, const std::string& value);
     void configure(const std::vector<std::string>& sensorTypes);
     void addSpecialToken(const std::string& token);
+    std::vector<std::string> sensorTypes; ///< Supported sensor types (public for access)
 private:
-    std::vector<std::string> sensorTypes;
     std::vector<std::string> specialTokens;
 };
