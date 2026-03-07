@@ -10,6 +10,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:ui';
 
+import '../theme.dart';
+
 bool _enableHeavyBlurEffects() {
   if (kIsWeb) return false;
   switch (defaultTargetPlatform) {
@@ -52,8 +54,20 @@ class _EaSkeletonState extends State<EaSkeleton>
 
   @override
   Widget build(BuildContext context) {
+    final animationsEnabled = EaAppSettings.instance.animationsEnabled;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final base = dark ? const Color(0xFF2C3342) : const Color(0xFFE3E8F4);
+
+    if (!animationsEnabled) {
+      return Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: base,
+          borderRadius: widget.borderRadius,
+        ),
+      );
+    }
 
     return AnimatedBuilder(
       animation: _controller,
@@ -124,10 +138,13 @@ class _EaBlurFadeInState extends State<EaBlurFadeIn>
 
   @override
   Widget build(BuildContext context) {
+    final animationsEnabled = EaAppSettings.instance.animationsEnabled;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final t = Curves.easeOut.transform(_controller.value);
+        final t = animationsEnabled
+            ? Curves.easeInOutSine.transform(_controller.value)
+            : 1.0;
         if (!_canUseBlur) {
           return Opacity(opacity: t, child: child);
         }
@@ -161,19 +178,21 @@ class EaBlurFadeSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final animationsEnabled = EaAppSettings.instance.animationsEnabled;
     final canUseBlur = _enableHeavyBlurEffects();
     return AnimatedSwitcher(
-      duration: duration,
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
+      duration: animationsEnabled ? duration : Duration.zero,
+      switchInCurve: Curves.easeInOutSine,
+      switchOutCurve: Curves.easeInOutSine,
       transitionBuilder: (child, animation) {
+        if (!animationsEnabled) return child;
         if (!canUseBlur) {
           return FadeTransition(opacity: animation, child: child);
         }
         return AnimatedBuilder(
           animation: animation,
           builder: (context, _) {
-            final t = Curves.easeOut.transform(animation.value);
+            final t = Curves.easeInOutSine.transform(animation.value);
             final sigma = (1 - t) * beginBlur;
             return Opacity(
               opacity: t,
@@ -237,9 +256,15 @@ class _EaFadeSlideInState extends State<EaFadeSlideIn>
 
   @override
   Widget build(BuildContext context) {
+    final animationsEnabled = EaAppSettings.instance.animationsEnabled;
     return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(position: _slide, child: widget.child),
+      opacity: animationsEnabled ? _fade : const AlwaysStoppedAnimation(1),
+      child: SlideTransition(
+        position: animationsEnabled
+            ? _slide
+            : const AlwaysStoppedAnimation(Offset.zero),
+        child: widget.child,
+      ),
     );
   }
 }

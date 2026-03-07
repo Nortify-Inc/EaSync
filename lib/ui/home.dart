@@ -49,6 +49,8 @@ class _HomeState extends State<Home> {
   double _dragDistanceX = 0;
   String? _profilePhoto;
 
+  final EaAppSettings _settings = EaAppSettings.instance;
+
   @override
   void initState() {
     super.initState();
@@ -103,8 +105,10 @@ class _HomeState extends State<Home> {
     final int nextVirtual = _virtualPage + delta;
     await _pageController.animateToPage(
       nextVirtual,
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
+      duration: _settings.animationsEnabled
+          ? const Duration(milliseconds: 220)
+          : Duration.zero,
+      curve: Curves.easeInOutSine,
     );
 
     if (!mounted) return;
@@ -145,9 +149,29 @@ class _HomeState extends State<Home> {
   Widget _buildTitle() {
     final idx = _safeSelectedIndex();
     final title = EaI18n.t(context, tabs[idx]);
-    return Text(
-      title,
-      style: EaText.primary.copyWith(color: EaAdaptiveColor.bodyText(context)),
+    return AnimatedSwitcher(
+      duration: _settings.animationsEnabled
+          ? const Duration(milliseconds: 220)
+          : Duration.zero,
+      switchInCurve: Curves.easeInOutSine,
+      switchOutCurve: Curves.easeInOutSine,
+      transitionBuilder: (child, animation) {
+        final slide = Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+      child: Text(
+        title,
+        key: ValueKey(title),
+        style: EaText.primary.copyWith(
+          color: EaAdaptiveColor.bodyText(context),
+        ),
+      ),
     );
   }
 
@@ -234,8 +258,10 @@ class _HomeState extends State<Home> {
   Widget _buildDot(int index) {
     final bool active = index == _safeSelectedIndex();
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 160),
-      curve: Curves.easeOut,
+      duration: _settings.animationsEnabled
+          ? const Duration(milliseconds: 220)
+          : Duration.zero,
+      curve: Curves.easeInOutSine,
       margin: const EdgeInsets.symmetric(horizontal: 6),
       width: active ? 20 : 8,
       height: 8,
@@ -277,10 +303,40 @@ class _HomeState extends State<Home> {
                 },
                 itemBuilder: (context, virtualIndex) {
                   final realIndex = _realIndexFromVirtual(virtualIndex);
+                  final content = TickerMode(
+                    enabled: realIndex == _safeSelectedIndex(),
+                    child: pages[realIndex],
+                  );
+
+                  if (!_settings.animationsEnabled) {
+                    return RepaintBoundary(child: content);
+                  }
+
                   return RepaintBoundary(
-                    child: TickerMode(
-                      enabled: realIndex == _safeSelectedIndex(),
-                      child: pages[realIndex],
+                    child: AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, child) {
+                        double page = _virtualPage.toDouble();
+                        if (_pageController.hasClients &&
+                            _pageController.position.hasPixels) {
+                          page =
+                              _pageController.page ?? _virtualPage.toDouble();
+                        }
+                        final distance = (virtualIndex - page).abs().clamp(
+                          0.0,
+                          1.0,
+                        );
+                        final t =
+                            1.0 - Curves.easeInOutSine.transform(distance);
+                        final scale = 0.985 + (0.015 * t);
+                        final opacity = 0.9 + (0.1 * t);
+
+                        return Opacity(
+                          opacity: opacity,
+                          child: Transform.scale(scale: scale, child: child),
+                        );
+                      },
+                      child: content,
                     ),
                   );
                 },
