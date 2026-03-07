@@ -8,6 +8,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,10 +45,23 @@ class _AssistantChatState extends State<AssistantChat>
   late final AnimationController _thinkingPulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
-  )..repeat(reverse: true);
+  );
   bool _isInTree = true;
 
   bool get _canUpdateUi => mounted && _isInTree;
+
+  void _startThinkingPulse() {
+    if (!_thinkingPulse.isAnimating) {
+      _thinkingPulse.repeat(reverse: true);
+    }
+  }
+
+  void _stopThinkingPulse() {
+    if (_thinkingPulse.isAnimating) {
+      _thinkingPulse.stop();
+    }
+    _thinkingPulse.value = 0;
+  }
 
   _ChatSession? get _activeSession {
     if (_activeChatId == null) return null;
@@ -65,6 +79,7 @@ class _AssistantChatState extends State<AssistantChat>
 
   @override
   void dispose() {
+    _stopThinkingPulse();
     _thinkingPulse.dispose();
     _commandController.dispose();
     _scrollController.dispose();
@@ -74,6 +89,7 @@ class _AssistantChatState extends State<AssistantChat>
   @override
   void deactivate() {
     _isInTree = false;
+    _stopThinkingPulse();
     super.deactivate();
   }
 
@@ -81,6 +97,9 @@ class _AssistantChatState extends State<AssistantChat>
   void activate() {
     super.activate();
     _isInTree = true;
+    if (_typingIndicator) {
+      _startThinkingPulse();
+    }
   }
 
   Future<void> _loadState() async {
@@ -89,15 +108,11 @@ class _AssistantChatState extends State<AssistantChat>
     final raw = prefs.getString(_kChats);
     if (raw != null && raw.trim().isNotEmpty) {
       try {
-        final decoded = jsonDecode(raw);
-        if (decoded is List) {
+        final decoded = await compute(_decodeChatSessionsRaw, raw);
+        if (decoded.isNotEmpty) {
           _sessions
             ..clear()
-            ..addAll(
-              decoded.whereType<Map>().map(
-                (e) => _ChatSession.fromJson(e.cast<String, dynamic>()),
-              ),
-            );
+            ..addAll(decoded.map((e) => _ChatSession.fromJson(e)));
         }
       } catch (_) {}
     }
@@ -174,6 +189,7 @@ class _AssistantChatState extends State<AssistantChat>
       _sending = true;
       _typingIndicator = true;
     });
+    _startThinkingPulse();
     await _persistState();
     _scrollToBottom();
 
@@ -189,12 +205,14 @@ class _AssistantChatState extends State<AssistantChat>
 
     if (!mounted) return;
     if (!_isInTree) {
+      _stopThinkingPulse();
       _typingIndicator = false;
       _sending = false;
       session.messages.add(_ChatMessage(role: _Role.assistant, text: reply));
       await _persistState();
       return;
     }
+    _stopThinkingPulse();
     setState(() {
       _typingIndicator = false;
       _sending = false;
@@ -505,8 +523,12 @@ class _AssistantChatState extends State<AssistantChat>
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(12),
-      itemCount: messages.length,
+      itemCount: messages.length + (_typingIndicator ? 1 : 0),
       itemBuilder: (context, i) {
+        if (_typingIndicator && i == messages.length) {
+          return _thinkingBubble();
+        }
+
         final msg = messages[i];
         final user = msg.role == _Role.user;
 
@@ -514,53 +536,91 @@ class _AssistantChatState extends State<AssistantChat>
           builder: (context, constraints) {
             final bubbleMax = max(120.0, constraints.maxWidth - 82);
 
-            return EaFadeSlideIn(
-              duration: _settings.animationsEnabled
-                  ? EaMotion.normal
-                  : Duration.zero,
-              begin: user ? const Offset(0.03, 0) : const Offset(-0.03, 0),
-              child: Align(
-                alignment: user ? Alignment.centerRight : Alignment.centerLeft,
-                child: Row(
-                  mainAxisAlignment: user
-                      ? MainAxisAlignment.end
-                      : MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (!user) _assistantAvatar(),
-                    if (!user) const SizedBox(width: 8),
-                    Flexible(
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
+            return Align(
+              alignment: user ? Alignment.centerRight : Alignment.centerLeft,
+              child: Row(
+                mainAxisAlignment: user
+                    ? MainAxisAlignment.end
+                    : MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (!user) _assistantAvatar(),
+                  if (!user) const SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      constraints: BoxConstraints(maxWidth: bubbleMax),
+                      decoration: BoxDecoration(
+                        color: user
+                            ? EaColor.fore.withValues(alpha: 0.18)
+                            : EaAdaptiveColor.field(context),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: EaAdaptiveColor.border(context),
                         ),
-                        constraints: BoxConstraints(maxWidth: bubbleMax),
-                        decoration: BoxDecoration(
-                          color: user
-                              ? EaColor.fore.withValues(alpha: 0.18)
-                              : EaAdaptiveColor.field(context),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: EaAdaptiveColor.border(context),
-                          ),
-                        ),
-                        child: Text(
-                          msg.text,
-                          style: EaText.small.copyWith(
-                            color: EaAdaptiveColor.bodyText(context),
-                          ),
+                      ),
+                      child: Text(
+                        msg.text,
+                        style: EaText.small.copyWith(
+                          color: EaAdaptiveColor.bodyText(context),
                         ),
                       ),
                     ),
-                    if (user) const SizedBox(width: 8),
-                    if (user) _userAvatar(),
-                  ],
-                ),
+                  ),
+                  if (user) const SizedBox(width: 8),
+                  if (user) _userAvatar(),
+                ],
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _thinkingBubble() {
+    return AnimatedBuilder(
+      animation: _thinkingPulse,
+      builder: (context, _) {
+        const glyphs = <String>['⠁', '⠃', '⠇', '⠧'];
+        final frame =
+            (_thinkingPulse.value * glyphs.length).floor() % glyphs.length;
+        final text = '${EaI18n.t(context, 'Thinking...')} ${glyphs[frame]}';
+
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _assistantAvatar(),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: EaAdaptiveColor.field(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: EaAdaptiveColor.border(context)),
+                  ),
+                  child: Text(
+                    text,
+                    style: EaText.small.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -678,6 +738,15 @@ class _AssistantChatState extends State<AssistantChat>
       ),
     );
   }
+}
+
+List<Map<String, dynamic>> _decodeChatSessionsRaw(String raw) {
+  final decoded = jsonDecode(raw);
+  if (decoded is! List) return const <Map<String, dynamic>>[];
+  return decoded
+      .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList(growable: false);
 }
 
 enum _Role { user, assistant }

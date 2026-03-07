@@ -8,7 +8,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:ui';
 import 'handler.dart';
 
 List<DeviceInfo> devices = [];
@@ -20,12 +19,11 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> with TickerProviderStateMixin {
+class _HomeState extends State<Home> {
   static const String _kAuthPhoto = 'account.auth.photo';
   static const int _kLoopItemCount = 1000000;
   static const int _kLoopSeed = 500000;
   static const double _kDragMinDistance = 14.0;
-  static const double _kTransitionBlurSigma = 11.0;
 
   int selectedIndex = 0;
   late final PageController _pageController;
@@ -33,15 +31,6 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   bool _pageAnimating = false;
   double _dragAccumulatedDx = 0;
   bool _dragTriggered = false;
-  bool _transitionBlurVisible = false;
-  final EaAppSettings _settings = EaAppSettings.instance;
-
-  late final AnimationController _transitionBlurController =
-      AnimationController(
-        vsync: this,
-        duration: const Duration(milliseconds: 110),
-        reverseDuration: const Duration(milliseconds: 140),
-      );
 
   String? _profilePhoto;
   late final List<bool> _pageReady;
@@ -116,11 +105,6 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     if (index == selectedIndex || _pageAnimating) return;
     _pageAnimating = true;
 
-    if (_settings.animationsEnabled && mounted) {
-      setState(() => _transitionBlurVisible = true);
-      _transitionBlurController.forward(from: 0);
-    }
-
     await _ensurePageReady(index);
     _warmNeighborPages(index);
 
@@ -133,7 +117,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
     try {
       await _pageController.animateToPage(
         targetVirtual,
-        duration: const Duration(milliseconds: 180),
+        duration: const Duration(milliseconds: 170),
         curve: Curves.easeOut,
       );
 
@@ -142,19 +126,7 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
         selectedIndex = index;
         _virtualPage = targetVirtual;
       });
-      _loadProfilePhoto();
-
-      if (_settings.animationsEnabled && mounted) {
-        await _transitionBlurController.reverse();
-        if (mounted) {
-          setState(() => _transitionBlurVisible = false);
-        }
-      }
     } finally {
-      if (_settings.animationsEnabled && _transitionBlurVisible && mounted) {
-        _transitionBlurController.value = 0;
-        setState(() => _transitionBlurVisible = false);
-      }
       _pageAnimating = false;
     }
   }
@@ -186,7 +158,6 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
   @override
   void dispose() {
     _pageController.dispose();
-    _transitionBlurController.dispose();
     super.dispose();
   }
 
@@ -361,39 +332,17 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
                     });
                     _ensurePageReady(realIndex);
                     _warmNeighborPages(realIndex);
-                    _loadProfilePhoto();
                   },
                   itemCount: _kLoopItemCount,
                   itemBuilder: (context, virtualIndex) {
                     final realIndex = _realIndexFromVirtual(virtualIndex);
-                    return AnimatedBuilder(
-                      animation: _pageController,
-                      builder: (context, child) {
-                        double page = _virtualPage.toDouble();
-                        if (_pageController.hasClients &&
-                            _pageController.position.hasPixels) {
-                          page =
-                              _pageController.page ?? _virtualPage.toDouble();
-                        }
-                        final distance = (virtualIndex - page).abs();
-                        const fadeWindow = 0.34;
-                        final opacity = distance >= fadeWindow
-                            ? 0.0
-                            : (1 - (distance / fadeWindow)).clamp(0.0, 1.0);
-
-                        return IgnorePointer(
-                          ignoring: opacity < 0.99,
-                          child: Opacity(opacity: opacity, child: child),
-                        );
-                      },
-                      child: RepaintBoundary(
-                        child: ColoredBox(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          child: ClipRect(
-                            child: _pageReady[realIndex]
-                                ? pages[realIndex]
-                                : const _HomePageSkeleton(),
-                          ),
+                    return RepaintBoundary(
+                      child: ColoredBox(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        child: ClipRect(
+                          child: _pageReady[realIndex]
+                              ? pages[realIndex]
+                              : const _HomePageSkeleton(),
                         ),
                       ),
                     );
@@ -404,27 +353,6 @@ class _HomeState extends State<Home> with TickerProviderStateMixin {
           ),
           _buildAppBar(),
           _buildIndicator(),
-          if (_transitionBlurVisible)
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: true,
-                child: AnimatedBuilder(
-                  animation: _transitionBlurController,
-                  builder: (context, _) {
-                    final t = Curves.easeOut.transform(
-                      _transitionBlurController.value,
-                    );
-                    final sigma = t * _kTransitionBlurSigma;
-                    return BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-                      child: ColoredBox(
-                        color: Colors.black.withValues(alpha: 0.04 * t),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
         ],
       ),
     );

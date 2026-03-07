@@ -924,6 +924,7 @@ Never _throwLastError(int code) {
 class Bridge {
   static bool _ready = false;
   static bool get isReady => _ready;
+  static bool _aiInferenceConfigured = false;
 
   static Pointer<Void>? _ctx;
 
@@ -1097,6 +1098,12 @@ class Bridge {
     }
   }
 
+  static void _ensureAiInferenceConfigured() {
+    if (_aiInferenceConfigured) return;
+    _configureChatInferenceScriptIfAvailable();
+    _aiInferenceConfigured = true;
+  }
+
   static Future<void> init() async {
     if (_ready) return;
 
@@ -1128,8 +1135,6 @@ class Bridge {
       _throwLastError(cbRes);
     }
 
-    _configureChatInferenceScriptIfAvailable();
-
     if (_enableAutoSimulation) {
       _startSimulationLoop();
     }
@@ -1153,6 +1158,7 @@ class Bridge {
     _wifiSsidByDevice.clear();
     _protocolConnectionByDevice.clear();
     _protocolByDevice.clear();
+    _aiInferenceConfigured = false;
     _endpointByDevice.clear();
     _healthByDevice.clear();
 
@@ -2138,6 +2144,18 @@ class Bridge {
     return _cloneState(result);
   }
 
+  static void _invalidateAllStatesAndNotify() {
+    _stateCache.clear();
+    try {
+      final devices = listDevices();
+      for (final d in devices) {
+        _stateController.add(d.uuid);
+      }
+    } catch (_) {
+      // best-effort refresh; ignore diagnostics failures
+    }
+  }
+
   static DeviceState _fetchState(String uuid) {
     _ensureReady();
 
@@ -2415,6 +2433,7 @@ class Bridge {
 
   static String aiProcessChat(String input) {
     _ensureReady();
+    _ensureAiInferenceConfigured();
     final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
     if (processFn == null) {
       return 'AI backend unavailable in current native library.';
@@ -2439,6 +2458,7 @@ class Bridge {
 
   static String aiExecuteCommand(String input) {
     _ensureReady();
+    _ensureAiInferenceConfigured();
     final execFn = _coreAiModelExecuteCommand ?? _coreAiExecuteCommand;
     final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
     if (execFn == null) {
@@ -2491,11 +2511,79 @@ class Bridge {
   }
 
   static Future<String> aiExecuteCommandAsync(String input) async {
+    _ensureReady();
+    _ensureAiInferenceConfigured();
+
     final hasAsyncNative =
         _coreAiModelExecuteCommandAsyncStart != null &&
         _coreAiModelExecuteCommandAsyncPoll != null;
-    if (hasAsyncNative) {}
-    return Future<String>.microtask(() => aiExecuteCommand(input));
+    if (!hasAsyncNative) {
+      await Future<void>.delayed(Duration.zero);
+      final response = aiExecuteCommand(input);
+      _invalidateAllStatesAndNotify();
+      return response;
+    }
+
+    final inPtr = input.toNativeUtf8();
+    final tokenPtr = calloc<Uint64>();
+    final startRes = _coreAiModelExecuteCommandAsyncStart!(
+      _ctx!,
+      inPtr,
+      tokenPtr,
+    );
+    calloc.free(inPtr);
+
+    if (startRes != CoreResult.CORE_OK) {
+      calloc.free(tokenPtr);
+      final response = aiExecuteCommand(input);
+      _invalidateAllStatesAndNotify();
+      return response;
+    }
+
+    final token = tokenPtr.value;
+    calloc.free(tokenPtr);
+
+    final readyPtr = calloc<Bool>();
+    final outPtr = calloc<Int8>(4096);
+
+    try {
+      while (true) {
+        final pollRes = _coreAiModelExecuteCommandAsyncPoll!(
+          _ctx!,
+          token,
+          readyPtr,
+          outPtr,
+          4096,
+        );
+
+        if (pollRes != CoreResult.CORE_OK) {
+          if (pollRes == CoreResult.CORE_NOT_FOUND) {
+            final response = aiExecuteCommand(input);
+            _invalidateAllStatesAndNotify();
+            return response;
+          }
+          final response = aiExecuteCommand(input);
+          _invalidateAllStatesAndNotify();
+          return response;
+        }
+
+        if (readyPtr.value) {
+          final response = outPtr.cast<Utf8>().toDartString();
+          if (response.trim().isEmpty) {
+            final fallback = aiExecuteCommand(input);
+            _invalidateAllStatesAndNotify();
+            return fallback;
+          }
+          _invalidateAllStatesAndNotify();
+          return response;
+        }
+
+        await Future<void>.delayed(const Duration(milliseconds: 45));
+      }
+    } finally {
+      calloc.free(readyPtr);
+      calloc.free(outPtr);
+    }
   }
 
   static List<String> aiAnnotations() {
