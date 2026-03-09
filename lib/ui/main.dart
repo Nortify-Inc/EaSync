@@ -12,27 +12,27 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   try {
     await Firebase.initializeApp().timeout(const Duration(seconds: 6));
+
   } catch (e) {
     debugPrint('[boot] Firebase init skipped: $e');
   }
 
   try {
     await Bridge.init().timeout(const Duration(seconds: 8));
+
   } catch (e) {
     debugPrint('[boot] Bridge init skipped/timed out: $e');
   }
 
   try {
     await EaAppSettings.instance.load().timeout(const Duration(seconds: 4));
+    
   } catch (e) {
     debugPrint('[boot] Settings load skipped: $e');
   }
-
-  try {
-    Bridge.aiObserveAppOpen();
-  } catch (_) {}
 
   runApp(const EaSync());
 }
