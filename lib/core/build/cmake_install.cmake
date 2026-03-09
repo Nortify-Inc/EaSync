@@ -1,4 +1,4 @@
-# Install script for directory: /home/radmann/easync/lib/core
+# Install script for directory: /home/gabriel/Documentos/EaSync/lib/core
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -57,7 +57,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   if(CMAKE_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION)
     message(FATAL_ERROR "ABSOLUTE path INSTALL DESTINATION forbidden (by caller): ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
   endif()
-  file(INSTALL DESTINATION "/usr/lib" TYPE SHARED_LIBRARY FILES "/home/radmann/easync/lib/core/build/libeasync_core.so")
+  file(INSTALL DESTINATION "/usr/lib" TYPE SHARED_LIBRARY FILES "/home/gabriel/Documentos/EaSync/lib/core/build/libeasync_core.so")
   if(EXISTS "$ENV{DESTDIR}/usr/lib/libeasync_core.so" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}/usr/lib/libeasync_core.so")
     if(CMAKE_INSTALL_DO_STRIP)
@@ -77,5 +77,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/radmann/easync/lib/core/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/gabriel/Documentos/EaSync/lib/core/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
