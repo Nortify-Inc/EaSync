@@ -204,9 +204,14 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/semaphore.h \
  /usr/include/x86_64-linux-gnu/bits/semaphore.h \
+ /home/radmann/easync/lib/core/drivers/ble.hpp \
+ /home/radmann/easync/lib/core/include/payload_utility.hpp \
+ /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_uninitialized.h \
+ /usr/include/c++/13/bits/stl_vector.h \
+ /usr/include/c++/13/bits/stl_bvector.h \
+ /usr/include/c++/13/bits/vector.tcc \
  /home/radmann/easync/lib/core/drivers/mqtt.hpp \
  /usr/include/c++/13/memory /usr/include/c++/13/bits/stl_tempbuf.h \
- /usr/include/c++/13/bits/stl_uninitialized.h \
  /usr/include/c++/13/bits/stl_raw_storage_iter.h \
  /usr/include/c++/13/bits/align.h /usr/include/c++/13/bits/shared_ptr.h \
  /usr/include/c++/13/bits/shared_ptr_base.h \
@@ -219,10 +224,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
  /usr/include/c++/13/pstl/execution_defs.h \
  /usr/local/include/mqtt/async_client.h /usr/include/c++/13/functional \
- /usr/include/c++/13/bits/std_function.h /usr/include/c++/13/vector \
- /usr/include/c++/13/bits/stl_vector.h \
- /usr/include/c++/13/bits/stl_bvector.h \
- /usr/include/c++/13/bits/vector.tcc /usr/include/c++/13/array \
+ /usr/include/c++/13/bits/std_function.h /usr/include/c++/13/array \
  /usr/include/c++/13/bits/stl_algo.h \
  /usr/include/c++/13/bits/algorithmfwd.h \
  /usr/include/c++/13/bits/stl_heap.h \
@@ -279,11 +281,6 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/queue /usr/include/c++/13/bits/stl_queue.h \
  /home/radmann/easync/lib/core/drivers/wifi.hpp \
  /home/radmann/easync/lib/core/drivers/zigbee.hpp \
- /home/radmann/easync/lib/core/drivers/ble.hpp \
- /home/radmann/easync/lib/core/include/payload_utility.hpp \
- /home/radmann/easync/lib/core/../ai/include/aiEngine.hpp \
- /home/radmann/easync/lib/core/../ai/include/chatModelRuntime.hpp \
- /home/radmann/easync/lib/core/../ai/include/chatCommandRouter.hpp \
  /usr/include/c++/13/unordered_set \
  /usr/include/c++/13/bits/unordered_set.h /usr/include/c++/13/random \
  /usr/include/c++/13/cmath /usr/include/math.h \

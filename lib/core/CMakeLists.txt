@@ -21,9 +21,6 @@ set(CORE_SRC
     src/core.cpp
     src/driver.cpp
     src/payload_utility.cpp
-    ../ai/src/aiEngine.cpp
-    ../ai/src/chatModelRuntime.cpp
-    ../ai/src/chatCommandRouter.cpp
 )
 
 file(GLOB DRIVER_SRC
@@ -52,7 +49,6 @@ add_library(easync_core SHARED
 target_include_directories(easync_core PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/drivers
-    ${CMAKE_CURRENT_SOURCE_DIR}/../ai/include
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
