@@ -6,6 +6,8 @@
  * @author Erick Radmann
  */
 
+import 'dart:ui';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
@@ -29,7 +31,6 @@ class _HomeState extends State<Home> {
     'Dashboard',
     'Profiles',
     'Manage',
-    'Assistant',
     'Account',
   ];
 
@@ -37,13 +38,14 @@ class _HomeState extends State<Home> {
     Dashboard(),
     Profiles(),
     Manage(),
-    AssistantChat(),
     Account(),
   ];
 
   int selectedIndex = 0;
   late final PageController _pageController;
   late int _virtualPage;
+
+  // Title offset removed: title will render at left during transitions.
 
   bool _pageAnimating = false;
   double _dragDistanceX = 0;
@@ -155,11 +157,18 @@ class _HomeState extends State<Home> {
           : Duration.zero,
       switchInCurve: Curves.easeInOutSine,
       switchOutCurve: Curves.easeInOutSine,
+      layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+        final children = <Widget>[];
+        children.addAll(previousChildren);
+        if (currentChild != null) children.add(currentChild);
+        return Stack(alignment: Alignment.centerLeft, children: children);
+      },
       transitionBuilder: (child, animation) {
         final slide = Tween<Offset>(
           begin: const Offset(0, 0.08),
           end: Offset.zero,
         ).animate(animation);
+
         return FadeTransition(
           opacity: animation,
           child: SlideTransition(position: slide, child: child),
@@ -197,7 +206,12 @@ class _HomeState extends State<Home> {
             height: 56,
             child: Row(
               children: [
-                Center(child: _buildTitle()),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.only(left: 0),
+                    child: Align(alignment: Alignment.centerLeft, child: _buildTitle()),
+                  ),
+                ),
                 Spacer(),
                 if (idx == 4)
                   IconButton(
@@ -331,10 +345,18 @@ class _HomeState extends State<Home> {
                         final scale = 0.985 + (0.015 * t);
                         final opacity = 0.9 + (0.1 * t);
 
-                        return Opacity(
-                          opacity: opacity,
-                          child: Transform.scale(scale: scale, child: child),
-                        );
+                              const double pageMaxBlur = 3.0;
+                              final double blurSigma = _settings.animationsEnabled
+                                  ? (pageMaxBlur * distance)
+                                  : 0.0;
+
+                              return ImageFiltered(
+                                imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+                                child: Opacity(
+                                  opacity: opacity,
+                                  child: Transform.scale(scale: scale, child: child),
+                                ),
+                              );
                       },
                       child: content,
                     ),

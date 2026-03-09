@@ -1,0 +1,36 @@
+{
+  "AiRequest": {
+    "type": "object",
+    "properties": {
+      "type": { "type": "string", "enum": ["interaction", "check", "set"] },
+      "payload": { "type": "object" },
+      "meta": { "type": "object" }
+    },
+    "required": ["type", "payload"]
+  },
+  "AiResponse": {
+    "type": "object",
+    "properties": {
+      "ok": { "type": "boolean" },
+      "type": { "type": "string" },
+      "text": { "type": "string" }
+    }
+  },
+  "DeviceState": {
+    "type": "object",
+    "properties": {
+      "deviceId": { "type": "string" },
+      "properties": { "type": "object" }
+    },
+    "required": ["deviceId"]
+  },
+  "CommandResult": {
+    "type": "object",
+    "properties": {
+      "deviceId": { "type": "string" },
+      "ok": { "type": "boolean" },
+      "applied": { "type": "object" }
+    },
+    "required": ["deviceId","ok"]
+  }
+}

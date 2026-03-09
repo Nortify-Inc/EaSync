@@ -44,4 +44,3 @@
 - `lib/core/include/core.h` and `lib/core/src/core.cpp` (native API + behavior)
 - `lib/ui/manage.dart` (template-driven registration/discovery)
 - `lib/ui/assistant.dart` (assistant UX + behavior telemetry)
-- `lib/ai/src/chatModelRuntime.cpp` and `lib/ai/models/chatInferenceCli.py` (Python inference boundary)

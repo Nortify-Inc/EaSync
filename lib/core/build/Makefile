@@ -294,78 +294,6 @@ drivers/zigbee.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s
 .PHONY : drivers/zigbee.cpp.s
 
-home/radmann/easync/lib/ai/src/aiEngine.o: home/radmann/easync/lib/ai/src/aiEngine.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.o
-
-# target to build an object file
-home/radmann/easync/lib/ai/src/aiEngine.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/aiEngine.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.cpp.o
-
-home/radmann/easync/lib/ai/src/aiEngine.i: home/radmann/easync/lib/ai/src/aiEngine.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.i
-
-# target to preprocess a source file
-home/radmann/easync/lib/ai/src/aiEngine.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/aiEngine.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.cpp.i
-
-home/radmann/easync/lib/ai/src/aiEngine.s: home/radmann/easync/lib/ai/src/aiEngine.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.s
-
-# target to generate assembly for a file
-home/radmann/easync/lib/ai/src/aiEngine.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/aiEngine.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/aiEngine.cpp.s
-
-home/radmann/easync/lib/ai/src/chatCommandRouter.o: home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.o
-
-# target to build an object file
-home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.o
-
-home/radmann/easync/lib/ai/src/chatCommandRouter.i: home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.i
-
-# target to preprocess a source file
-home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.i
-
-home/radmann/easync/lib/ai/src/chatCommandRouter.s: home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.s
-
-# target to generate assembly for a file
-home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/chatCommandRouter.cpp.s
-
-home/radmann/easync/lib/ai/src/chatModelRuntime.o: home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.o
-
-# target to build an object file
-home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.o
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.o
-
-home/radmann/easync/lib/ai/src/chatModelRuntime.i: home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.i
-
-# target to preprocess a source file
-home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.i
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.i
-
-home/radmann/easync/lib/ai/src/chatModelRuntime.s: home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.s
-
-# target to generate assembly for a file
-home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.s
-.PHONY : home/radmann/easync/lib/ai/src/chatModelRuntime.cpp.s
-
 src/core.o: src/core.cpp.o
 .PHONY : src/core.o
 
@@ -466,15 +394,6 @@ help:
 	@echo "... drivers/zigbee.o"
 	@echo "... drivers/zigbee.i"
 	@echo "... drivers/zigbee.s"
-	@echo "... home/radmann/easync/lib/ai/src/aiEngine.o"
-	@echo "... home/radmann/easync/lib/ai/src/aiEngine.i"
-	@echo "... home/radmann/easync/lib/ai/src/aiEngine.s"
-	@echo "... home/radmann/easync/lib/ai/src/chatCommandRouter.o"
-	@echo "... home/radmann/easync/lib/ai/src/chatCommandRouter.i"
-	@echo "... home/radmann/easync/lib/ai/src/chatCommandRouter.s"
-	@echo "... home/radmann/easync/lib/ai/src/chatModelRuntime.o"
-	@echo "... home/radmann/easync/lib/ai/src/chatModelRuntime.i"
-	@echo "... home/radmann/easync/lib/ai/src/chatModelRuntime.s"
 	@echo "... src/core.o"
 	@echo "... src/core.i"
 	@echo "... src/core.s"
