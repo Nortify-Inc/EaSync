@@ -1,6 +1,7 @@
 CMakeFiles/easync_core.dir/src/driver.cpp.o: \
- /home/radmann/easync/lib/core/src/driver.cpp /usr/include/stdc-predef.h \
- /home/radmann/easync/lib/core/drivers/driver.hpp \
+ /home/gabriel/Documentos/EaSync/lib/core/src/driver.cpp \
+ /usr/include/stdc-predef.h \
+ /home/gabriel/Documentos/EaSync/lib/core/drivers/driver.hpp \
  /usr/include/c++/13/string /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
@@ -124,7 +125,7 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
- /home/radmann/easync/lib/core/include/core.h \
+ /home/gabriel/Documentos/EaSync/lib/core/include/core.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
  /usr/include/c++/13/unordered_map \
  /usr/include/c++/13/bits/unordered_map.h \
