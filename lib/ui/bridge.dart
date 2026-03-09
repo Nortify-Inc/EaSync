@@ -21,8 +21,6 @@ DynamicLibrary _openCoreLibrary() {
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final cwd = Directory.current.path;
     DynamicLibrary? firstLoadable;
-    DynamicLibrary? legacyLoadable;
-    String? legacyPath;
 
     List<String> projectRootCandidates(String from) {
       final out = <String>[];
@@ -381,84 +379,6 @@ typedef _coreProvisionWifiDart =
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
-typedef _coreAiSetPermissionsC =
-    Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
-typedef _coreAiSetPermissionsDart =
-    int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
-
-typedef _coreAiGetPermissionsC =
-    Int32 Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
-typedef _coreAiGetPermissionsDart =
-    int Function(Pointer<Void>, Pointer<CoreAiPermissionsNative>);
-
-typedef _coreAiRecordPatternC =
-    Int32 Function(
-      Pointer<Void>,
-      Pointer<Utf8>,
-      Pointer<CoreDeviceState>,
-      Pointer<CoreDeviceState>,
-    );
-typedef _coreAiRecordPatternDart =
-    int Function(
-      Pointer<Void>,
-      Pointer<Utf8>,
-      Pointer<CoreDeviceState>,
-      Pointer<CoreDeviceState>,
-    );
-
-typedef _coreAiObserveAppOpenC = Int32 Function(Pointer<Void>, Uint64);
-typedef _coreAiObserveAppOpenDart = int Function(Pointer<Void>, int);
-
-typedef _coreAiObserveProfileApplyC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Uint64);
-typedef _coreAiObserveProfileApplyDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, int);
-
-typedef _coreAiProcessChatC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
-typedef _coreAiProcessChatDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
-
-typedef _coreAiModelProcessChatC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
-typedef _coreAiModelProcessChatDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
-
-typedef _coreAiGetAnnotationsC =
-    Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
-typedef _coreAiGetAnnotationsDart =
-    int Function(Pointer<Void>, Pointer<Int8>, int);
-
-typedef _coreAiExecuteCommandC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
-typedef _coreAiExecuteCommandDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
-
-typedef _coreAiModelExecuteCommandC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
-typedef _coreAiModelExecuteCommandDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
-
-typedef _coreAiSetChatModelScriptC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>);
-typedef _coreAiSetChatModelScriptDart =
-    int Function(Pointer<Void>, Pointer<Utf8>);
-
-typedef _coreAiModelExecuteCommandAsyncStartC =
-    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
-typedef _coreAiModelExecuteCommandAsyncStartDart =
-    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
-
-typedef _coreAiModelExecuteCommandAsyncPollC =
-    Int32 Function(Pointer<Void>, Uint64, Pointer<Bool>, Pointer<Int8>, Uint32);
-typedef _coreAiModelExecuteCommandAsyncPollDart =
-    int Function(Pointer<Void>, int, Pointer<Bool>, Pointer<Int8>, int);
-
-typedef _coreAiLearningSnapshotC =
-    Int32 Function(Pointer<Void>, Pointer<Int8>, Uint32);
-typedef _coreAiLearningSnapshotDart =
-    int Function(Pointer<Void>, Pointer<Int8>, int);
-
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
 
@@ -752,7 +672,6 @@ Never _throwLastError(int code) {
 class Bridge {
   static bool _ready = false;
   static bool get isReady => _ready;
-  static bool _aiInferenceConfigured = false;
 
   static Pointer<Void>? _ctx;
 
@@ -932,7 +851,6 @@ class Bridge {
     _wifiSsidByDevice.clear();
     _protocolConnectionByDevice.clear();
     _protocolByDevice.clear();
-    _aiInferenceConfigured = false;
     _endpointByDevice.clear();
     _healthByDevice.clear();
 
