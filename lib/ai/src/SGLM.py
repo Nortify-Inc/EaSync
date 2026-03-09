@@ -174,7 +174,6 @@ class SGLM(nn.Module):
 
 
 class Generator:
-
     def __init__(self, model, device=None):
         self.model = model
         self.device = device or next(model.parameters()).device
