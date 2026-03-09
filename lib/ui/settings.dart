@@ -21,33 +21,11 @@ class _SettingsState extends State<Settings> {
   @override
   void initState() {
     super.initState();
-    _syncAiPermissionsFromCore();
-  }
-
-  void _syncAiPermissionsFromCore() {
-    try {
-      final p = Bridge.getAiPermissions();
-      _settings.aiUseLocationData = p.useLocationData;
-      _settings.aiUseWeatherData = p.useWeatherData;
-      _settings.aiUseUsageHistory = p.useUsageHistory;
-      _settings.aiAllowDeviceControl = p.allowDeviceControl;
-      _settings.aiAllowAutoRoutines = p.allowAutoRoutines;
-      _settings.aiTemperament = p.temperament.clamp(0, 2);
-    } catch (_) {}
   }
 
   Future<void> _persistAll() async {
     try {
-      Bridge.setAiPermissions(
-        AiPermissions(
-          useLocationData: _settings.aiUseLocationData,
-          useWeatherData: _settings.aiUseWeatherData,
-          useUsageHistory: _settings.aiUseUsageHistory,
-          allowDeviceControl: _settings.aiAllowDeviceControl,
-          allowAutoRoutines: _settings.aiAllowAutoRoutines,
-          temperament: _settings.aiTemperament,
-        ),
-      );
+
     } catch (_) {}
 
     await _settings.persist();

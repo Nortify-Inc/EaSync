@@ -8,45 +8,6 @@
 
 import 'handler.dart';
 
-bool _hasAiBackendSymbols(DynamicLibrary lib) {
-  try {
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_model_process_chat');
-    lib.lookup<NativeFunction<Void Function()>>(
-      'core_ai_model_execute_command',
-    );
-    lib.lookup<NativeFunction<Void Function()>>(
-      'core_ai_set_chat_model_script',
-    );
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-bool _hasAsyncAiBackendSymbols(DynamicLibrary lib) {
-  try {
-    lib.lookup<NativeFunction<Void Function()>>(
-      'core_ai_model_execute_command_async_start',
-    );
-    lib.lookup<NativeFunction<Void Function()>>(
-      'core_ai_model_execute_command_async_poll',
-    );
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-bool _hasLegacyAiBackendSymbols(DynamicLibrary lib) {
-  try {
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_process_chat');
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_execute_command');
-    lib.lookup<NativeFunction<Void Function()>>('core_ai_get_annotations');
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
 
 String _loadedCoreLibraryPath = 'libeasync_core.so';
 
@@ -99,21 +60,9 @@ DynamicLibrary _openCoreLibrary() {
       try {
         final lib = DynamicLibrary.open(path);
         firstLoadable ??= lib;
-        if (_hasAiBackendSymbols(lib) && _hasAsyncAiBackendSymbols(lib)) {
-          _loadedCoreLibraryPath = path;
-          return lib;
-        }
-        if (legacyLoadable == null && _hasLegacyAiBackendSymbols(lib)) {
-          legacyLoadable = lib;
-          legacyPath = path;
-        }
       } catch (_) {}
     }
 
-    if (legacyLoadable != null) {
-      _loadedCoreLibraryPath = legacyPath ?? 'legacy-ai-loadable';
-      return legacyLoadable;
-    }
 
     if (firstLoadable != null) {
       _loadedCoreLibraryPath = 'fallback-first-loadable';
@@ -122,10 +71,43 @@ DynamicLibrary _openCoreLibrary() {
   }
 
   _loadedCoreLibraryPath = 'libeasync_core.so';
+  
   return DynamicLibrary.open('libeasync_core.so');
 }
 
 final DynamicLibrary coreLib = _openCoreLibrary();
+
+DynamicLibrary _openAiLibrary() {
+  if (Platform.isWindows) {
+    return DynamicLibrary.open('ai.dll');
+  }
+
+  if (Platform.isLinux) {
+    final executableDir = File(Platform.resolvedExecutable).parent.path;
+    final cwd = Directory.current.path;
+
+    final candidates = <String>[
+      '$cwd/lib/ai/build/libeasync_ai.so',
+      '$executableDir/lib/libeasync_ai.so',
+      '$cwd/build/linux/x64/debug/bundle/lib/libeasync_ai.so',
+      '$cwd/build/linux/x64/release/bundle/lib/libeasync_ai.so',
+      '/usr/lib/libeasync_ai.so',
+      '/usr/local/lib/libeasync_ai.so',
+    ];
+
+    for (final path in candidates) {
+      try {
+        if (!File(path).existsSync()) continue;
+        final lib = DynamicLibrary.open(path);
+        return lib;
+      } catch (_) {}
+    }
+  }
+
+  return DynamicLibrary.open('libeasync_ai.so');
+}
+
+final DynamicLibrary aiLib = _openAiLibrary();
 
 const String CORE_API_VERSION = "0.0.1";
 
@@ -610,160 +592,6 @@ final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
 final _coreSimulateDart _coreSimulate = coreLib
     .lookupFunction<_coreSimulateC, _coreSimulateDart>('core_simulate');
 
-final _coreAiSetPermissionsDart? _coreAiSetPermissions = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiSetPermissionsC, _coreAiSetPermissionsDart>(
-          'core_ai_set_permissions',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiGetPermissionsDart? _coreAiGetPermissions = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiGetPermissionsC, _coreAiGetPermissionsDart>(
-          'core_ai_get_permissions',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiRecordPatternDart? _coreAiRecordPattern = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiRecordPatternC, _coreAiRecordPatternDart>(
-          'core_ai_record_pattern',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiObserveAppOpenDart? _coreAiObserveAppOpen = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiObserveAppOpenC, _coreAiObserveAppOpenDart>(
-          'core_ai_observe_app_open',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiObserveProfileApplyDart? _coreAiObserveProfileApply = (() {
-  try {
-    return coreLib.lookupFunction<
-      _coreAiObserveProfileApplyC,
-      _coreAiObserveProfileApplyDart
-    >('core_ai_observe_profile_apply');
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiProcessChatDart? _coreAiProcessChat = (() {
-  try {
-    return coreLib.lookupFunction<_coreAiProcessChatC, _coreAiProcessChatDart>(
-      'core_ai_process_chat',
-    );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiModelProcessChatDart? _coreAiModelProcessChat = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiModelProcessChatC, _coreAiModelProcessChatDart>(
-          'core_ai_model_process_chat',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiGetAnnotationsDart? _coreAiGetAnnotations = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiGetAnnotationsC, _coreAiGetAnnotationsDart>(
-          'core_ai_get_annotations',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiExecuteCommandDart? _coreAiExecuteCommand = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiExecuteCommandC, _coreAiExecuteCommandDart>(
-          'core_ai_execute_command',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiModelExecuteCommandDart? _coreAiModelExecuteCommand = (() {
-  try {
-    return coreLib.lookupFunction<
-      _coreAiModelExecuteCommandC,
-      _coreAiModelExecuteCommandDart
-    >('core_ai_model_execute_command');
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiSetChatModelScriptDart? _coreAiSetChatModelScript = (() {
-  try {
-    return coreLib.lookupFunction<
-      _coreAiSetChatModelScriptC,
-      _coreAiSetChatModelScriptDart
-    >('core_ai_set_chat_model_script');
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiModelExecuteCommandAsyncStartDart?
-_coreAiModelExecuteCommandAsyncStart = (() {
-  try {
-    return coreLib.lookupFunction<
-      _coreAiModelExecuteCommandAsyncStartC,
-      _coreAiModelExecuteCommandAsyncStartDart
-    >('core_ai_model_execute_command_async_start');
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiModelExecuteCommandAsyncPollDart?
-_coreAiModelExecuteCommandAsyncPoll = (() {
-  try {
-    return coreLib.lookupFunction<
-      _coreAiModelExecuteCommandAsyncPollC,
-      _coreAiModelExecuteCommandAsyncPollDart
-    >('core_ai_model_execute_command_async_poll');
-  } catch (_) {
-    return null;
-  }
-})();
-
-final _coreAiLearningSnapshotDart? _coreAiLearningSnapshot = (() {
-  try {
-    return coreLib
-        .lookupFunction<_coreAiLearningSnapshotC, _coreAiLearningSnapshotDart>(
-          'core_ai_learning_snapshot',
-        );
-  } catch (_) {
-    return null;
-  }
-})();
 
 class DeviceInfo {
   final String uuid;
@@ -1048,60 +876,6 @@ class Bridge {
     if (!_ready || _ctx == null) {
       throw Exception("Bridge not initialized. Call Bridge.init() first.");
     }
-  }
-
-  static String? _resolveChatInferenceScriptPath() {
-    final cwd = Directory.current.path;
-    final executableDir = File(Platform.resolvedExecutable).parent.path;
-
-    final candidates = <String>[
-      '$cwd/lib/ai/models/chatInferenceCli.py',
-      '$cwd/../lib/ai/models/chatInferenceCli.py',
-      '$cwd/../../lib/ai/models/chatInferenceCli.py',
-      '$cwd/../../../lib/ai/models/chatInferenceCli.py',
-      '$executableDir/lib/ai/models/chatInferenceCli.py',
-      '$executableDir/../lib/ai/models/chatInferenceCli.py',
-      '$executableDir/../../lib/ai/models/chatInferenceCli.py',
-      '$executableDir/../../../lib/ai/models/chatInferenceCli.py',
-      '$executableDir/../../../../lib/ai/models/chatInferenceCli.py',
-    ];
-
-    for (final path in candidates) {
-      final f = File(path);
-      if (f.existsSync()) {
-        return f.absolute.path;
-      }
-    }
-    return null;
-  }
-
-  static void _configureChatInferenceScriptIfAvailable() {
-    if (_coreAiSetChatModelScript == null || _ctx == null) return;
-
-    final scriptPath = _resolveChatInferenceScriptPath();
-    if (scriptPath == null || scriptPath.trim().isEmpty) {
-      _log(
-        'ai',
-        'Chat inference script path not found; using native auto-discovery',
-      );
-      return;
-    }
-
-    final scriptPtr = scriptPath.toNativeUtf8();
-    final res = _coreAiSetChatModelScript!(_ctx!, scriptPtr);
-    calloc.free(scriptPtr);
-
-    if (res == 0) {
-      _log('ai', 'Configured chat inference script path: $scriptPath');
-    } else {
-      _log('ai', 'Failed to configure chat inference script path (code=$res)');
-    }
-  }
-
-  static void _ensureAiInferenceConfigured() {
-    if (_aiInferenceConfigured) return;
-    _configureChatInferenceScriptIfAvailable();
-    _aiInferenceConfigured = true;
   }
 
   static Future<void> init() async {
@@ -2144,21 +1918,6 @@ class Bridge {
     return _cloneState(result);
   }
 
-  static void _invalidateAllStatesAndNotify() {
-    final uuids = <String>{
-      ..._stateCache.keys,
-      ..._protocolByDevice.keys,
-      ..._endpointByDevice.keys,
-      ..._healthByDevice.keys,
-    };
-
-    _stateCache.clear();
-
-    for (final uuid in uuids) {
-      _stateController.add(uuid);
-    }
-  }
-
   static DeviceState _fetchState(String uuid) {
     _ensureReady();
 
@@ -2382,322 +2141,6 @@ class Bridge {
     }
   }
 
-  static void setAiPermissions(AiPermissions permissions) {
-    _ensureReady();
-    if (_coreAiSetPermissions == null) return;
-
-    final ptr = calloc<CoreAiPermissionsNative>();
-    ptr.ref.useLocationData = permissions.useLocationData;
-    ptr.ref.useWeatherData = permissions.useWeatherData;
-    ptr.ref.useUsageHistory = permissions.useUsageHistory;
-    ptr.ref.allowDeviceControl = permissions.allowDeviceControl;
-    ptr.ref.allowAutoRoutines = permissions.allowAutoRoutines;
-    ptr.ref.temperament = permissions.temperament;
-
-    final res = _coreAiSetPermissions!(_ctx!, ptr);
-    calloc.free(ptr);
-
-    if (res != 0) {
-      _throwLastError(res);
-    }
-  }
-
-  static AiPermissions getAiPermissions() {
-    _ensureReady();
-    if (_coreAiGetPermissions == null) {
-      return const AiPermissions(
-        useLocationData: true,
-        useWeatherData: true,
-        useUsageHistory: true,
-        allowDeviceControl: true,
-        allowAutoRoutines: true,
-        temperament: 0,
-      );
-    }
-
-    final ptr = calloc<CoreAiPermissionsNative>();
-    final res = _coreAiGetPermissions!(_ctx!, ptr);
-    if (res != 0) {
-      calloc.free(ptr);
-      _throwLastError(res);
-    }
-
-    final result = AiPermissions(
-      useLocationData: ptr.ref.useLocationData,
-      useWeatherData: ptr.ref.useWeatherData,
-      useUsageHistory: ptr.ref.useUsageHistory,
-      allowDeviceControl: ptr.ref.allowDeviceControl,
-      allowAutoRoutines: ptr.ref.allowAutoRoutines,
-      temperament: ptr.ref.temperament,
-    );
-    calloc.free(ptr);
-    return result;
-  }
-
-  static String aiProcessChat(String input) {
-    _ensureReady();
-    _ensureAiInferenceConfigured();
-    final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
-    if (processFn == null) {
-      return 'AI backend unavailable in current native library.';
-    }
-
-    final inPtr = input.toNativeUtf8();
-    final outPtr = calloc<Int8>(2048);
-
-    final res = processFn(_ctx!, inPtr, outPtr, 2048);
-
-    calloc.free(inPtr);
-
-    if (res != 0) {
-      calloc.free(outPtr);
-      _throwLastError(res);
-    }
-
-    final response = outPtr.cast<Utf8>().toDartString();
-    calloc.free(outPtr);
-    return response;
-  }
-
-  static String aiExecuteCommand(String input) {
-    _ensureReady();
-    _ensureAiInferenceConfigured();
-    final execFn = _coreAiModelExecuteCommand ?? _coreAiExecuteCommand;
-    final processFn = _coreAiModelProcessChat ?? _coreAiProcessChat;
-    if (execFn == null) {
-      if (processFn != null) {
-        return aiProcessChat(input);
-      }
-      return 'I could not process this request right now.';
-    }
-
-    final inPtr = input.toNativeUtf8();
-    final outPtr = calloc<Int8>(4096);
-    final res = execFn(_ctx!, inPtr, outPtr, 4096);
-
-    calloc.free(inPtr);
-
-    if (res != 0) {
-      calloc.free(outPtr);
-      _throwLastError(res);
-    }
-
-    final response = outPtr.cast<Utf8>().toDartString();
-    calloc.free(outPtr);
-
-    final q = input.trim().toLowerCase();
-    final r = response.toLowerCase();
-    final questionLike =
-        q.contains('?') ||
-        q.contains('what') ||
-        q.contains('how') ||
-        q.contains('which') ||
-        q.contains('qual') ||
-        q.contains('quais') ||
-        q.contains('quanto');
-    final staleOrGeneric =
-        r.contains(
-          'i can report status, online devices and possible behavior insights',
-        ) ||
-        r.contains('i could not identify the target device') ||
-        r.contains('mention the device name');
-
-    if (processFn != null &&
-        ((r.contains('no actionable changes') ||
-                    r.contains('could not map this command')) &&
-                questionLike ||
-            staleOrGeneric)) {
-      return aiProcessChat(input);
-    }
-
-    return response;
-  }
-
-  static Future<String> aiExecuteCommandAsync(String input) async {
-    _ensureReady();
-    _ensureAiInferenceConfigured();
-
-    final hasAsyncNative =
-        _coreAiModelExecuteCommandAsyncStart != null &&
-        _coreAiModelExecuteCommandAsyncPoll != null;
-    if (!hasAsyncNative) {
-      await Future<void>.delayed(Duration.zero);
-      final response = aiExecuteCommand(input);
-      _invalidateAllStatesAndNotify();
-      return response;
-    }
-
-    final inPtr = input.toNativeUtf8();
-    final tokenPtr = calloc<Uint64>();
-    final startRes = _coreAiModelExecuteCommandAsyncStart!(
-      _ctx!,
-      inPtr,
-      tokenPtr,
-    );
-    calloc.free(inPtr);
-
-    if (startRes != CoreResult.CORE_OK) {
-      calloc.free(tokenPtr);
-      final response = aiExecuteCommand(input);
-      _invalidateAllStatesAndNotify();
-      return response;
-    }
-
-    final token = tokenPtr.value;
-    calloc.free(tokenPtr);
-
-    final readyPtr = calloc<Bool>();
-    final outPtr = calloc<Int8>(4096);
-
-    try {
-      while (true) {
-        final pollRes = _coreAiModelExecuteCommandAsyncPoll!(
-          _ctx!,
-          token,
-          readyPtr,
-          outPtr,
-          4096,
-        );
-
-        if (pollRes != CoreResult.CORE_OK) {
-          if (pollRes == CoreResult.CORE_NOT_FOUND) {
-            final response = aiExecuteCommand(input);
-            _invalidateAllStatesAndNotify();
-            return response;
-          }
-          final response = aiExecuteCommand(input);
-          _invalidateAllStatesAndNotify();
-          return response;
-        }
-
-        if (readyPtr.value) {
-          final response = outPtr.cast<Utf8>().toDartString();
-          if (response.trim().isEmpty) {
-            final fallback = aiExecuteCommand(input);
-            _invalidateAllStatesAndNotify();
-            return fallback;
-          }
-          _invalidateAllStatesAndNotify();
-          return response;
-        }
-
-        await Future<void>.delayed(const Duration(milliseconds: 45));
-      }
-    } finally {
-      calloc.free(readyPtr);
-      calloc.free(outPtr);
-    }
-  }
-
-  static List<String> aiAnnotations() {
-    _ensureReady();
-    if (_coreAiGetAnnotations == null) return const [];
-
-    final outPtr = calloc<Int8>(4096);
-    final res = _coreAiGetAnnotations!(_ctx!, outPtr, 4096);
-    if (res != 0) {
-      calloc.free(outPtr);
-      _throwLastError(res);
-    }
-
-    final raw = outPtr.cast<Utf8>().toDartString();
-    calloc.free(outPtr);
-    return raw
-        .split('\n')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-  }
-
-  static void aiObserveAppOpen({int? timestampMs}) {
-    _ensureReady();
-    if (_coreAiObserveAppOpen == null) return;
-    final ts = timestampMs ?? DateTime.now().millisecondsSinceEpoch;
-    final res = _coreAiObserveAppOpen!(_ctx!, ts);
-    if (res != 0) {
-      _throwLastError(res);
-    }
-  }
-
-  static void aiObserveProfileApply(String profileName, {int? timestampMs}) {
-    _ensureReady();
-    if (_coreAiObserveProfileApply == null) return;
-    final namePtr = profileName.toNativeUtf8();
-    final ts = timestampMs ?? DateTime.now().millisecondsSinceEpoch;
-    final res = _coreAiObserveProfileApply!(_ctx!, namePtr, ts);
-    calloc.free(namePtr);
-    if (res != 0) {
-      _throwLastError(res);
-    }
-  }
-
-  static void aiRecordPattern(
-    String uuid,
-    DeviceState previous,
-    DeviceState next,
-  ) {
-    _ensureReady();
-    if (_coreAiRecordPattern == null) return;
-
-    final uuidPtr = uuid.toNativeUtf8();
-    final prevPtr = calloc<CoreDeviceState>();
-    final nextPtr = calloc<CoreDeviceState>();
-
-    prevPtr.ref
-      ..power = previous.power
-      ..brightness = previous.brightness
-      ..color = previous.color
-      ..temperature = previous.temperature
-      ..temperatureFridge = previous.temperatureFridge
-      ..temperatureFreezer = previous.temperatureFreezer
-      ..timestamp = previous.timestamp
-      ..colorTemperature = previous.colorTemperature
-      ..lock = previous.lock
-      ..mode = previous.mode
-      ..position = previous.position;
-
-    nextPtr.ref
-      ..power = next.power
-      ..brightness = next.brightness
-      ..color = next.color
-      ..temperature = next.temperature
-      ..temperatureFridge = next.temperatureFridge
-      ..temperatureFreezer = next.temperatureFreezer
-      ..timestamp = next.timestamp
-      ..colorTemperature = next.colorTemperature
-      ..lock = next.lock
-      ..mode = next.mode
-      ..position = next.position;
-
-    final res = _coreAiRecordPattern!(_ctx!, uuidPtr, prevPtr, nextPtr);
-
-    calloc.free(uuidPtr);
-    calloc.free(prevPtr);
-    calloc.free(nextPtr);
-
-    if (res != 0) {
-      _throwLastError(res);
-    }
-  }
-
-  static String aiLearningSnapshot() {
-    _ensureReady();
-    if (_coreAiLearningSnapshot == null) {
-      return 'AI backend unavailable in current native library.';
-    }
-
-    final outPtr = calloc<Int8>(1024);
-    final res = _coreAiLearningSnapshot!(_ctx!, outPtr, 1024);
-
-    if (res != 0) {
-      calloc.free(outPtr);
-      _throwLastError(res);
-    }
-
-    final summary = outPtr.cast<Utf8>().toDartString();
-    calloc.free(outPtr);
-    return summary;
-  }
 
   static void _onCoreEvent(
     Pointer<CoreEventNative> eventPtr,

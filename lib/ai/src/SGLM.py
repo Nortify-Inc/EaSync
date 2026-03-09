@@ -172,7 +172,6 @@ class SGLM(nn.Module):
 
         return logits
 
-
 class Generator:
     def __init__(self, model, device=None):
         self.model = model
