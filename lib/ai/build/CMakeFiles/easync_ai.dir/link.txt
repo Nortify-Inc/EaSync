@@ -1,0 +1,1 @@
+/usr/bin/g++ -fPIC -shared -Wl,-soname,libeasync_ai.so -o libeasync_ai.so CMakeFiles/easync_ai.dir/src/engine.cpp.o  -lpthread 
