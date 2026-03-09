@@ -1,60 +1,36 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Build libeasync_ai.so
+# Build both libeasync_ai.so and libeasync_core.so and install them.
+
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 echo "Building ai..."
-mkdir -p ai/build
-(cd ai/build && cmake .. && make -j$(nproc))
+mkdir -p "$ROOT_DIR/ai/build"
+(cd "$ROOT_DIR/ai/build" && cmake .. && make -j"$(nproc)")
 
-if [ ! -f "ai/build/libeasync_ai.so" ]; then
+if [ ! -f "$ROOT_DIR/ai/build/libeasync_ai.so" ]; then
     echo "ERROR: libeasync_ai.so was not generated." >&2
     exit 1
 fi
 
-echo "Built $(pwd)/ai/build/libeasync_ai.so"
+echo "Built $ROOT_DIR/ai/build/libeasync_ai.so"
 
-sudo (cd ai/build && make install)
+sudo sh -c "cd '$ROOT_DIR/ai/build' && make install"
 sudo ldconfig
 
-# Build libeasync_core.so
 echo "Building core..."
-mkdir -p core/build
-(cd core/build && cmake .. && make -j$(nproc))
+mkdir -p "$ROOT_DIR/core/build"
+(cd "$ROOT_DIR/core/build" && cmake .. && make -j"$(nproc)")
 
-if [ ! -f "core/build/libeasync_core.so" ]; then
+if [ ! -f "$ROOT_DIR/core/build/libeasync_core.so" ]; then
     echo "ERROR: libeasync_core.so was not generated." >&2
     exit 1
 fi
 
-echo "Built $(pwd)/core/build/libeasync_core.so"
+echo "Built $ROOT_DIR/core/build/libeasync_core.so"
 
-sudo (cd core/build && make install)
+sudo sh -c "cd '$ROOT_DIR/core/build' && make install"
 sudo ldconfig
 
 echo "All libraries built and installed."
-#!/bin/bash
-
-##!
-# @file build.sh
-# @brief Local build script for the EaSync Core native library.
-# @param No positional parameters.
-# @return 0 on success; non-zero exit code on failure.
-# @author Erick Radmann
-
-set -e
-
-mkdir -p build
-cd build
-
-cmake ..
-make -j$(nproc)
-
-if [ ! -f "libeasync_core.so" ]; then
-	echo "ERROR: libeasync_core.so was not generated." >&2
-	exit 1
-fi
-
-echo "Built $(pwd)/libeasync_core.so"
-
-sudo make install
-sudo ldconfig
