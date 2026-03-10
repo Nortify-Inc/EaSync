@@ -1,386 +1,277 @@
-#!/usr/bin/env python3
-"""
-ai/src/service.py
-Lightweight runner that loads the Python SGLM implementation from `SGLM.py` in
-the same folder and generates a response for a given `--prompt` argument.
-
-This script is intentionally small: it uses a simple whitespace tokenizer
-and returns JSON on stdout: {"result":"ok","response":"..."}
-"""
-import argparse
-import json
 import sys
-import os
-from SGLM import SGLM, Generator
-import torch
-import sentencepiece as spm
-try:
-    from tokenizers import Tokenizer as HFTokenizer
-except Exception:
-    HFTokenizer = None
+import argparse
+import importlib.util
+import json
 from pathlib import Path
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--prompt', required=True)
-    args = parser.parse_args()
+import torch
+import torch.nn.functional as F
 
-    # single-argument mode: decoding and file paths are fixed defaults
-    max_tokens = 50
-    decoding_method = 'typical'
-    temperature = 0.6
-    top_k = 40
-    top_p = 0.9
-    repetition_penalty = 1.2
-    ban_ngram = 4
-    typical_p = 0.95
-    entropy_target = None
-    entropy_lr = 0.1
+# Configuration constants (tweak here instead of CLI params)
+DEVICE = "cpu"
+MAX_NEW_TOKENS = 256
+TEMPERATURE = 0.7
+TOP_K = 40
+TOP_P = 0.9
+REPETITION_PENALTY = 1.1
+NUM_RETURN_SEQUENCES = 1
+SELF_CONSISTENCY_N = 1
+USE_BEAM_SEARCH = True
+BEAM_WIDTH = 3
+LENGTH_PENALTY = 1.0
 
-    # Prefer HF Tokenizer (`tokenizer.json`) from lib/ai/data for chat-style formatting
-    data_dir = Path(__file__).resolve().parents[1] / "data"
-    hf_tok_path = data_dir / "tokenizer.json"
-    sp_tok_path = Path(args.tokenizer) if args.tokenizer else data_dir / "tokenizer.model"
+parser = argparse.ArgumentParser()
+# Keep only prompt (device is fixed to CPU)
+parser.add_argument("--prompt", type=str, required=True)
+cli = parser.parse_args()
 
-    hf_tokenizer = None
-    tokenizer = None
-    vocab_size = None
+HERE = Path(__file__).parent.resolve()
 
-    if hf_tok_path.exists() and HFTokenizer is not None:
-        try:
-            hf_tokenizer = HFTokenizer.from_file(str(hf_tok_path))
-            vocab_size = hf_tokenizer.get_vocab_size()
-        except Exception:
-            hf_tokenizer = None
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, str(path))
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
-    if hf_tokenizer is None:
-        if not sp_tok_path.exists():
-            print(json.dumps({"result": "error", "message": f"Tokenizer not found: {sp_tok_path} or {hf_tok_path}"}))
-            sys.exit(1)
-        tokenizer = spm.SentencePieceProcessor()
-        ok = tokenizer.load(str(sp_tok_path))
-        if not ok:
-            print(json.dumps({"result": "error", "message": "Failed to load SentencePiece tokenizer"}))
-            sys.exit(1)
-        vocab_size = tokenizer.get_piece_size()
-    # instantiate model with same architecture used during training (matches train.py)
-    model = SGLM(vocab_size, dim=256, layers=6, heads=8, kvHeads=2)
-    device = torch.device('cpu')
-    model.to(device)
+from tokenizers import Tokenizer
 
-    # load weights: prefer explicit --weights, otherwise try common checkpoint locations
-    def try_load(path):
-        try:
-            sd = torch.load(path, map_location=device)
-        except Exception:
-            return False
-        # handle wrapped dicts or raw state_dicts
-        if isinstance(sd, dict):
-            if "model_state" in sd:
-                try:
-                    model.load_state_dict(sd["model_state"])
-                    return True
-                except Exception:
-                    pass
-            # try direct state dict
-            try:
-                model.load_state_dict(sd)
-                return True
-            except Exception:
-                # maybe checkpoint contains extra keys or vocab mismatch; try common wrappers
-                for k in ("state_dict", "model", "model_state_dict"):
-                    if k in sd:
-                        try:
-                            model.load_state_dict(sd[k])
-                            return True
-                        except Exception:
-                            pass
-                # attempt to adapt embedding/head sizes when vocab differs
-                cand = None
-                for k in ("model_state", "state_dict", "model", "model_state_dict"):
-                    if k in sd:
-                        cand = sd[k]
-                        break
-                if cand is None:
-                    cand = sd
-                if isinstance(cand, dict):
-                    ck_state = cand
-                    model_state = model.state_dict()
-                    new_state = {}
-                    for kk, vv in ck_state.items():
-                        if kk in model_state:
-                            try:
-                                if vv.shape == model_state[kk].shape:
-                                    new_state[kk] = vv
-                                else:
-                                    # special-case token embedding and head: copy prefix rows
-                                    if kk in ("tokenEmb.weight", "head.weight") and vv.dim() >= 2:
-                                        min0 = min(vv.shape[0], model_state[kk].shape[0])
-                                        tmp = model_state[kk].clone()
-                                        tmp[:min0] = vv[:min0]
-                                        new_state[kk] = tmp
-                                    else:
-                                        # skip incompatible key
-                                        pass
-                            except Exception:
-                                pass
-                    # fill remaining keys from model_state
-                    for kk in model_state:
-                        if kk not in new_state:
-                            new_state[kk] = model_state[kk]
-                    try:
-                        model.load_state_dict(new_state)
-                        return True
-                    except Exception:
-                        return False
-        return False
+tok_path = HERE.parent / "data" / "tokenizer.json"
+if not tok_path.exists():
+    raise FileNotFoundError(tok_path)
 
-    loaded = False
-    if args.weights:
-        loaded = try_load(args.weights)
+tokenizer = Tokenizer.from_file(str(tok_path))
+
+with open(HERE.parent / "data" / "tokenizer_config.json") as f:
+    tok_cfg = json.load(f)
+
+IM_START = tokenizer.token_to_id("<|im_start|>")
+IM_END = tokenizer.token_to_id("<|im_end|>")
+EOS = tokenizer.token_to_id("<|endoftext|>")
+
+def encode(text: str) -> list[int]:
+    return tokenizer.encode(text, add_special_tokens=False).ids
+
+def decode(ids: list[int]) -> str:
+    return tokenizer.decode(ids, skip_special_tokens=True)
+
+
+def clean_text(text: str) -> str:
+    # remove known special tokens and stray markers
+    for t in ("<|im_end|>", "<|im_start|>", "<|endoftext|>"):
+        text = text.replace(t, "")
+    return text.replace("\x00", "").strip()
+SEMANTIC_RERANKING = True
+SEMANTIC_ALPHA = 0.6  # weight for semantic score in final ranking
+LOGPROB_BETA = 0.4    # weight for model logprob score
+
+model_mod = load_module("sglm", HERE / "SGLM.py")
+model_path = HERE.parent / "data" / "model.safetensors"
+if not model_path.exists():
+    model_path = HERE.parent / "data" / "model"
+model = model_mod.SGLM.load(model_path, device=DEVICE)
+
+SYSTEM = (
+    "You're a helpful, concise and creative personal assistant called Agent. "
+    "You're part of EaSync and created by Nortify Inc. Provide clear answers, offer multiple options when relevant, "
+    "and avoid unnecessary repetition. When asked for reasoning, be concise and structured."
+)
+
+def build_tokens(history: list[tuple[str, str]], user_msg: str) -> torch.Tensor:
+    ids = []
+
+    ids += [IM_START] + encode(f"system\n{SYSTEM}") + [IM_END] + encode("\n")
+
+    for u, a in history:
+        ids += [IM_START] + encode(f"user\n{u}") + [IM_END] + encode("\n")
+        ids += [IM_START] + encode(f"assistant\n{a}") + [IM_END] + encode("\n")
+
+    ids += [IM_START] + encode(f"user\n{user_msg}") + [IM_END] + encode("\n")
+
+    ids += [IM_START] + encode("assistant\n")
+
+    return torch.tensor([ids], dtype=torch.long, device=DEVICE)
+
+@torch.no_grad()
+def respond(history: list, user_msg: str) -> str:
+    def sample_once(temperature: float) -> list[int]:
+        token_ids = build_tokens(history, user_msg)
+        out = model(token_ids)
+        logits = out["logits"]
+        kv_caches = out["kv_caches"]
+        offset = token_ids.shape[1]
+
+        generated = []
+        logprob_sum = 0.0
+        for _ in range(MAX_NEW_TOKENS):
+            next_logits = logits[:, -1, :] / max(1e-6, temperature)
+
+            # repetition penalty: discourage tokens already generated
+            if REPETITION_PENALTY is not None and REPETITION_PENALTY != 1.0:
+                for t in set(generated):
+                    next_logits[0, t] = next_logits[0, t] / float(REPETITION_PENALTY)
+
+            if TOP_K:
+                v, _ = torch.topk(next_logits, TOP_K)
+                next_logits[next_logits < v[:, [-1]]] = float("-inf")
+
+            if TOP_P < 1.0:
+                sorted_logits, sorted_idx = torch.sort(next_logits, descending=True)
+                cum_probs = torch.cumsum(F.softmax(sorted_logits, dim=-1), dim=-1)
+                remove = cum_probs - F.softmax(sorted_logits, dim=-1) > TOP_P
+                sorted_logits[remove] = float("-inf")
+                next_logits = torch.scatter(next_logits, 1, sorted_idx, sorted_logits)
+
+            probs = F.softmax(next_logits, dim=-1)
+            token_id = torch.multinomial(probs, 1).item()
+            # accumulate log-prob for reranking
+            token_logprob = float(torch.log(probs[0, token_id] + 1e-12).item())
+            logprob_sum += token_logprob
+
+            if token_id in (IM_END, EOS, 0):
+                break
+
+            generated.append(token_id)
+            token_tensor = torch.tensor([[token_id]], device=DEVICE)
+            out = model(token_tensor, kv_caches=kv_caches, offset=offset)
+            logits = out["logits"]
+            kv_caches = out["kv_caches"]
+            offset += 1
+
+        return generated, logprob_sum
+    # If beam search is enabled, prefer it for higher-quality deterministic output
+    if USE_BEAM_SEARCH:
+        beam_result = beam_search(history, user_msg)
+        # clean beam result before returning
+        return clean_text(beam_result)
+
+    # Generate multiple candidates to increase diversity / self-consistency
+    candidates = []
+    sample_infos = []
+    for i in range(max(1, NUM_RETURN_SEQUENCES)):
+        temp = TEMPERATURE
+        gen, lp = sample_once(temp)
+        candidates.append(clean_text(decode(gen).strip()))
+        sample_infos.append((gen, lp))
+
+    # If self-consistency mode requested, resample and pick the most frequent answer
+    if SELF_CONSISTENCY_N and SELF_CONSISTENCY_N > 1:
+        sc_samples = []
+        for _ in range(SELF_CONSISTENCY_N):
+            gen, lp = sample_once(max(TEMPERATURE, 0.8))
+            sc_samples.append(clean_text(decode(gen).strip()))
+        from collections import Counter
+
+        most_common = Counter(sc_samples).most_common(1)
+        if most_common:
+            return most_common[0][0]
+
+    # Rerank sampled candidates by average log-prob (prefer higher average logprob)
+    if len(candidates) == 1:
+        return candidates[0]
     else:
-        # common paths relative to project
-        cand = [
-            Path(__file__).resolve().parents[1] / "data" / "sglm_model.pt",
-            Path(__file__).resolve().parents[1] / "data" / "sglm_model.pth",
-            Path(__file__).resolve().parents[2] / "lib" / "ai" / "models" / "sglm.pth",
-            Path(__file__).resolve().parents[1] / "models" / "sglm.pth",
-        ]
-        for p in cand:
-            if p.exists():
-                loaded = try_load(str(p))
-                if loaded:
-                    break
-
-    if not loaded:
-        # attempt to give a helpful diagnostic if a checkpoint exists but failed to load
-        cand_path = Path(__file__).resolve().parents[1] / "data" / "sglm_model.pt"
-        if cand_path.exists():
-            try:
-                sd = torch.load(str(cand_path), map_location=device)
-                if isinstance(sd, dict):
-                    # if raw state_dict stored as OrderedDict
-                    if "tokenEmb.weight" in sd:
-                        ck_vocab = sd["tokenEmb.weight"].shape[0]
-                        if ck_vocab != vocab_size:
-                            print(json.dumps({"result": "warning", "message": f"Checkpoint vocab ({ck_vocab}) != tokenizer vocab ({vocab_size}). Pass matching tokenizer or a matching checkpoint via --weights."}))
-                else:
-                    # sd may be state_dict-like
-                    if hasattr(sd, "keys"):
-                        if "tokenEmb.weight" in sd:
-                            ck_vocab = sd["tokenEmb.weight"].shape[0]
-                            if ck_vocab != vocab_size:
-                                print(json.dumps({"result": "warning", "message": f"Checkpoint vocab ({ck_vocab}) != tokenizer vocab ({vocab_size}). Pass matching tokenizer or a matching checkpoint via --weights."}))
-            except Exception:
-                pass
-        else:
-            # no checkpoint found; model remains randomly initialized
-            pass
-
-    gen = Generator(model, device=device)
-
-    # Use SentencePiece tokenizer for tokenization/detokenization
-    # Provide a chat-style token builder if HF tokenizer is available
-    SYSTEM = """
-You are Agent, the friendly assistant of the EaSync App.
-Be concise, helpful and avoid fabricating personal data.
-"""
-
-    def tokenize_sp(text):
-        return tokenizer.encode(text)
-
-    def detokenize_sp(ids):
-        try:
-            return tokenizer.decode(ids)
-        except Exception:
-            pieces = [tokenizer.id_to_piece(int(i)) for i in ids]
-            return ''.join(pieces)
-
-    def build_chat_tokens(user_text):
-        # build tokens similar to `chat.py` using HF tokenizer special tokens
-        im_start = None
-        im_end = None
-        eos = None
-        try:
-            im_start = hf_tokenizer.token_to_id("<|im_start|>")
-            im_end = hf_tokenizer.token_to_id("<|im_end|>")
-            eos = hf_tokenizer.token_to_id("<|endoftext|>")
-        except Exception:
-            # fallback to None
-            pass
-
-        pieces = []
-        if hf_tokenizer is not None and im_start is not None:
-            pieces += [im_start] + hf_tokenizer.encode(f"system\n{SYSTEM}").ids + [im_end]
-            pieces += hf_tokenizer.encode("\n").ids
-            pieces += [im_start] + hf_tokenizer.encode(f"user\n{user_text}").ids + [im_end]
-            pieces += hf_tokenizer.encode("\n").ids
-            pieces += [im_start] + hf_tokenizer.encode("assistant\n").ids
-            return pieces
-        else:
-            # fallback to simple SentencePiece formatting
-            text = "<bos> <sep> user: " + user_text + " <eos>"
-            return tokenize_sp(text)
-
-    def detokenize(ids):
-        if hf_tokenizer is not None:
-            try:
-                return hf_tokenizer.decode(ids, skip_special_tokens=True)
-            except Exception:
-                pass
-        return detokenize_sp(ids)
-
-    # Role-aware history formatting helper
-    def format_dialogue(history, user_text):
-        # history: list of (role, text) where role in {"user","assistant","system"}
-        # keep recent turns up to model.maxSeq tokens when possible
-        pieces = ["<bos>"]
-        for role, text in history[-6:]:
-            if role == "user":
-                pieces.append("<sep> user: ")
-            elif role == "assistant":
-                pieces.append("<sep> assistant: ")
+        scored = []
+        for (gen, lp), text in zip(sample_infos, candidates):
+            l = max(1, len(gen))
+            logprob_score = lp / (l ** LENGTH_PENALTY)
+            if SEMANTIC_RERANKING:
+                sem = semantic_score(cli.prompt, text)
+                final = SEMANTIC_ALPHA * sem + LOGPROB_BETA * (logprob_score)
             else:
-                pieces.append("<sep> system: ")
-            pieces.append(text)
-        pieces.append("<sep> user: ")
-        pieces.append(user_text)
-        pieces.append("<eos>")
-        return "".join(pieces)
+                final = logprob_score
+            scored.append((final, text))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        # return distinct candidates ordered by score
+        unique = []
+        for _, c in scored:
+            if c and c not in unique:
+                unique.append(c)
+        return "\n\n---\n\n".join(unique)
 
-    # build seed ids using chat-style tokens when available
-    if hf_tokenizer is not None:
-        seed_ids = build_chat_tokens(args.prompt)
-    else:
-        seed_ids = tokenize_sp(args.prompt)
-    if len(seed_ids) == 0:
-        seed_ids = [0]
 
-    seq = torch.tensor(seed_ids, dtype=torch.long).unsqueeze(0).to(device)
-    # primary generation attempt with advanced decoding defaults
-    try:
-        out_seq = gen.generate(
-            seq.squeeze(0),
-            maxLen=args.max_tokens,
-            temperature=args.temperature,
-            topK=args.top_k,
-            topP=args.top_p,
-            repetition_penalty=args.repetition_penalty,
-            ban_ngram_size=args.ban_ngram,
-            method=args.decoding_method,
-            typical_p=args.typical_p,
-        )
-        if isinstance(out_seq, torch.Tensor):
-            out_ids = out_seq.tolist()
-        else:
-            out_ids = list(out_seq)
-    except Exception:
-        out_ids = seed_ids
+def normalize_words(s: str) -> list[str]:
+    import re
+    s = s.lower()
+    s = re.sub(r"[^a-z0-9\s]", " ", s)
+    parts = [w for w in s.split() if len(w) > 1]
+    return parts
 
-    # return only the continuation (tokens after the seed)
-    cont_ids = out_ids[len(seed_ids):]
 
-    # if continuation is empty or trivial, try aggressive fallback sampling
-    def aggressive_sample():
-        # expanded sampling strategies: vary temperature, top-k, top-p, and length
-        tries = [
-            {"method": "typical", "temperature": 0.8, "topK": 200, "topP": 0.97, "max_len": min(64, args.max_tokens)},
-            {"method": "sample", "temperature": 1.2, "topK": 0, "topP": 0.0, "max_len": min(80, args.max_tokens)},
-            {"method": "typical", "temperature": 0.8, "topK": 40, "topP": 0.9, "max_len": min(40, args.max_tokens)},
-            {"method": "typical", "temperature": 0.6, "topK": 30, "topP": 0.85, "max_len": min(32, args.max_tokens)},
-        ]
-        for cfg in tries:
-            try:
-                s = gen.generate(
-                    seq.squeeze(0),
-                    maxLen=cfg["max_len"],
-                    temperature=cfg.get("temperature", args.temperature),
-                    topK=cfg.get("topK", args.top_k),
-                    topP=cfg.get("topP", args.top_p),
-                    repetition_penalty=args.repetition_penalty,
-                    ban_ngram_size=args.ban_ngram,
-                    method=cfg.get("method", args.decoding_method),
-                    typical_p=args.typical_p,
-                    entropy_target=args.entropy_target,
-                    entropy_lr=args.entropy_lr,
-                )
-                if isinstance(s, torch.Tensor):
-                    s_ids = s.tolist()
-                else:
-                    s_ids = list(s)
-                c = s_ids[len(seed_ids):]
-                if len(c) > 0:
-                    return c
-            except Exception:
+def semantic_score(prompt: str, candidate: str) -> float:
+    pset = set(normalize_words(prompt))
+    cset = set(normalize_words(candidate))
+    if not pset or not cset:
+        return 0.0
+    inter = pset.intersection(cset)
+    union = pset.union(cset)
+    return len(inter) / len(union)
+
+def beam_search(history: list, user_msg: str) -> str:
+    # simple beam search that expands top-K tokens at each step and keeps top BEAM_WIDTH beams
+    init_out = model(build_tokens(history, user_msg))
+    init_logits = init_out["logits"]
+    init_kv = init_out["kv_caches"]
+    offset = init_logits.shape[1]
+
+    beams = [
+        {"tokens": [], "kv": init_kv, "logprob": 0.0, "logits": init_logits, "offset": offset, "done": False}
+    ]
+
+    for _ in range(MAX_NEW_TOKENS):
+        all_candidates = []
+        for b in beams:
+            if b["done"]:
+                all_candidates.append(b)
                 continue
-        # try sample-and-rank: generate several candidates and pick best by log-prob (length-normalized)
-        try:
-            candidates = []
-            for t in (0.6, 0.8, 1.0):
-                for _ in range(3):
-                    s = gen.generate(
-                        seq.squeeze(0),
-                        maxLen=min(32, args.max_tokens),
-                        temperature=t,
-                        topK=args.top_k,
-                        topP=args.top_p,
-                        repetition_penalty=args.repetition_penalty,
-                        ban_ngram_size=args.ban_ngram,
-                        method='sample',
-                        typical_p=args.typical_p,
-                    )
-                    s_ids = s.tolist() if isinstance(s, list) or isinstance(s, tuple) else s.tolist()
-                    cont = s_ids[len(seed_ids):]
-                    if len(cont) == 0:
-                        continue
-                    # score candidate using model log-prob
-                    try:
-                        import math as _math
-                        seq_ids = seed_ids + cont
-                        t_in = torch.tensor([seq_ids], dtype=torch.long).to(device)
-                        with torch.no_grad():
-                            logits = model(t_in)
-                            logp = torch.log_softmax(logits, dim=-1)
-                        # sum log-probs for continuation tokens
-                        cum = 0.0
-                        L = len(seq_ids)
-                        for i in range(len(seed_ids), L):
-                            tok = seq_ids[i]
-                            cum += float(logp[0, i - 0, tok])
-                        # length-normalize and repetition penalty
-                        rep_pen = len(cont) - len(set(cont))
-                        score = cum / (len(cont) ** 0.7) - 0.1 * rep_pen
-                        candidates.append((score, cont))
-                    except Exception:
-                        candidates.append(( -1e9, cont))
-            if len(candidates) > 0:
-                candidates.sort(key=lambda x: x[0], reverse=True)
-                return candidates[0][1]
-        except Exception:
-            pass
-        # last resort: sample random tokens from tokenizer vocab but bias towards frequent tokens
-        import random
-        vocab_n = tokenizer.get_piece_size()
-        # sample from unigram frequency proxy by using tokenizer.get_score (if available)
-        try:
-            scores = [tokenizer.get_score(i) for i in range(vocab_n)]
-            # convert to probabilities
-            import math
-            exps = [math.exp(s) if not math.isinf(s) and not math.isnan(s) else 0.0 for s in scores]
-            total = sum(exps)
-            if total > 0:
-                probs = [e/total for e in exps]
-                return random.choices(range(vocab_n), weights=probs, k=min(8,args.max_tokens))
-        except Exception:
-            pass
-        return [random.randrange(vocab_n) for _ in range(min(8, args.max_tokens))]
 
-    if len(cont_ids) == 0 or all((isinstance(x, int) and x == seed_ids[-1]) for x in cont_ids[:1]):
-        cont_ids = aggressive_sample()
+            next_logits = b["logits"][:, -1, :] / max(1e-6, TEMPERATURE)
+            # repetition penalty
+            if REPETITION_PENALTY is not None and REPETITION_PENALTY != 1.0:
+                for t in set(b["tokens"]):
+                    next_logits[0, t] = next_logits[0, t] / float(REPETITION_PENALTY)
 
-    resp_text = detokenize(cont_ids) if len(cont_ids) > 0 else detokenize(out_ids)
-    print(json.dumps({"result": "ok", "response": resp_text}))
+            if TOP_K:
+                v, _ = torch.topk(next_logits, TOP_K)
+                next_logits[next_logits < v[:, [-1]]] = float("-inf")
 
+            probs = F.softmax(next_logits, dim=-1)
+            topv, topi = torch.topk(probs, BEAM_WIDTH, dim=-1)
+            topv = topv[0].tolist()
+            topi = topi[0].tolist()
+
+            for pv, pi in zip(topv, topi):
+                token_tensor = torch.tensor([[pi]], device=DEVICE)
+                out = model(token_tensor, kv_caches=b["kv"], offset=b["offset"])
+                new_logits = out["logits"]
+                new_kv = out["kv_caches"]
+                cand = {
+                    "tokens": b["tokens"] + [pi],
+                    "kv": new_kv,
+                    "logprob": b["logprob"] + float(torch.log(torch.tensor(pv) + 1e-12).item()),
+                    "logits": new_logits,
+                    "offset": b["offset"] + 1,
+                    "done": pi in (IM_END, EOS, 0),
+                }
+                all_candidates.append(cand)
+
+        # keep top BEAM_WIDTH by score (normalized by length)
+        def score(b):
+            l = max(1, len(b["tokens"]))
+            return b["logprob"] / (l ** LENGTH_PENALTY)
+
+        beams = sorted(all_candidates, key=score, reverse=True)[:BEAM_WIDTH]
+
+        # stop if all beams done
+        if all(b["done"] for b in beams):
+            break
+
+    # pick best finished beam or best beam
+    finished = [b for b in beams if b["done"]]
+    best = (finished or beams)[0]
+    return decode(best["tokens"]).strip()
+ 
 
 if __name__ == '__main__':
-    main()
+    history = []
+    resp = respond(history, cli.prompt)
+    print(resp)
