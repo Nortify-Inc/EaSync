@@ -1002,6 +1002,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                         ),
                       ),
                     ),
+
                   Positioned.fill(
                     child: EaBlurFadeSwitcher(
                       marker: discovering,
@@ -1027,9 +1028,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                           minimumSize: const Size.fromHeight(48),
                           alignment: Alignment.center,
                           side: BorderSide(
-                            color: discovering
-                                ? Colors.transparent
-                                : EaColor.fore,
+                            color: discovering ? Colors.transparent : EaColor.fore,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1049,19 +1048,29 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
             child: EaBlurFadeIn(
               beginBlur: 4,
               duration: const Duration(milliseconds: 220),
-              child: EaGradientButtonFrame(
-                borderRadius: BorderRadius.circular(12),
-                child: ElevatedButton.icon(
-                  onPressed: () => _openEditor(),
-                  icon: const Icon(Icons.add),
-                  label: Text(
-                    EaI18n.t(context, 'Add device'),
-                    style: EaText.primaryBack,
-                  ),
-                  style: EaButtonStyle.gradientFilled(
-                    context: context,
-                    borderRadius: BorderRadius.circular(12),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+              child: SizedBox(
+                height: 48,
+                child: EaGradientButtonFrame(
+                  borderRadius: BorderRadius.circular(12),
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openEditor(),
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      EaI18n.t(context, 'Add device'),
+                      style: EaText.primaryBack,
+                    ),
+                    style: EaButtonStyle
+                        .gradientFilled(
+                          context: context,
+                          borderRadius: BorderRadius.circular(12),
+                          padding: const EdgeInsets.symmetric(vertical: 0),
+                        )
+                        .copyWith(
+                          minimumSize:
+                              WidgetStateProperty.all(const Size.fromHeight(48)),
+                          padding: WidgetStateProperty.all(
+                              const EdgeInsets.symmetric(horizontal: 12)),
+                        ),
                   ),
                 ),
               ),
