@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <array>
+#include <filesystem>
 
 static std::string g_runner_path = "./lib/ai/src/service.py";
 
@@ -47,8 +48,32 @@ static bool run_runner_capture(const std::string &prompt, std::string &out) {
     const char *env_runner = std::getenv("EASYNC_CHAT_INFER_SCRIPT");
     std::string runner = env_runner && std::strlen(env_runner) ? std::string(env_runner) : g_runner_path;
 
+    // try to resolve runner path if it's not directly present
+    try {
+        std::filesystem::path rp(runner);
+        if (!std::filesystem::exists(rp)) {
+            auto cur = std::filesystem::current_path();
+            for (int i = 0; i < 8; ++i) {
+                auto cand = cur / runner;
+                if (std::filesystem::exists(cand)) {
+                    runner = cand.string();
+                    break;
+                }
+                if (cur.has_parent_path()) cur = cur.parent_path();
+                else break;
+            }
+        }
+    } catch (...) {}
+
     std::string esc = escapeArg(prompt);
-    cmd += runner + " --prompt \"" + esc + "\" --max_tokens 64";
+    cmd += runner + " --prompt \"" + esc + "\"";
+
+    // Capture both stdout and stderr so callers receive useful diagnostics
+    cmd += " 2>&1";
+
+    // diagnostic log: print the command and resolved runner path to stderr
+    fprintf(stderr, "EASYNC_RUN_CMD=%s\n", cmd.c_str());
+    fprintf(stderr, "EASYNC_RUNNER_PATH=%s\n", runner.c_str());
 
     std::array<char, 4096> buffer;
     out.clear();
@@ -104,17 +129,53 @@ int ai_model_execute_command(void *ctx, const char *reqJson, char *outBuf, uint3
     return ai_process_chat(ctx, reqJson, outBuf, outLen);
 }
 
-int ai_set_chat_model_script(void *ctx, const char *scriptPath) {
-    if (!scriptPath) return -1;
-    g_runner_path = std::string(scriptPath);
-    return 0;
+int ai_query(void *ctx, const char *inputJson, char *outBuf, uint32_t outLen) {
+    (void)ctx;
+    std::string input = inputJson ? std::string(inputJson) : std::string();
+    std::string prompt = input;
+    if (!input.empty() && input.front() == '{') {
+        auto pos = input.find("\"prompt\"");
+        if (pos != std::string::npos) {
+            auto colon = input.find(':', pos);
+            if (colon != std::string::npos) {
+                auto q1 = input.find('"', colon);
+                if (q1 != std::string::npos) {
+                    auto q2 = input.find('"', q1 + 1);
+                    if (q2 != std::string::npos) {
+                        prompt = input.substr(q1 + 1, q2 - q1 - 1);
+                    }
+                }
+            }
+        }
+    }
+
+    std::string result;
+    if (!run_runner_capture(prompt, result)) return -1;
+    return write_out(result, outBuf, outLen);
 }
 
-int ai_model_execute_command_async_start(void *ctx, const char *reqJson, uint64_t *outHandle) {
+int ai_query_async_start(void *ctx, const char *inputJson, uint64_t *outHandle) {
     if (!outHandle) return -1;
-    std::string req = reqJson ? reqJson : "";
+    std::string input = inputJson ? std::string(inputJson) : std::string();
+    std::string prompt = input;
+    if (!input.empty() && input.front() == '{') {
+        auto pos = input.find("\"prompt\"");
+        if (pos != std::string::npos) {
+            auto colon = input.find(':', pos);
+            if (colon != std::string::npos) {
+                auto q1 = input.find('"', colon);
+                if (q1 != std::string::npos) {
+                    auto q2 = input.find('"', q1 + 1);
+                    if (q2 != std::string::npos) {
+                        prompt = input.substr(q1 + 1, q2 - q1 - 1);
+                    }
+                }
+            }
+        }
+    }
+
     std::string result;
-    if (!run_runner_capture(req, result)) return -1;
+    if (!run_runner_capture(prompt, result)) return -1;
     uint64_t id = g_next_job.fetch_add(1);
     {
         std::lock_guard<std::mutex> lk(g_jobs_mutex);
@@ -124,7 +185,7 @@ int ai_model_execute_command_async_start(void *ctx, const char *reqJson, uint64_
     return 0;
 }
 
-int ai_model_execute_command_async_poll(void *ctx, uint64_t handle, bool *finished, char *outBuf, uint32_t outLen) {
+int ai_query_async_poll(void *ctx, uint64_t handle, bool *finished, char *outBuf, uint32_t outLen) {
     if (!finished) return -1;
     std::string resp;
     {
@@ -141,20 +202,11 @@ int ai_model_execute_command_async_poll(void *ctx, uint64_t handle, bool *finish
     return write_out(resp, outBuf, outLen);
 }
 
-int ai_get_annotations(void *ctx, char *outBuf, uint32_t outLen) {
-    const std::string r = "{\"annotations\": []}";
-    return write_out(r, outBuf, outLen);
+int ai_set_chat_model_script(void *ctx, const char *scriptPath) {
+    if (!scriptPath) return -1;
+    g_runner_path = std::string(scriptPath);
+    return 0;
 }
 
-int ai_learning_snapshot(void *ctx, char *outBuf, uint32_t outLen) {
-    const std::string r = "{\"snapshot\": \"ok\"}";
-    return write_out(r, outBuf, outLen);
-}
-
-int ai_set_permissions(void *ctx, void *perms) { (void)ctx; (void)perms; return 0; }
-int ai_get_permissions(void *ctx, void *perms) { (void)ctx; (void)perms; return 0; }
-int ai_record_pattern(void *ctx, const char *payload, uint64_t timestamp) { (void)ctx; (void)payload; (void)timestamp; return 0; }
-int ai_observe_app_open(void *ctx, uint64_t timestamp) { (void)ctx; (void)timestamp; return 0; }
-int ai_observe_profile_apply(void *ctx, const char *profile, uint64_t timestamp) { (void)ctx; (void)profile; (void)timestamp; return 0; }
 
 } // extern "C"

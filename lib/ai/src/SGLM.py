@@ -21,7 +21,7 @@ class ModelArgs:
         return self.n_embd // self.n_heads
 
 
-def _rms_norm(x: torch.Tensor, w: torch.Tensor, eps: float) -> torch.Tensor:
+def RMSNorm(x: torch.Tensor, w: torch.Tensor, eps: float) -> torch.Tensor:
     return (x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + eps)) * w
 
 
@@ -30,18 +30,18 @@ def _rotate_half(x: torch.Tensor) -> torch.Tensor:
     return torch.cat([-x[..., h:], x[..., :h]], dim=-1)
 
 
-def _build_rope(head_dim: int, T: int, base: float, device, dtype):
+def RoPE(head_dim: int, T: int, base: float, device, dtype):
     inv_freq = 1.0 / (base ** (torch.arange(0, head_dim, 2, dtype=torch.float32, device=device) / head_dim))
-    t        = torch.arange(T, dtype=torch.float32, device=device)
-    freqs    = torch.outer(t, inv_freq)
-    emb      = torch.cat([freqs, freqs], dim=-1)
+    t = torch.arange(T, dtype=torch.float32, device=device)
+    freqs = torch.outer(t, inv_freq)
+    emb = torch.cat([freqs, freqs], dim=-1)
     return emb.cos().to(dtype), emb.sin().to(dtype)
 
 
 class SGLM:
     def __init__(self, sd: dict, args: ModelArgs, device: str = "cpu"):
-        self.sd     = {k: v.to(device) for k, v in sd.items()}
-        self.args   = args
+        self.sd = {k : v.to(device) for k, v in sd.items()}
+        self.args = args
         self.device = device
 
     def _attn(
@@ -112,7 +112,7 @@ class SGLM:
 
         x = sd["model.embed_tokens.weight"][token_ids[0]]
 
-        cos, sin = _build_rope(a.head_dim, offset + T, a.rope_base, x.device, x.dtype)
+        cos, sin = RoPE(a.head_dim, offset + T, a.rope_base, x.device, x.dtype)
         cos = cos[offset:]
         sin = sin[offset:]
 
@@ -124,18 +124,18 @@ class SGLM:
 
         for i in range(a.n_layer):
             p   = f"model.layers.{i}"
-            xn  = _rms_norm(x, sd[f"{p}.input_layernorm.weight"], a.rms_eps)
+            xn  = RMSNorm(x, sd[f"{p}.input_layernorm.weight"], a.rms_eps)
 
             cache = kv_caches[i] if kv_caches else None
             attn_out, new_cache = self._attn(xn, cos, sin, i, mask, cache)
 
             x  = x + attn_out
-            xn = _rms_norm(x, sd[f"{p}.post_attention_layernorm.weight"], a.rms_eps)
+            xn = RMSNorm(x, sd[f"{p}.post_attention_layernorm.weight"], a.rms_eps)
 
             x  = x + self._ffn(xn, i)
             new_caches.append(new_cache)
 
-        x = _rms_norm(x, sd["model.norm.weight"], a.rms_eps)
+        x = RMSNorm(x, sd["model.norm.weight"], a.rms_eps)
         logits = (x @ sd["model.embed_tokens.weight"].T).unsqueeze(0)
 
         return {"logits": logits, "kv_caches": new_caches}
