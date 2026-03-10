@@ -50,11 +50,7 @@ IM_START = tokenizer.token_to_id("<|im_start|>")
 IM_END = tokenizer.token_to_id("<|im_end|>")
 EOS = tokenizer.token_to_id("<|endoftext|>")
 
-# Precompute common token id sequences to avoid repeated tokenization
-SYSTEM_IDS = encode(f"system\n{SYSTEM}")
-USER_PREFIX_IDS = encode("user\n")
-ASSISTANT_PREFIX_IDS = encode("assistant\n")
-NEWLINE_IDS = encode("\n")
+# (SYSTEM_IDS and prefixes are computed after SYSTEM and encode() are defined)
 
 def encode(text: str) -> list[int]:
     return tokenizer.encode(text, add_special_tokens=False).ids
@@ -84,6 +80,12 @@ SYSTEM = (
     "You're part of EaSync and created by Nortify Inc. Provide clear answers, offer multiple options when relevant, "
     "and avoid unnecessary repetition. When asked for reasoning, be concise and structured."
 )
+
+# Precompute common token id sequences to avoid repeated tokenization
+SYSTEM_IDS = encode(f"system\n{SYSTEM}")
+USER_PREFIX_IDS = encode("user\n")
+ASSISTANT_PREFIX_IDS = encode("assistant\n")
+NEWLINE_IDS = encode("\n")
 
 def build_tokens(history: list[tuple[str, str]], user_msg: str) -> torch.Tensor:
     ids = []
