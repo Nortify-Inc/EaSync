@@ -27,13 +27,14 @@ def load_module(name: str, path: Path):
 from tokenizers import Tokenizer
 from tokenizers.processors import TemplateProcessing
 
-tok_path = HERE / "tokenizer.json"
+# use shared tokenizer in lib/ai/data
+tok_path = HERE.parent / "data" / "tokenizer.json"
 if not tok_path.exists():
     raise FileNotFoundError(tok_path)
 
 tokenizer = Tokenizer.from_file(str(tok_path))
 
-with open(HERE / "tokenizer_config.json") as f:
+with open(HERE.parent / "data" / "tokenizer_config.json") as f:
     tok_cfg = json.load(f)
 
 IM_START = tokenizer.token_to_id("<|im_start|>")
@@ -47,7 +48,10 @@ def decode(ids: list[int]) -> str:
     return tokenizer.decode(ids, skip_special_tokens=False)
 
 model_mod = load_module("sglm", HERE / "SGLM.py")
-model     = model_mod.SGLM.load(HERE / "model.safetensors", device=cli.device)
+model_path = HERE.parent / "data" / "model.safetensors"
+if not model_path.exists():
+    model_path = HERE.parent / "data" / "model"
+model     = model_mod.SGLM.load(model_path, device=cli.device)
 
 SYSTEM = """
 You are Agent, the friendly assistant of the EaSync App created by Nortify Inc.

@@ -1,7 +1,3 @@
-"""
-Qwen2 Language Model — weights loaded directly, no load_state_dict.
-"""
-
 import torch
 import torch.nn.functional as F
 from dataclasses import dataclass
