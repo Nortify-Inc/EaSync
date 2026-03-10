@@ -164,9 +164,9 @@ class _AssistantChatState extends State<AssistantChat>
     if (raw.isEmpty || _sending) return;
     final newChatText = EaI18n.t(context, 'New chat');
 
-    final failedText = EaI18n.t(
+    final noResponseText = EaI18n.t(
       context,
-      'Could not process this command right now. Please try again.',
+      'No response generated. Try rephrasing your request.',
     );
 
     if (_settings.hapticsEnabled) {
@@ -190,7 +190,7 @@ class _AssistantChatState extends State<AssistantChat>
     await _persistState();
     _scrollToBottom();
 
-    String reply = failedText;
+    String reply = '';
     
     if (!mounted) return;
 
@@ -203,6 +203,16 @@ class _AssistantChatState extends State<AssistantChat>
       return;
     }
     _stopThinkingPulse();
+    try {
+      final aiResp = await aiQueryAsync(raw);
+      if (aiResp.trim().isNotEmpty) {
+        reply = aiResp.trim();
+      } else {
+        reply = noResponseText;
+      }
+    } catch (_) {
+      reply = noResponseText;
+    }
     setState(() {
       _typingIndicator = false;
       _sending = false;

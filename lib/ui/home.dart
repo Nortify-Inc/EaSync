@@ -8,6 +8,7 @@
 
 import 'dart:ui';
 
+import 'package:easync/ui/assistant_chat.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
@@ -31,6 +32,7 @@ class _HomeState extends State<Home> {
     'Dashboard',
     'Profiles',
     'Manage',
+    'Assistant',
     'Account',
   ];
 
@@ -38,6 +40,7 @@ class _HomeState extends State<Home> {
     Dashboard(),
     Profiles(),
     Manage(),
+    AssistantChat(),
     Account(),
   ];
 

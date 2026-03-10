@@ -107,6 +107,80 @@ DynamicLibrary _openAiLibrary() {
 
 final DynamicLibrary aiLib = _openAiLibrary();
 
+typedef _aiQueryC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _aiQueryDart = int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+
+final _aiQuery = aiLib.lookupFunction<_aiQueryC, _aiQueryDart>('ai_query');
+
+String aiQuery(String prompt) {
+  final input = prompt;
+  final inPtr = input.toNativeUtf8();
+  const outLen = 8192;
+  final outBuf = malloc.allocate<Int8>(outLen);
+  try {
+    print('[Bridge] aiQuery: prompt="${prompt.length > 120 ? prompt.substring(0,120)+"..." : prompt}"');
+    final rc = _aiQuery(nullptr, inPtr, outBuf, outLen);
+    print('[Bridge] aiQuery: rc=$rc');
+    if (rc != 0) {
+      print('[Bridge] aiQuery: native returned error rc=$rc');
+      return '';
+    }
+    final res = outBuf.cast<Utf8>().toDartString();
+    print('[Bridge] aiQuery: result_len=${res.length}');
+    return res;
+  } finally {
+    malloc.free(inPtr);
+    malloc.free(outBuf);
+  }
+}
+
+typedef _aiQueryStartC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+typedef _aiQueryStartDart = int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+
+typedef _aiQueryPollC = Int32 Function(Pointer<Void>, Uint64, Pointer<Uint8>, Pointer<Int8>, Uint32);
+typedef _aiQueryPollDart = int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int);
+
+final _aiQueryStart = aiLib.lookupFunction<_aiQueryStartC, _aiQueryStartDart>('ai_query_async_start');
+final _aiQueryPoll = aiLib.lookupFunction<_aiQueryPollC, _aiQueryPollDart>('ai_query_async_poll');
+
+Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 150}) async {
+  final inPtr = prompt.toNativeUtf8();
+  final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
+  try {
+    print('[Bridge] aiQueryAsync: starting prompt="${prompt.length > 120 ? prompt.substring(0,120)+"..." : prompt}"');
+    final rc = _aiQueryStart(nullptr, inPtr, handlePtr);
+    print('[Bridge] aiQueryAsync: start rc=$rc');
+    if (rc != 0) {
+      print('[Bridge] aiQueryAsync: start failed rc=$rc');
+      return '';
+    }
+    final handle = handlePtr.value;
+    print('[Bridge] aiQueryAsync: handle=$handle');
+    final outLen = 8192;
+    final outBuf = malloc.allocate<Int8>(outLen);
+    final finishedFlag = malloc.allocate<Uint8>(1);
+    try {
+      while (true) {
+        final pollRc = _aiQueryPoll(nullptr, handle, finishedFlag, outBuf, outLen);
+        print('[Bridge] aiQueryAsync: pollRc=$pollRc finished=${finishedFlag.value}');
+        if (pollRc == 0) {
+          final res = outBuf.cast<Utf8>().toDartString();
+          print('[Bridge] aiQueryAsync: got result len=${res.length}');
+          return res;
+        }
+        // not ready yet: sleep and retry
+        await Future.delayed(Duration(milliseconds: pollIntervalMs));
+      }
+    } finally {
+      malloc.free(outBuf);
+      malloc.free(finishedFlag);
+    }
+  } finally {
+    malloc.free(inPtr);
+    malloc.free(handlePtr);
+  }
+}
+
 const String CORE_API_VERSION = "0.0.1";
 
 const int CORE_MAX_CAPS = 16;

@@ -24,6 +24,13 @@ int ai_model_execute_command_async_poll(void *ctx, uint64_t handle, bool *finish
 int ai_get_annotations(void *ctx, char *outBuf, uint32_t outLen);
 int ai_learning_snapshot(void *ctx, char *outBuf, uint32_t outLen);
 
+// Single exported query function. Return 0 on success, negative on error.
+int ai_query(void *ctx, const char *inputJson, char *outBuf, uint32_t outLen);
+
+// Async start/poll API. Start returns 0 and outputs a handle via outHandle.
+int ai_query_async_start(void *ctx, const char *inputJson, uint64_t *outHandle);
+int ai_query_async_poll(void *ctx, uint64_t handle, bool *finished, char *outBuf, uint32_t outLen);
+
 // Permissions / telemetry hooks (opaque pointers for ABI compatibility)
 int ai_set_permissions(void *ctx, void *perms);
 int ai_get_permissions(void *ctx, void *perms);

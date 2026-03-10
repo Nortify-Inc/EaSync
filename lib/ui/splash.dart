@@ -102,7 +102,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         ),
         SizedBox(width: 6),
         Text(
-          "Nortify",
+          "alibaba",
           style: EaText.primary.copyWith(
             color: EaAdaptiveColor.bodyText(context),
           ),

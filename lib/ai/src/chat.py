@@ -8,16 +8,17 @@ import torch
 import torch.nn.functional as F
 
 # Configuration constants (tweak here instead of CLI params)
+# Defaults chosen to favor speed on CPU
 DEVICE = "cpu"
-MAX_NEW_TOKENS = 256
+MAX_NEW_TOKENS = 128
 TEMPERATURE = 0.7
-TOP_K = 40
-TOP_P = 0.9
+TOP_K = 20
+TOP_P = 0.95
 REPETITION_PENALTY = 1.1
 NUM_RETURN_SEQUENCES = 1
 SELF_CONSISTENCY_N = 1
-USE_BEAM_SEARCH = True
-BEAM_WIDTH = 3
+USE_BEAM_SEARCH = False
+BEAM_WIDTH = 2
 LENGTH_PENALTY = 1.0
 SEMANTIC_RERANKING = True
 SEMANTIC_ALPHA = 0.6
@@ -49,6 +50,12 @@ with open(HERE.parent / "data" / "tokenizer_config.json") as f:
 IM_START = tokenizer.token_to_id("<|im_start|>")
 IM_END   = tokenizer.token_to_id("<|im_end|>")
 EOS      = tokenizer.token_to_id("<|endoftext|>")
+
+# Precompute common token id sequences to avoid repeated tokenization
+SYSTEM_IDS = encode(f"system\n{SYSTEM}")
+USER_PREFIX_IDS = encode("user\n")
+ASSISTANT_PREFIX_IDS = encode("assistant\n")
+NEWLINE_IDS = encode("\n")
 
 def encode(text: str) -> list[int]:
     return tokenizer.encode(text, add_special_tokens=False).ids
@@ -92,15 +99,15 @@ SYSTEM = (
 def build_tokens(history: list[tuple[str, str]], user_msg: str) -> torch.Tensor:
     ids = []
 
-    ids += [IM_START] + encode(f"system\n{SYSTEM}") + [IM_END] + encode("\n")
+    ids += [IM_START] + SYSTEM_IDS + [IM_END] + NEWLINE_IDS
 
     for u, a in history:
-        ids += [IM_START] + encode(f"user\n{u}") + [IM_END] + encode("\n")
-        ids += [IM_START] + encode(f"assistant\n{a}") + [IM_END] + encode("\n")
+        ids += [IM_START] + USER_PREFIX_IDS + encode(u) + [IM_END] + NEWLINE_IDS
+        ids += [IM_START] + ASSISTANT_PREFIX_IDS + encode(a) + [IM_END] + NEWLINE_IDS
 
-    ids += [IM_START] + encode(f"user\n{user_msg}") + [IM_END] + encode("\n")
+    ids += [IM_START] + USER_PREFIX_IDS + encode(user_msg) + [IM_END] + NEWLINE_IDS
 
-    ids += [IM_START] + encode("assistant\n")
+    ids += [IM_START] + ASSISTANT_PREFIX_IDS
 
     return torch.tensor([ids], dtype=torch.long, device=DEVICE)
 
