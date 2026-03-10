@@ -14,39 +14,55 @@ import os
 from SGLM import SGLM, Generator
 import torch
 import sentencepiece as spm
+try:
+    from tokenizers import Tokenizer as HFTokenizer
+except Exception:
+    HFTokenizer = None
 from pathlib import Path
-
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--prompt', required=True)
-    parser.add_argument('--weights', required=False)
-    parser.add_argument('--tokenizer', required=False, help='path to SentencePiece tokenizer.model')
-    parser.add_argument('--max_tokens', type=int, default=50)
-    parser.add_argument('--decoding_method', type=str, default='typical', help="'typical','sample','greedy'")
-    parser.add_argument('--temperature', type=float, default=0.6)
-    parser.add_argument('--top_k', type=int, default=40)
-    parser.add_argument('--top_p', type=float, default=0.9)
-    parser.add_argument('--repetition_penalty', type=float, default=1.2)
-    parser.add_argument('--ban_ngram', type=int, default=4)
-    parser.add_argument('--typical_p', type=float, default=0.95)
-    parser.add_argument('--entropy_target', type=float, default=None)
-    parser.add_argument('--entropy_lr', type=float, default=0.1)
     args = parser.parse_args()
 
-    # Load tokenizer from ai/data (SentencePiece) and create model with matching vocab
-    tokenizer_path = Path(args.tokenizer) if args.tokenizer else Path(__file__).resolve().parents[1] / "data" / "tokenizer.model"
-    if not tokenizer_path.exists():
-        print(json.dumps({"result": "error", "message": f"Tokenizer not found: {tokenizer_path}"}))
-        sys.exit(1)
+    # single-argument mode: decoding and file paths are fixed defaults
+    max_tokens = 50
+    decoding_method = 'typical'
+    temperature = 0.6
+    top_k = 40
+    top_p = 0.9
+    repetition_penalty = 1.2
+    ban_ngram = 4
+    typical_p = 0.95
+    entropy_target = None
+    entropy_lr = 0.1
 
-    tokenizer = spm.SentencePieceProcessor()
-    ok = tokenizer.load(str(tokenizer_path))
-    if not ok:
-        print(json.dumps({"result": "error", "message": "Failed to load tokenizer"}))
-        sys.exit(1)
+    # Prefer HF Tokenizer (`tokenizer.json`) from lib/ai/data for chat-style formatting
+    data_dir = Path(__file__).resolve().parents[1] / "data"
+    hf_tok_path = data_dir / "tokenizer.json"
+    sp_tok_path = Path(args.tokenizer) if args.tokenizer else data_dir / "tokenizer.model"
 
-    vocab_size = tokenizer.get_piece_size()
+    hf_tokenizer = None
+    tokenizer = None
+    vocab_size = None
+
+    if hf_tok_path.exists() and HFTokenizer is not None:
+        try:
+            hf_tokenizer = HFTokenizer.from_file(str(hf_tok_path))
+            vocab_size = hf_tokenizer.get_vocab_size()
+        except Exception:
+            hf_tokenizer = None
+
+    if hf_tokenizer is None:
+        if not sp_tok_path.exists():
+            print(json.dumps({"result": "error", "message": f"Tokenizer not found: {sp_tok_path} or {hf_tok_path}"}))
+            sys.exit(1)
+        tokenizer = spm.SentencePieceProcessor()
+        ok = tokenizer.load(str(sp_tok_path))
+        if not ok:
+            print(json.dumps({"result": "error", "message": "Failed to load SentencePiece tokenizer"}))
+            sys.exit(1)
+        vocab_size = tokenizer.get_piece_size()
     # instantiate model with same architecture used during training (matches train.py)
     model = SGLM(vocab_size, dim=256, layers=6, heads=8, kvHeads=2)
     device = torch.device('cpu')
@@ -164,16 +180,55 @@ def main():
     gen = Generator(model, device=device)
 
     # Use SentencePiece tokenizer for tokenization/detokenization
-    def tokenize(text):
-        ids = tokenizer.encode(text)
-        return ids
+    # Provide a chat-style token builder if HF tokenizer is available
+    SYSTEM = """
+You are Agent, the friendly assistant of the EaSync App.
+Be concise, helpful and avoid fabricating personal data.
+"""
 
-    def detokenize(ids):
+    def tokenize_sp(text):
+        return tokenizer.encode(text)
+
+    def detokenize_sp(ids):
         try:
             return tokenizer.decode(ids)
         except Exception:
             pieces = [tokenizer.id_to_piece(int(i)) for i in ids]
             return ''.join(pieces)
+
+    def build_chat_tokens(user_text):
+        # build tokens similar to `chat.py` using HF tokenizer special tokens
+        im_start = None
+        im_end = None
+        eos = None
+        try:
+            im_start = hf_tokenizer.token_to_id("<|im_start|>")
+            im_end = hf_tokenizer.token_to_id("<|im_end|>")
+            eos = hf_tokenizer.token_to_id("<|endoftext|>")
+        except Exception:
+            # fallback to None
+            pass
+
+        pieces = []
+        if hf_tokenizer is not None and im_start is not None:
+            pieces += [im_start] + hf_tokenizer.encode(f"system\n{SYSTEM}").ids + [im_end]
+            pieces += hf_tokenizer.encode("\n").ids
+            pieces += [im_start] + hf_tokenizer.encode(f"user\n{user_text}").ids + [im_end]
+            pieces += hf_tokenizer.encode("\n").ids
+            pieces += [im_start] + hf_tokenizer.encode("assistant\n").ids
+            return pieces
+        else:
+            # fallback to simple SentencePiece formatting
+            text = "<bos> <sep> user: " + user_text + " <eos>"
+            return tokenize_sp(text)
+
+    def detokenize(ids):
+        if hf_tokenizer is not None:
+            try:
+                return hf_tokenizer.decode(ids, skip_special_tokens=True)
+            except Exception:
+                pass
+        return detokenize_sp(ids)
 
     # Role-aware history formatting helper
     def format_dialogue(history, user_text):
@@ -193,7 +248,11 @@ def main():
         pieces.append("<eos>")
         return "".join(pieces)
 
-    seed_ids = tokenize(args.prompt)
+    # build seed ids using chat-style tokens when available
+    if hf_tokenizer is not None:
+        seed_ids = build_chat_tokens(args.prompt)
+    else:
+        seed_ids = tokenize_sp(args.prompt)
     if len(seed_ids) == 0:
         seed_ids = [0]
 
