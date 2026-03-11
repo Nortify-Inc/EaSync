@@ -202,13 +202,11 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       return;
     }
 
-    // Add an assistant placeholder so we can stream partial replies into it
-    setState(() {
-      session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
-    });
-
+    // Show a global thinking indicator while waiting for the first token.
+    // Do NOT create an empty assistant message yet (avoids the empty bubble).
     try {
       final stream = aiQueryStream(raw);
+      var firstChunk = true;
       await for (final chunk in stream) {
         if (!_canUpdateUi) break;
         var text = chunk.toString();
@@ -217,30 +215,34 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
         text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
         if (text.isEmpty) continue;
 
-        if (text.isEmpty) continue;
+        if (firstChunk) {
+          // Create the assistant message with the first token and remove the
+          // thinking indicator immediately so the typewriter effect begins.
+          setState(() {
+            session.messages.add(_ChatMessage(role: _Role.assistant, text: text));
+            _typingIndicator = false;
+          });
+          _stopThinkingPulse();
+          firstChunk = false;
+          _scrollToBottom();
+          continue;
+        }
 
+        // Merge subsequent chunks into the last assistant message using
+        // overlap detection to avoid accidental duplication.
         setState(() {
-          // Merge incoming chunk into the last assistant message using
-          // overlap detection to avoid accidental duplication when the
-          // native side sends cumulative decodes or partial deltas.
           for (int i = session.messages.length - 1; i >= 0; --i) {
             if (session.messages[i].role == _Role.assistant) {
               final prev = session.messages[i].text;
               String merged;
 
-              // If identical, nothing to do.
               if (text == prev) {
                 merged = prev;
               } else if (text.length >= prev.length && text.startsWith(prev)) {
-                // incoming is cumulative (starts with previous): replace
                 merged = text;
               } else if (text.contains(prev)) {
-                // incoming contains previous text somewhere: use incoming
                 merged = text;
               } else {
-                // Find largest overlap where a suffix of `prev` matches a
-                // prefix of `text`, then append only the non-overlapping
-                // tail from `text` to avoid duplicated fragments.
                 final int maxOverlap = prev.length < text.length ? prev.length : text.length;
                 int overlap = 0;
                 for (int k = maxOverlap; k > 0; --k) {
@@ -360,7 +362,11 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                               ),
                             ),
                             const Spacer(),
-                            // Typing indicator moved inline under assistant messages.
+                            if (_typingIndicator)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: _smallTypingIndicator(),
+                              ),
                           ],
                         ),
                       ),
