@@ -4,6 +4,8 @@ const _kModelDataUrl =
     'https://github.com/Nortify-Inc/EaSync/releases/download/v1.0.0-beta/model.onnx.data';
 
 const _kBundledAssets = [
+  'lib/ai/data/model.q4_0.bin',
+  'lib/ai/data/model.quant.onnx',
   'lib/ai/data/model.onnx',
   'lib/ai/data/tokenizer.json',
 ];
@@ -122,10 +124,15 @@ class Downloader {
         message: 'Loading model…',
       );
 
-      final rcSet = aiSetDataDir?.call(
-        dir.path as Pointer<Void>,
-        dir.path.toNativeUtf8(),
-      );
+
+
+      final pathPtr = dir.path.toNativeUtf8();
+      int? rcSet;
+      try {
+        rcSet = aiSetDataDir?.call(nullptr, pathPtr);
+      } finally {
+        malloc.free(pathPtr);
+      }
       debugPrint('[Downloader] ai_set_data_dir rc=$rcSet path=${dir.path}');
 
       final _ = await Future<bool>(() async {
@@ -140,7 +147,6 @@ class Downloader {
           return false;
         }
       });
-
       yield const DownloadState(
         status: DownloadStatus.ready,
         progress: 1.0,
