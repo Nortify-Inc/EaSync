@@ -47,6 +47,16 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       } catch (_) {}
     }
 
+    // While still on the splash screen, await the native AI model/tokenizer
+    // preload so its logs appear during splash. Don't block indefinitely;
+    // timeout after 30s and continue to Home.
+    try {
+      await Bridge.modelReady.timeout(const Duration(seconds: 30));
+      debugPrint('[splash] AI model preloaded during splash');
+    } catch (e) {
+      debugPrint('[splash] AI model preload timed out/failed: $e');
+    }
+
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
@@ -102,7 +112,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         ),
         SizedBox(width: 6),
         Text(
-          "alibaba",
+          "Nortify",
           style: EaText.primary.copyWith(
             color: EaAdaptiveColor.bodyText(context),
           ),
