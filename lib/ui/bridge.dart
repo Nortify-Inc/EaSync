@@ -1059,14 +1059,28 @@ class Bridge {
     }
 
     // Preload AI tokenizer/model so streaming can start immediately.
+    // Expose a future `modelReady` that completes when the native
+    // ai_initialize has finished (or immediately if not available).
+    if (_modelReadyCompleter == null) {
+      _modelReadyCompleter = Completer<void>();
+    }
     if (_aiInitialize != null) {
-      try {
-        _log('core', 'Preloading AI model...');
-        final rc = _aiInitialize!(_ctx!);
-        _log('core', 'ai_initialize returned $rc');
-      } catch (e) {
-        _log('core', 'ai_initialize failed: $e');
-      }
+      // Run initialization off the UI microtask queue so init() can finish
+      // quickly while still allowing callers to await `modelReady`.
+      Future<void>(() {
+        try {
+          _log('core', 'Preloading AI model...');
+          final rc = _aiInitialize!(_ctx!);
+          _log('core', 'ai_initialize returned $rc');
+        } catch (e) {
+          _log('core', 'ai_initialize failed: $e');
+        } finally {
+          if (!(_modelReadyCompleter?.isCompleted ?? true)) _modelReadyCompleter?.complete();
+        }
+      });
+    } else {
+      // No ai_initialize exported; mark ready immediately.
+      if (!(_modelReadyCompleter?.isCompleted ?? true)) _modelReadyCompleter?.complete();
     }
 
     if (_enableAutoSimulation) {
@@ -1100,6 +1114,15 @@ class Bridge {
       _ctx = null;
       _ready = false;
     }
+  }
+
+  /// Future that completes when the AI model/tokenizer has been preloaded
+  /// in the native library. Callers can await this to ensure the model is
+  /// ready before making streaming requests.
+  static Completer<void>? _modelReadyCompleter;
+  static Future<void> get modelReady async {
+    if (_modelReadyCompleter == null) return Future<void>.value();
+    return _modelReadyCompleter!.future;
   }
 
   static void registerDevice({

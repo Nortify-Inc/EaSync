@@ -31,6 +31,15 @@ void main() async {
     debugPrint('[boot] Bridge init skipped/timed out: $e');
   }
 
+  // Ensure AI model is preloaded before showing the UI. This waits for the
+  // native `ai_initialize` to finish but does not crash if it times out.
+  try {
+    await Bridge.modelReady.timeout(const Duration(seconds: 30));
+    debugPrint('[boot] AI model preloaded');
+  } catch (e) {
+    debugPrint('[boot] AI model preload timed out or failed: $e');
+  }
+
   try {
     await EaAppSettings.instance.load().timeout(const Duration(seconds: 4));
   } catch (e) {
