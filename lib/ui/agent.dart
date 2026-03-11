@@ -211,12 +211,51 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       final stream = aiQueryStream(raw);
       await for (final chunk in stream) {
         if (!_canUpdateUi) break;
-        final text = chunk.toString();
+        var text = chunk.toString();
+        // Strip leading replacement characters and control bytes that
+        // may survive decoding, to avoid showing the strange box glyph.
+        text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
+        if (text.isEmpty) continue;
+
+        if (text.isEmpty) continue;
 
         setState(() {
+          // Merge incoming chunk into the last assistant message using
+          // overlap detection to avoid accidental duplication when the
+          // native side sends cumulative decodes or partial deltas.
           for (int i = session.messages.length - 1; i >= 0; --i) {
             if (session.messages[i].role == _Role.assistant) {
-              session.messages[i] = _ChatMessage(role: _Role.assistant, text: text);
+              final prev = session.messages[i].text;
+              String merged;
+
+              // If identical, nothing to do.
+              if (text == prev) {
+                merged = prev;
+              } else if (text.length >= prev.length && text.startsWith(prev)) {
+                // incoming is cumulative (starts with previous): replace
+                merged = text;
+              } else if (text.contains(prev)) {
+                // incoming contains previous text somewhere: use incoming
+                merged = text;
+              } else {
+                // Find largest overlap where a suffix of `prev` matches a
+                // prefix of `text`, then append only the non-overlapping
+                // tail from `text` to avoid duplicated fragments.
+                final int maxOverlap = prev.length < text.length ? prev.length : text.length;
+                int overlap = 0;
+                for (int k = maxOverlap; k > 0; --k) {
+                  if (prev.substring(prev.length - k) == text.substring(0, k)) {
+                    overlap = k;
+                    break;
+                  }
+                }
+                merged = prev + text.substring(overlap);
+              }
+
+              session.messages[i] = _ChatMessage(
+                role: _Role.assistant,
+                text: merged,
+              );
               break;
             }
           }
@@ -321,25 +360,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                               ),
                             ),
                             const Spacer(),
-                            if (_typingIndicator)
-                              EaBlurFadeIn(
-                                duration: const Duration(milliseconds: 140),
-                                beginBlur: 4,
-                                child: FadeTransition(
-                                  opacity: CurvedAnimation(
-                                    parent: _thinkingPulse,
-                                    curve: Curves.easeInOut,
-                                  ),
-                                  child: Text(
-                                    EaI18n.t(context, 'Thinking...'),
-                                    style: EaText.small.copyWith(
-                                      color: EaAdaptiveColor.secondaryText(
-                                        context,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                            // Typing indicator moved inline under assistant messages.
                           ],
                         ),
                       ),
@@ -557,12 +578,8 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(12),
-      itemCount: messages.length + (_typingIndicator ? 1 : 0),
+      itemCount: messages.length,
       itemBuilder: (context, i) {
-        if (_typingIndicator && i == messages.length) {
-          return _thinkingBubble();
-        }
-
         final msg = messages[i];
         final user = msg.role == _Role.user;
 
@@ -570,6 +587,9 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
           builder: (context, constraints) {
             final bubbleMax = max(120.0, constraints.maxWidth - 82);
 
+            // Render message bubble; if this is the last assistant message and
+            // the typing indicator is active, render a small typing indicator
+            // under the bubble to create a "typing" effect.
             return Align(
               alignment: user ? Alignment.centerRight : Alignment.centerLeft,
               child: Row(
@@ -581,28 +601,40 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                   if (!user) _assistantAvatar(),
                   if (!user) const SizedBox(width: 8),
                   Flexible(
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      constraints: BoxConstraints(maxWidth: bubbleMax),
-                      decoration: BoxDecoration(
-                        color: user
-                            ? EaColor.fore.withValues(alpha: 0.18)
-                            : EaAdaptiveColor.field(context),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: EaAdaptiveColor.border(context),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          constraints: BoxConstraints(maxWidth: bubbleMax),
+                          decoration: BoxDecoration(
+                            color: user
+                                ? EaColor.fore.withValues(alpha: 0.18)
+                                : EaAdaptiveColor.field(context),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: EaAdaptiveColor.border(context),
+                            ),
+                          ),
+                          child: Text(
+                            msg.text,
+                            style: EaText.small.copyWith(
+                              color: EaAdaptiveColor.bodyText(context),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        msg.text,
-                        style: EaText.small.copyWith(
-                          color: EaAdaptiveColor.bodyText(context),
-                        ),
-                      ),
+                        // Small inline typing indicator for assistant only and
+                        // only when this is the last message.
+                        if (!user && _typingIndicator && i == messages.length - 1)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6, top: 2),
+                            child: _smallTypingIndicator(),
+                          ),
+                      ],
                     ),
                   ),
                   if (user) const SizedBox(width: 8),
@@ -616,45 +648,35 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     );
   }
 
-  Widget _thinkingBubble() {
+  // _thinkingBubble was removed in favor of a smaller inline indicator.
+
+  Widget _smallTypingIndicator() {
     return AnimatedBuilder(
       animation: _thinkingPulse,
       builder: (context, _) {
-        const glyphs = <String>['⠁', '⠃', '⠇', '⠧'];
-        final frame =
-            (_thinkingPulse.value * glyphs.length).floor() % glyphs.length;
-        final text = '${EaI18n.t(context, 'Thinking...')} ${glyphs[frame]}';
-
-        return Align(
-          alignment: Alignment.centerLeft,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              _assistantAvatar(),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: EaAdaptiveColor.field(context),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: EaAdaptiveColor.border(context)),
-                  ),
-                  child: Text(
-                    text,
-                    style: EaText.small.copyWith(
-                      color: EaAdaptiveColor.bodyText(context),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+        const dots = ['.', '..', '...'];
+        final idx = (_thinkingPulse.value * dots.length).floor() % dots.length;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 6,
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.secondaryText(context).withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                dots[idx],
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

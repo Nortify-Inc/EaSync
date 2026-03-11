@@ -108,6 +108,17 @@ DynamicLibrary _openAiLibrary() {
 
 final DynamicLibrary aiLib = _openAiLibrary();
 
+// Sanitize chunks received from native code to remove leading replacement
+// characters or control bytes that may arise from partial/invalid UTF-8.
+String _sanitizeChunk(String s) {
+  if (s.isEmpty) return s;
+  // Remove leading Unicode replacement characters (U+FFFD)
+  s = s.replaceFirst(RegExp(r'^\uFFFD+'), '');
+  // Remove leading ASCII control chars except common whitespace (tab/newline)
+  s = s.replaceFirst(RegExp(r'^[\x00-\x08\x0B\x0C\x0E-\x1F]+'), '');
+  return s;
+}
+
 typedef _aiQueryC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _aiQueryDart =
@@ -292,21 +303,22 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
       final outBuf = malloc.allocate<Int8>(outLen);
       final finishedFlag = malloc.allocate<Uint8>(1);
       try {
-        while (true) {
-          final pollRc = _aiQueryPollLocal(nullptr, handle, finishedFlag, outBuf, outLen);
-          final res = outBuf.cast<Utf8>().toDartString();
-          if (pollRc == 1) {
-            reply.send({'chunk': res});
-            // continue streaming
-            await Future.delayed(Duration(milliseconds: pollIntervalMs));
-            continue;
-          }
-          if (pollRc == 0) {
-            // final chunk
-            reply.send({'chunk': res});
-            reply.send({'done': true});
-            return;
-          }
+          while (true) {
+              final pollRc = _aiQueryPollLocal(nullptr, handle, finishedFlag, outBuf, outLen);
+              final resRaw = outBuf.cast<Utf8>().toDartString();
+              final res = _sanitizeChunk(resRaw);
+              if (pollRc == 1) {
+                reply.send({'chunk': res});
+                // continue streaming
+                await Future.delayed(Duration(milliseconds: pollIntervalMs));
+                continue;
+              }
+              if (pollRc == 0) {
+                // final chunk
+                reply.send({'chunk': res});
+                reply.send({'done': true});
+                return;
+              }
           // not ready: wait
           await Future.delayed(Duration(milliseconds: pollIntervalMs));
         }

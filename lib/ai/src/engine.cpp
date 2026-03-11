@@ -304,11 +304,25 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
             generated.push_back(token_id);
             ++token_counter;
 
-            if (token_counter % DECODE_EVERY == 0) {
+                if (token_counter % DECODE_EVERY == 0) {
                 std::string cur = g_tokenizer->decode(generated);
                 std::lock_guard<std::mutex> lk(g_jobs_mutex);
                 auto it = g_jobs.find(id);
-                if (it != g_jobs.end()) it->second.buf = cur;
+                if (it != g_jobs.end()) {
+                    // If the tokenizer returned a cumulative string that
+                    // starts with our existing buffer, append only the
+                    // new tail to preserve job.pos semantics and avoid
+                    // copying from mid-codepoint when buffers change.
+                    std::string &old = it->second.buf;
+                    if (!old.empty() && cur.size() >= old.size() && cur.rfind(old, 0) == 0) {
+                        old.append(cur.substr(old.size()));
+                    } else {
+                        // Otherwise replace full buffer and reset pos to 0
+                        // to ensure readers don't use stale indices.
+                        old = cur;
+                        it->second.pos = 0;
+                    }
+                }
             }
         };
 
@@ -327,7 +341,14 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
             if (it2 != g_jobs.end()) {
                 // ensure final decoded text is available
                 try {
-                    it2->second.buf = g_tokenizer->decode(generated);
+                    std::string finalDec = g_tokenizer->decode(generated);
+                    std::string &old = it2->second.buf;
+                    if (!old.empty() && finalDec.size() >= old.size() && finalDec.rfind(old, 0) == 0) {
+                        old.append(finalDec.substr(old.size()));
+                    } else {
+                        old = finalDec;
+                        it2->second.pos = 0;
+                    }
                 } catch (...) {}
                 it2->second.finished = true;
             }
@@ -354,11 +375,14 @@ int ai_query_async_poll(void* /*ctx*/, uint64_t handle, bool* finished,
         if (job.finished) {
             *finished = true;
             // nothing to send, remove job
+            // clear outBuf to avoid returning stale data
+            if (outBuf && outLen > 0) outBuf[0] = '\0';
             g_jobs.erase(it);
             return 0;
         }
-        // not ready and no data yet
+        // not ready and no data yet: clear outBuf so caller doesn't reuse old data
         *finished = false;
+        if (outBuf && outLen > 0) outBuf[0] = '\0';
         return 1; // indicate partial/not-ready
     }
 
