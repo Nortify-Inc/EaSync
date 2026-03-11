@@ -1,3 +1,9 @@
+/*
+ * SGLM.cpp
+ * ────────
+ * Implementação do engine SGLM com ONNX Runtime.
+ */
+
 #include "SGLM.hpp"
 
 #include <algorithm>
@@ -5,6 +11,9 @@
 #include <numeric>
 #include <stdexcept>
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  Construtor
+// ─────────────────────────────────────────────────────────────────────────────
 SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
     : env_(cfg.verbose ? ORT_LOGGING_LEVEL_VERBOSE : ORT_LOGGING_LEVEL_WARNING,
            "SGLM"),
@@ -15,18 +24,36 @@ SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
     opts.SetInterOpNumThreads(cfg.inter_op_threads);
     opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
+    // Habilita memory-mapped loading para o .onnx.data externo (modelo grande)
+    opts.AddConfigEntry("session.use_env_allocators", "1");
 
+#ifdef ORT_WITH_CUDA
+    if (cfg.use_gpu) {
+        OrtCUDAProviderOptions cuda_opts{};
+        cuda_opts.device_id = cfg.cuda_device_id;
+        opts.AppendExecutionProvider_CUDA(cuda_opts);
+    }
+#endif
 
     session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), opts);
 
+    // vocab_size = último dim do output [1, T, vocab_size]
     auto out_info  = session_->GetOutputTypeInfo(0).GetTensorTypeAndShapeInfo();
     auto out_shape = out_info.GetShape();
     if (out_shape.size() < 3)
         throw std::runtime_error("SGLM: output shape inesperado (esperado rank 3)");
 
     vocab_size_ = out_shape.back();
+    fprintf(stderr, "[SGLM] vocab_size=%lld\n", static_cast<long long>(vocab_size_));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  forward()
+//
+//  Retorna apenas os logits do ÚLTIMO token: shape [vocab_size].
+//  Isso evita alocar T * vocab_size * 4 bytes por step de geração.
+//  Com vocab_size=151936 e float32, o tensor completo seria ~600KB * T por step.
+// ─────────────────────────────────────────────────────────────────────────────
 std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
 {
     if (token_ids.empty())
@@ -52,12 +79,17 @@ std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
         in_names,  &in_tensor, 1,
         out_names, 1);
 
-    const float* data  = outputs[0].GetTensorData<float>();
-    const size_t total = static_cast<size_t>(T * vocab_size_);
+    // output shape: [1, T, vocab_size]
+    // Extrai apenas o último token: offset = (T-1) * vocab_size_
+    const float* data   = outputs[0].GetTensorData<float>();
+    const size_t offset = static_cast<size_t>(T - 1) * static_cast<size_t>(vocab_size_);
 
-    return std::vector<float>(data, data + total);
+    return std::vector<float>(data + offset, data + offset + static_cast<size_t>(vocab_size_));
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  sample() — top-k / top-p
+// ─────────────────────────────────────────────────────────────────────────────
 int64_t SGLM::sample(
     std::vector<float>& logits,
     float temperature,
@@ -67,10 +99,8 @@ int64_t SGLM::sample(
 {
     const size_t V = logits.size();
 
-    // Temperatura
     for (auto& v : logits) v /= (temperature > 0.f ? temperature : 1e-6f);
 
-    // Top-K: mascara tudo abaixo do k-ésimo maior valor
     if (top_k > 0 && static_cast<size_t>(top_k) < V) {
         std::vector<float> tmp(logits);
         std::nth_element(tmp.begin(), tmp.begin() + top_k - 1,
@@ -80,7 +110,6 @@ int64_t SGLM::sample(
             if (v < kth) v = -std::numeric_limits<float>::infinity();
     }
 
-    // Softmax estável
     const float maxv = *std::max_element(logits.begin(), logits.end());
     std::vector<float> probs(V);
     float sum = 0.f;
@@ -90,20 +119,16 @@ int64_t SGLM::sample(
     }
     for (auto& p : probs) p /= sum;
 
-    // Top-P (nucleus sampling)
     if (top_p < 1.f) {
-        // Índices ordenados por probabilidade decrescente
         std::vector<size_t> idx(V);
         std::iota(idx.begin(), idx.end(), 0);
         std::sort(idx.begin(), idx.end(),
                   [&](size_t a, size_t b){ return probs[a] > probs[b]; });
-
         float cum = 0.f;
         for (size_t i = 0; i < V; ++i) {
             if (cum >= top_p) probs[idx[i]] = 0.f;
             else              cum += probs[idx[i]];
         }
-        // Re-normaliza após mascaramento
         sum = 0.f;
         for (const auto& p : probs) sum += p;
         if (sum > 0.f) for (auto& p : probs) p /= sum;
@@ -113,11 +138,13 @@ int64_t SGLM::sample(
     return dist(rng);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  generate()
+// ─────────────────────────────────────────────────────────────────────────────
 std::vector<int64_t> SGLM::generate(
     const std::vector<int64_t>& prompt_ids,
     SGLMGenParams params)
 {
-    // EOS tokens do Qwen2
     constexpr int64_t EOS1 = 151643;
     constexpr int64_t EOS2 = 151645;
 
@@ -126,16 +153,8 @@ std::vector<int64_t> SGLM::generate(
     generated.reserve(static_cast<size_t>(params.max_new_tokens));
 
     for (int step = 0; step < params.max_new_tokens; ++step) {
-        // Forward sobre toda a sequência acumulada
-        auto logits_all = forward(ids);
-
-        // Logits do último token: offset = (T-1) * vocab_size
-        const size_t T      = ids.size();
-        const size_t offset = (T - 1) * static_cast<size_t>(vocab_size_);
-
-        std::vector<float> next_logits(
-            logits_all.begin() + static_cast<std::ptrdiff_t>(offset),
-            logits_all.begin() + static_cast<std::ptrdiff_t>(offset + vocab_size_));
+        // forward() já retorna apenas os logits do último token [vocab_size]
+        auto next_logits = forward(ids);
 
         const int64_t token_id = sample(
             next_logits,
