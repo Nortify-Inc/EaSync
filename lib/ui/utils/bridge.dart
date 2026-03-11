@@ -177,7 +177,9 @@ typedef _aiInitializeDart = int Function(Pointer<Void>);
 
 final aiInitialize = (() {
   try {
-    return aiLib.lookupFunction<_aiInitializeC, _aiInitializeDart>('ai_initialize');
+    return aiLib.lookupFunction<_aiInitializeC, _aiInitializeDart>(
+      'ai_initialize',
+    );
   } catch (_) {
     return null;
   }
@@ -188,21 +190,26 @@ typedef _aiSetDataDirDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
 final aiSetDataDir = (() {
   try {
-    return aiLib.lookupFunction<_aiSetDataDirC, _aiSetDataDirDart>('ai_set_data_dir');
+    return aiLib.lookupFunction<_aiSetDataDirC, _aiSetDataDirDart>(
+      'ai_set_data_dir',
+    );
   } catch (_) {
     return null;
   }
 })();
 
-// Copy packaged AI assets (lib/ai/data/) to app support dir and return path.
 Future<String> _ensureAiAssetsCopied() async {
   final manifest = await rootBundle.loadString('AssetManifest.json');
-  final Map<String, dynamic> map = manifest.isNotEmpty ? Map<String, dynamic>.from(jsonDecode(manifest)) : {};
+  final Map<String, dynamic> map = manifest.isNotEmpty
+      ? Map<String, dynamic>.from(jsonDecode(manifest))
+      : {};
   final entries = map.keys.where((k) => k.startsWith('lib/ai/data/')).toList();
+
   if (entries.isEmpty) return '';
 
   final support = await getApplicationSupportDirectory();
   final outDir = Directory('${support.path}/ai_data');
+
   if (!outDir.existsSync()) outDir.createSync(recursive: true);
 
   for (final assetPath in entries) {
@@ -311,21 +318,33 @@ Stream<String> aiQueryStream(String prompt, {int pollIntervalMs = 50}) {
 Future<void> _aiQueryIsolateEntry(dynamic message) async {
   final args = message as List<dynamic>;
   final SendPort reply = args[0] as SendPort;
-  final String prompt = (args.length > 1 && args[1] != null) ? args[1] as String : '';
-  final int pollIntervalMs = (args.length > 2 && args[2] != null) ? args[2] as int : 150;
+  final String prompt = (args.length > 1 && args[1] != null)
+      ? args[1] as String
+      : '';
+  final int pollIntervalMs = (args.length > 2 && args[2] != null)
+      ? args[2] as int
+      : 150;
 
   try {
     final lib = DynamicLibrary.open('libeasync_ai.so');
 
-    final _aiQueryStartLocal = lib.lookupFunction<
-        Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>),
-        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>)
-    >('ai_query_async_start');
+    final _aiQueryStartLocal = lib
+        .lookupFunction<
+          Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>),
+          int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>)
+        >('ai_query_async_start');
 
-    final _aiQueryPollLocal = lib.lookupFunction<
-        Int32 Function(Pointer<Void>, Uint64, Pointer<Uint8>, Pointer<Int8>, Uint32),
-        int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int)
-    >('ai_query_async_poll');
+    final _aiQueryPollLocal = lib
+        .lookupFunction<
+          Int32 Function(
+            Pointer<Void>,
+            Uint64,
+            Pointer<Uint8>,
+            Pointer<Int8>,
+            Uint32,
+          ),
+          int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int)
+        >('ai_query_async_poll');
 
     final inPtr = prompt.toNativeUtf8();
     final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
@@ -341,22 +360,28 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
       final outBuf = malloc.allocate<Int8>(outLen);
       final finishedFlag = malloc.allocate<Uint8>(1);
       try {
-          while (true) {
-              final pollRc = _aiQueryPollLocal(nullptr, handle, finishedFlag, outBuf, outLen);
-              final resRaw = outBuf.cast<Utf8>().toDartString();
-              final res = _sanitizeChunk(resRaw);
-              if (pollRc == 1) {
-                reply.send({'chunk': res});
-                // continue streaming
-                await Future.delayed(Duration(milliseconds: pollIntervalMs));
-                continue;
-              }
-              if (pollRc == 0) {
-                // final chunk
-                reply.send({'chunk': res});
-                reply.send({'done': true});
-                return;
-              }
+        while (true) {
+          final pollRc = _aiQueryPollLocal(
+            nullptr,
+            handle,
+            finishedFlag,
+            outBuf,
+            outLen,
+          );
+          final resRaw = outBuf.cast<Utf8>().toDartString();
+          final res = _sanitizeChunk(resRaw);
+          if (pollRc == 1) {
+            reply.send({'chunk': res});
+            // continue streaming
+            await Future.delayed(Duration(milliseconds: pollIntervalMs));
+            continue;
+          }
+          if (pollRc == 0) {
+            // final chunk
+            reply.send({'chunk': res});
+            reply.send({'done': true});
+            return;
+          }
           // not ready: wait
           await Future.delayed(Duration(milliseconds: pollIntervalMs));
         }
@@ -1099,36 +1124,39 @@ class Bridge {
     _modelReadyCompleter ??= Completer<void>();
 
     if (aiInitialize != null) {
-
-    Future<void>(() async {
-      try {
+      Future<void>(() async {
         try {
-          final aiDir = await _ensureAiAssetsCopied();
-          if (aiDir.isNotEmpty && aiSetDataDir != null) {
-            final p = aiDir.toNativeUtf8();
-            try {
-              final rcSet = aiSetDataDir!(nullptr, p);
-              _log('core', 'ai_set_data_dir rc=$rcSet path=$aiDir');
-            } finally {
-              malloc.free(p);
+          try {
+            final aiDir = await _ensureAiAssetsCopied();
+            if (aiDir.isNotEmpty && aiSetDataDir != null) {
+              final p = aiDir.toNativeUtf8();
+              try {
+                final rcSet = aiSetDataDir!(nullptr, p);
+                _log('core', 'ai_set_data_dir rc=$rcSet path=$aiDir');
+              } finally {
+                malloc.free(p);
+              }
             }
+          } catch (e) {
+            _log('core', 'ai asset copy failed: $e');
           }
-        } catch (e) {
-          _log('core', 'ai asset copy failed: $e');
-        }
 
-        _log('core', 'Preloading AI model...');
-        final rc = aiInitialize!(_ctx!);
-        _log('core', 'ai_initialize returned $rc');
-      } catch (e) {
-        _log('core', 'ai_initialize failed: $e');
-      } finally {
-        if (!(_modelReadyCompleter?.isCompleted ?? true)) _modelReadyCompleter?.complete();
-      }
-    });
+          _log('core', 'Preloading AI model...');
+
+          final rc = aiInitialize!(_ctx!);
+
+          _log('core', 'ai_initialize returned $rc');
+        } catch (e) {
+          _log('core', 'ai_initialize failed: $e');
+        } finally {
+          if (!(_modelReadyCompleter?.isCompleted ?? true))
+            _modelReadyCompleter?.complete();
+        }
+      });
     } else {
       // No ai_initialize exported; mark ready immediately.
-      if (!(_modelReadyCompleter?.isCompleted ?? true)) _modelReadyCompleter?.complete();
+      if (!(_modelReadyCompleter?.isCompleted ?? true))
+        _modelReadyCompleter?.complete();
     }
 
     if (_enableAutoSimulation) {
@@ -2406,8 +2434,6 @@ class Bridge {
         _protocolConnectionByDevice.remove(uuid);
         _protocolByDevice.remove(uuid);
       }
-    } catch (_) {
-      // swallow errors to avoid crashing native callback
-    }
+    } catch (_) {}
   }
 }

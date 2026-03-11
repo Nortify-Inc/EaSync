@@ -19,6 +19,12 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   late final AnimationController _fadeController;
   late final Animation<double> _fade;
 
+  // AI download state
+  DownloadStatus _aiStatus = DownloadStatus.checking;
+  double _aiProgress = 0.0;
+  String _aiMessage = '';
+  bool _showAiProgress = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,14 +53,17 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       } catch (_) {}
     }
 
-    // While still on the splash screen, await the native AI model/tokenizer
-    // preload so its logs appear during splash. Don't block indefinitely;
-    // timeout after 30s and continue to Home.
-    try {
-      await Bridge.modelReady.timeout(const Duration(seconds: 30));
-      debugPrint('[splash] AI model preloaded during splash');
-    } catch (e) {
-      debugPrint('[splash] AI model preload timed out/failed: $e');
+    // On Android, run the downloader flow instead of waiting on modelReady
+    if (Platform.isAndroid) {
+      await _runAndroidModelSetup();
+    } else {
+      // Desktop/iOS: model is bundled, just wait for preload
+      try {
+        await Bridge.modelReady.timeout(const Duration(seconds: 30));
+        debugPrint('[splash] AI model preloaded during splash');
+      } catch (e) {
+        debugPrint('[splash] AI model preload timed out/failed: $e');
+      }
     }
 
     if (!mounted) return;
@@ -64,34 +73,123 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     );
   }
 
+  Future<void> _runAndroidModelSetup() async {
+    // Check if model already downloaded — skip progress UI if so
+    final ready = await Downloader.isReady();
+    if (ready) {
+      // Still need to set data dir + initialize
+      setState(() {
+        _showAiProgress = true;
+        _aiMessage = 'Loading model…';
+        _aiStatus = DownloadStatus.initializing;
+      });
+    } else {
+      setState(() => _showAiProgress = true);
+    }
+
+    await for (final state in Downloader().ensure()) {
+      if (!mounted) return;
+      setState(() {
+        _aiStatus = state.status;
+        _aiProgress = state.progress;
+        _aiMessage = state.message;
+      });
+
+      if (state.isError) {
+        // Show error briefly then proceed anyway (graceful degradation)
+        await Future.delayed(const Duration(seconds: 2));
+        return;
+      }
+
+      if (state.isDone) return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-
       body: Stack(
         children: [
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
-
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-
                 children: [
                   FadeTransition(opacity: _fade, child: _brand()),
-
                   const SizedBox(height: 48),
-
                   FadeTransition(opacity: _fade, child: _headline()),
-
                   const Spacer(),
+                  if (_showAiProgress)
+                    FadeTransition(opacity: _fade, child: _aiProgressWidget()),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _aiProgressWidget() {
+    final isDownloading = _aiStatus == DownloadStatus.downloading;
+    final isError = _aiStatus == DownloadStatus.error;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (!isError)
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: EaColor.fore,
+                ),
+              ),
+            if (isError)
+              Icon(Icons.error_outline, size: 14, color: Colors.redAccent),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _aiMessage,
+                style: EaText.secondary.copyWith(
+                  color: isError
+                      ? Colors.redAccent
+                      : EaAdaptiveColor.secondaryText(context),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            if (isDownloading)
+              Text(
+                '${(_aiProgress * 100).toStringAsFixed(1)}%',
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                  fontSize: 12,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: isDownloading ? _aiProgress : null,
+            minHeight: 3,
+            backgroundColor: EaAdaptiveColor.secondaryText(
+              context,
+            ).withValues(alpha: 0.15),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              isError ? Colors.redAccent : EaColor.fore,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -144,7 +242,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
                 ),
               ),
             ),
-
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

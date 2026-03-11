@@ -24,14 +24,29 @@ if(NOT DEFINED ORT_INCLUDE OR NOT DEFINED ORT_LIB)
 endif()
 
 if(NOT EXISTS "${ORT_LIB}")
-    message(FATAL_ERROR "libonnxruntime não encontrada: ${ORT_LIB}")
+    # Try to find any matching runtime under ORT_ROOT as a fallback.
+    file(GLOB_RECURSE _FOUND_ORT_SO
+         "${ORT_ROOT}/*libonnxruntime*.so"
+         "${ORT_ROOT}/*libonnxruntime*.dylib")
+    if(_FOUND_ORT_SO)
+        list(GET _FOUND_ORT_SO 0 ORT_LIB_FALLBACK)
+        if(ORT_LIB_FALLBACK)
+        set(ORT_LIB "${ORT_LIB_FALLBACK}")
+        message(STATUS "Found ORT_LIB fallback: ${ORT_LIB}")
+        endif()
+    else()
+        message(WARNING "libonnxruntime não encontrada: ${ORT_LIB}; continuing without imported onnxruntime target. Ensure ONNX runtime .so is packaged into APK jniLibs.")
+        set(ORT_LIB "")
+    endif()
 endif()
 
-add_library(onnxruntime SHARED IMPORTED)
-set_target_properties(onnxruntime PROPERTIES
-    IMPORTED_LOCATION             "${ORT_LIB}"
-    INTERFACE_INCLUDE_DIRECTORIES "${ORT_INCLUDE}"
-)
+if(ORT_LIB)
+    add_library(onnxruntime SHARED IMPORTED)
+    set_target_properties(onnxruntime PROPERTIES
+        IMPORTED_LOCATION             "${ORT_LIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${ORT_INCLUDE}"
+    )
+endif()
 
 add_library(easync_ai SHARED
     src/engine.cpp
@@ -45,10 +60,16 @@ target_include_directories(easync_ai PRIVATE
     ${ORT_INCLUDE}
 )
 
-target_link_libraries(easync_ai PRIVATE
-    onnxruntime
-    Threads::Threads
-)
+if(ORT_LIB)
+    target_link_libraries(easync_ai PRIVATE
+        onnxruntime
+        Threads::Threads
+    )
+else()
+    target_link_libraries(easync_ai PRIVATE
+        Threads::Threads
+    )
+endif()
 
 set_target_properties(easync_ai PROPERTIES
     OUTPUT_NAME easync_ai

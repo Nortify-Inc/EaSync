@@ -1,5 +1,0 @@
-1
-user: hello
-agent: Hi
-user: turn on the lamp
-agent: The lamp is now on.

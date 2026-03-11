@@ -83,8 +83,8 @@ flutter:
     - assets/
     - assets/images/
     - assets/images/mocks/
-    # Package AI model and tokenizer so they are available on-device
-    - lib/ai/data/
+    - lib/ai/data/model.onnx
+    - lib/ai/data/tokenizer.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

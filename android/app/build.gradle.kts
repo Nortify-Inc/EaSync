@@ -1,7 +1,6 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -26,6 +25,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
+        manifestPlaceholders["largeHeap"] = "true"
+
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -33,7 +34,8 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += listOf(
-                    "-DANDROID_STL=c++_shared"
+                    "-DANDROID_STL=c++_shared",
+                    "-DORT_ROOT=${rootDir}/../../lib/thirdParty/onnxruntime-android-1.20.1"
                 )
             }
         }
@@ -50,19 +52,20 @@ android {
             path = file("../../lib/CMakeLists.txt")
         }
     }
+
+    // Inclui libonnxruntime.so no APK para que o app encontre em runtime
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs(
+                listOf("../../lib/thirdParty/onnxruntime-android-1.20.1/jni")
+            )
+        }
+    }
 }
 
 flutter {
     source = "../.."
-    // Use the app's actual Flutter entrypoint
     target = "lib/ui/main.dart"
 }
 
-dependencies {
-    // No Java-level ONNX Runtime dependency required; native code links against
-    // the ONNX Runtime libraries provided via `ORT_ROOT` for native builds.
-}
-
-// If you need to package a prebuilt `libeasync_ai.so`, add a copy task here.
-// Currently the native library is built via CMake (externalNativeBuild), so
-// pre-copying is disabled to avoid duplicate native libs during packaging.
+dependencies {}

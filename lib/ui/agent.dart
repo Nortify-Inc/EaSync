@@ -55,33 +55,35 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
 
   void _startReveal(String sessionId) {
     _revealTimers[sessionId]?.cancel();
-    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 65), (_) {
+    _revealTimers[sessionId] = Timer.periodic(
+      const Duration(milliseconds: 65),
+      (_) {
+        if (!mounted) return;
+        final pending = _pendingBuffers[sessionId] ?? '';
+        if (pending.isEmpty) return;
 
-      if (!mounted) return;
-      final pending = _pendingBuffers[sessionId] ?? '';
-      if (pending.isEmpty) return;
+        final take = 1;
+        final reveal = pending.substring(0, take);
+        _pendingBuffers[sessionId] = pending.substring(reveal.length);
 
-      final take = 1;
-      final reveal = pending.substring(0, take);
-      _pendingBuffers[sessionId] = pending.substring(reveal.length);
+        setState(() {
+          final idx = _sessions.indexWhere((s) => s.id == sessionId);
+          if (idx < 0) return;
+          final session = _sessions[idx];
 
-      setState(() {
-        final idx = _sessions.indexWhere((s) => s.id == sessionId);
-        if (idx < 0) return;
-        final session = _sessions[idx];
-
-        for (int i = session.messages.length - 1; i >= 0; --i) {
-          if (session.messages[i].role == _Role.assistant) {
-            session.messages[i] = _ChatMessage(
-              role: _Role.assistant,
-              text: session.messages[i].text + reveal,
-            );
-            break;
+          for (int i = session.messages.length - 1; i >= 0; --i) {
+            if (session.messages[i].role == _Role.assistant) {
+              session.messages[i] = _ChatMessage(
+                role: _Role.assistant,
+                text: session.messages[i].text + reveal,
+              );
+              break;
+            }
           }
-        }
-      });
-      _scrollToBottom();
-    });
+        });
+        _scrollToBottom();
+      },
+    );
   }
 
   void _stopReveal(String sessionId) {
@@ -204,10 +206,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     if (raw.isEmpty || _sending) return;
     final newChatText = EaI18n.t(context, 'New chat');
 
-    final noResponseText = EaI18n.t(
-      context,
-      'No response generated.',
-    );
+    final noResponseText = EaI18n.t(context, 'No response generated.');
 
     if (_settings.hapticsEnabled) {
       HapticFeedback.lightImpact();
@@ -270,15 +269,12 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
 
           if ((displayed + curPending).isEmpty) {
             _pendingBuffers[sessionId] = text;
-
           } else {
             final existing = displayed + curPending;
             if (text.length >= existing.length && text.startsWith(existing)) {
               _pendingBuffers[sessionId] = text.substring(existing.length);
-
             } else {
               _pendingBuffers[sessionId] = curPending + text;
-
             }
           }
           _startReveal(sessionId);
@@ -288,27 +284,30 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
           continue;
         }
 
-        final displayedMsg = session.messages.isNotEmpty ? session.messages.last.text : '';
+        final displayedMsg = session.messages.isNotEmpty
+            ? session.messages.last.text
+            : '';
         final pendingSoFar = _pendingBuffers[sessionId] ?? '';
         final existing = displayedMsg + pendingSoFar;
 
         if (text.length >= existing.length && text.startsWith(existing)) {
           _pendingBuffers[sessionId] = text.substring(existing.length);
-
         } else {
           _pendingBuffers[sessionId] = pendingSoFar + text;
-          
         }
         _startReveal(sessionId);
       }
 
       final last = session.messages.isNotEmpty ? session.messages.last : null;
-      
+
       if (last == null || last.text.trim().isEmpty) {
         setState(() {
           for (int i = session.messages.length - 1; i >= 0; --i) {
             if (session.messages[i].role == _Role.assistant) {
-              session.messages[i] = _ChatMessage(role: _Role.assistant, text: noResponseText);
+              session.messages[i] = _ChatMessage(
+                role: _Role.assistant,
+                text: noResponseText,
+              );
               break;
             }
           }
@@ -318,7 +317,10 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       setState(() {
         for (int i = session.messages.length - 1; i >= 0; --i) {
           if (session.messages[i].role == _Role.assistant) {
-            session.messages[i] = _ChatMessage(role: _Role.assistant, text: noResponseText);
+            session.messages[i] = _ChatMessage(
+              role: _Role.assistant,
+              text: noResponseText,
+            );
             break;
           }
         }
@@ -689,7 +691,9 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                         ),
                         // Small inline typing indicator for assistant only and
                         // only when this is the last message.
-                        if (!user && _typingIndicator && i == messages.length - 1)
+                        if (!user &&
+                            _typingIndicator &&
+                            i == messages.length - 1)
                           Padding(
                             padding: const EdgeInsets.only(left: 6, top: 2),
                             child: _smallTypingIndicator(),
@@ -723,7 +727,9 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
               width: 10,
               height: 6,
               decoration: BoxDecoration(
-                color: EaAdaptiveColor.secondaryText(context).withValues(alpha: 0.2),
+                color: EaAdaptiveColor.secondaryText(
+                  context,
+                ).withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(6),
               ),
               alignment: Alignment.center,

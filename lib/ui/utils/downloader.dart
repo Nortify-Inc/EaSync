@@ -30,12 +30,11 @@ class DownloadState {
     this.message = '',
   });
 
-  bool get isDone  => status == DownloadStatus.ready;
+  bool get isDone => status == DownloadStatus.ready;
   bool get isError => status == DownloadStatus.error;
 }
 
 class Downloader {
-
   static Future<Directory> _modelDir() async {
     final support = await getApplicationSupportDirectory();
     final dir = Directory('${support.path}/ai_data');
@@ -56,14 +55,14 @@ class Downloader {
   static Stream<double> _download(String url, File dest) async* {
     final client = HttpClient();
     try {
-      final request  = await client.getUrl(Uri.parse(url));
+      final request = await client.getUrl(Uri.parse(url));
       final response = await request.close();
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
-      final total  = response.contentLength; // -1 if unknown
+      final total = response.contentLength; // -1 if unknown
       int received = 0;
-      final sink   = dest.openWrite();
+      final sink = dest.openWrite();
       await for (final chunk in response) {
         sink.add(chunk);
         received += chunk.length;
@@ -75,18 +74,21 @@ class Downloader {
       client.close(force: true);
     }
   }
-  
+
   Stream<DownloadState> ensure() async* {
     yield const DownloadState(
-        status: DownloadStatus.checking, message: 'Checking model…');
+      status: DownloadStatus.checking,
+      message: 'Checking model…',
+    );
 
     try {
       final dir = await _modelDir();
       final weightFile = File('${dir.path}/$_kDownloadedFile');
 
       yield const DownloadState(
-          status: DownloadStatus.copyingAssets,
-          message: 'Preparing assets…');
+        status: DownloadStatus.copyingAssets,
+        message: 'Preparing assets…',
+      );
 
       await _copyBundledAssets(dir);
 
@@ -108,11 +110,9 @@ class Downloader {
             );
           }
           await tmp.rename(weightFile.path);
-
         } catch (e) {
           if (tmp.existsSync()) tmp.deleteSync();
           rethrow;
-
         }
       }
 
@@ -122,7 +122,10 @@ class Downloader {
         message: 'Loading model…',
       );
 
-      final rcSet = aiSetDataDir?.call(dir.path as Pointer<Void>, dir.path.toNativeUtf8());
+      final rcSet = aiSetDataDir?.call(
+        dir.path as Pointer<Void>,
+        dir.path.toNativeUtf8(),
+      );
       debugPrint('[Downloader] ai_set_data_dir rc=$rcSet path=${dir.path}');
 
       final _ = await Future<bool>(() async {
@@ -132,11 +135,9 @@ class Downloader {
           final rc = aiInitialize?.call(nullptr);
           debugPrint('[Downloader] ai_initialize rc=$rc');
           return rc == 0;
-
         } catch (e) {
           debugPrint('[Downloader] ai_initialize threw: $e');
           return false;
-
         }
       });
 
@@ -146,18 +147,17 @@ class Downloader {
         message: 'Ready',
       );
     } catch (e) {
-      yield DownloadState(
-          status: DownloadStatus.error, message: 'Error: $e');
+      yield DownloadState(status: DownloadStatus.error, message: 'Error: $e');
     }
   }
 
   static Future<bool> isReady() async {
     final dir = await _modelDir();
     return File('${dir.path}/$_kDownloadedFile').existsSync() &&
-           File('${dir.path}/model.onnx').existsSync() &&
-           File('${dir.path}/tokenizer.json').existsSync();
+        File('${dir.path}/model.onnx').existsSync() &&
+        File('${dir.path}/tokenizer.json').existsSync();
   }
-  
+
   static Future<void> clearCache() async {
     final dir = await _modelDir();
     for (final name in [_kDownloadedFile, 'model.onnx', 'tokenizer.json']) {

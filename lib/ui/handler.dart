@@ -21,6 +21,7 @@ export 'dart:isolate';
 export 'dart:convert';
 
 export 'utils/bridge.dart';
+export 'utils/downloader.dart';
 export 'utils/skeleton.dart';
 export 'theme.dart';
 export 'i18n.dart';
@@ -33,4 +34,3 @@ export 'profiles.dart';
 export 'manage.dart';
 export 'account.dart';
 export 'settings.dart';
-

@@ -15,6 +15,8 @@
 
 namespace fs = std::filesystem;
 
+static std::string g_data_dir_override;
+
 static std::string find_data_dir()
 {
     if (!g_data_dir_override.empty() && fs::exists(g_data_dir_override + "/model.onnx"))
@@ -51,7 +53,6 @@ static std::unique_ptr<SGLM>      g_model;
 static std::unique_ptr<Tokenizer> g_tokenizer;
 static std::mutex                 g_mutex;
 static std::atomic<int>          g_decode_every{4};
-static std::string               g_data_dir_override;
 
 struct JobState {
     std::string buf;
@@ -59,9 +60,9 @@ struct JobState {
     bool finished = false;
 };
 
-static std::mutex                        g_jobs_mutex;
-static std::unordered_map<uint64_t, JobState> g_jobs;
-static std::atomic<uint64_t>            g_next_job{1};
+static std::mutex                              g_jobs_mutex;
+static std::unordered_map<uint64_t, JobState>  g_jobs;
+static std::atomic<uint64_t>                   g_next_job{1};
 
 static int write_out(const std::string& s, char* buf, uint32_t len)
 {
@@ -72,7 +73,6 @@ static int write_out(const std::string& s, char* buf, uint32_t len)
     return 0;
 }
 
-// Reduce toCopy to avoid splitting UTF-8 multi-byte characters
 static uint32_t adjust_to_utf8_boundary(const std::string &s, size_t start, uint32_t toCopy)
 {
     if (toCopy == 0) return 0;
