@@ -12,9 +12,30 @@ if(NOT DEFINED ORT_ROOT)
     endif()
 endif()
 
+# Normalize ORT_ROOT to an absolute real path to avoid unnormalized ../ segments
+get_filename_component(ORT_ROOT_REAL "${ORT_ROOT}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+if(ORT_ROOT_REAL)
+    set(ORT_ROOT "${ORT_ROOT_REAL}")
+endif()
+
+# If the resolved ORT_ROOT doesn't exist, prefer the repository default under lib/thirdParty
+if(NOT EXISTS "${ORT_ROOT}")
+    set(_DEFAULT_ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdParty/onnxruntime-android-1.20.1")
+    get_filename_component(_DEFAULT_ORT_ROOT_REAL "${_DEFAULT_ORT_ROOT}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    if(EXISTS "${_DEFAULT_ORT_ROOT_REAL}")
+        message(STATUS "Provided ORT_ROOT (${ORT_ROOT}) not found; using repo thirdParty: ${_DEFAULT_ORT_ROOT_REAL}")
+        set(ORT_ROOT "${_DEFAULT_ORT_ROOT_REAL}")
+    else()
+        message(STATUS "ORT_ROOT (${ORT_ROOT}) not found and default repo path also missing: ${_DEFAULT_ORT_ROOT_REAL}")
+    endif()
+endif()
+
 if(ANDROID)
+    # Normalize include/lib paths for Android
     set(ORT_INCLUDE "${ORT_ROOT}/headers")
-    set(ORT_LIB    "${ORT_ROOT}/jni/${ANDROID_ABI}/libonnxruntime.so")
+    get_filename_component(ORT_INCLUDE "${ORT_INCLUDE}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(ORT_LIB "${ORT_ROOT}/jni/${ANDROID_ABI}/libonnxruntime.so")
+    get_filename_component(ORT_LIB "${ORT_LIB}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 else()
     set(ORT_INCLUDE "${ORT_ROOT}/include")
     file(GLOB _ORT_SO "${ORT_ROOT}/lib/libonnxruntime.so*"
@@ -24,7 +45,19 @@ else()
 endif()
 
 if(NOT EXISTS "${ORT_LIB}")
-    message(FATAL_ERROR "libonnxruntime não encontrada: ${ORT_LIB}")
+    # Try to locate any libonnxruntime under ORT_ROOT as a fallback.
+    file(GLOB_RECURSE _FOUND_ORT_SO
+         RELATIVE "${ORT_ROOT}"
+         "${ORT_ROOT}/*libonnxruntime*.so"
+         "${ORT_ROOT}/*libonnxruntime*.dylib")
+    if(_FOUND_ORT_SO)
+        list(GET _FOUND_ORT_SO 0 _rel)
+        set(ORT_LIB "${ORT_ROOT}/${_rel}")
+        message(STATUS "Found ORT_LIB fallback: ${ORT_LIB}")
+    else()
+        message(WARNING "libonnxruntime não encontrada at: ${ORT_LIB}; continuing — build may fail later if ONNX runtime is required at link time.")
+        set(ORT_LIB "")
+    endif()
 endif()
 
 message(STATUS "ORT_ROOT    : ${ORT_ROOT}")
