@@ -6,6 +6,7 @@
  * @author Erick Radmann
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -48,6 +49,47 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
   bool _isInTree = true;
 
   bool get _canUpdateUi => mounted && _isInTree;
+
+  // Pending reveal buffers per session id. Incoming chunks are enqueued
+  // here and revealed character-by-character by a periodic timer to
+  // produce a smooth typewriter effect.
+  final Map<String, String> _pendingBuffers = {};
+  final Map<String, Timer?> _revealTimers = {};
+
+  void _startReveal(String sessionId) {
+    _revealTimers[sessionId]?.cancel();
+    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (!mounted) return;
+      final pending = _pendingBuffers[sessionId] ?? '';
+      if (pending.isEmpty) return;
+
+      // Take a small number of characters to reveal per tick.
+      final take = pending.length >= 3 ? 3 : 1;
+      final reveal = pending.substring(0, take);
+      _pendingBuffers[sessionId] = pending.substring(reveal.length);
+
+      setState(() {
+        final session = _sessions.firstWhere((s) => s.id == sessionId, orElse: () => null);
+        if (session == null) return;
+        for (int i = session.messages.length - 1; i >= 0; --i) {
+          if (session.messages[i].role == _Role.assistant) {
+            session.messages[i] = _ChatMessage(
+              role: _Role.assistant,
+              text: session.messages[i].text + reveal,
+            );
+            break;
+          }
+        }
+      });
+      _scrollToBottom();
+    });
+  }
+
+  void _stopReveal(String sessionId) {
+    _revealTimers[sessionId]?.cancel();
+    _revealTimers.remove(sessionId);
+    _pendingBuffers.remove(sessionId);
+  }
 
   void _startThinkingPulse() {
     if (!_thinkingPulse.isAnimating) {
@@ -207,6 +249,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     try {
       final stream = aiQueryStream(raw);
       var firstChunk = true;
+      final sessionId = session.id;
       await for (final chunk in stream) {
         if (!_canUpdateUi) break;
         var text = chunk.toString();
@@ -216,53 +259,46 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
         if (text.isEmpty) continue;
 
         if (firstChunk) {
-          // Create the assistant message with the first token and remove the
-          // thinking indicator immediately so the typewriter effect begins.
+          // Create placeholder assistant message and start revealing.
           setState(() {
-            session.messages.add(_ChatMessage(role: _Role.assistant, text: text));
+            session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
             _typingIndicator = false;
           });
           _stopThinkingPulse();
+          // Enqueue text into pending buffer and start reveal timer.
+          final pending = _pendingBuffers[sessionId] ?? '';
+          _pendingBuffers[sessionId] = pending;
+          // Merge/append carefully to avoid duplicates between displayed + pending
+          final displayed = '';
+          final curPending = _pendingBuffers[sessionId] ?? '';
+          if ((displayed + curPending).isEmpty) {
+            _pendingBuffers[sessionId] = text;
+          } else {
+            final existing = displayed + curPending;
+            if (text.length >= existing.length && text.startsWith(existing)) {
+              _pendingBuffers[sessionId] = text.substring(existing.length);
+            } else {
+              _pendingBuffers[sessionId] = curPending + text;
+            }
+          }
+          _startReveal(sessionId);
           firstChunk = false;
           _scrollToBottom();
           continue;
         }
 
-        // Merge subsequent chunks into the last assistant message using
-        // overlap detection to avoid accidental duplication.
-        setState(() {
-          for (int i = session.messages.length - 1; i >= 0; --i) {
-            if (session.messages[i].role == _Role.assistant) {
-              final prev = session.messages[i].text;
-              String merged;
-
-              if (text == prev) {
-                merged = prev;
-              } else if (text.length >= prev.length && text.startsWith(prev)) {
-                merged = text;
-              } else if (text.contains(prev)) {
-                merged = text;
-              } else {
-                final int maxOverlap = prev.length < text.length ? prev.length : text.length;
-                int overlap = 0;
-                for (int k = maxOverlap; k > 0; --k) {
-                  if (prev.substring(prev.length - k) == text.substring(0, k)) {
-                    overlap = k;
-                    break;
-                  }
-                }
-                merged = prev + text.substring(overlap);
-              }
-
-              session.messages[i] = _ChatMessage(
-                role: _Role.assistant,
-                text: merged,
-              );
-              break;
-            }
-          }
-        });
-        _scrollToBottom();
+        // Enqueue incoming chunk into pending buffer with overlap detection
+        final displayedMsg = session.messages.isNotEmpty ? session.messages.last.text : '';
+        final pendingSoFar = _pendingBuffers[sessionId] ?? '';
+        final existing = displayedMsg + pendingSoFar;
+        if (text.length >= existing.length && text.startsWith(existing)) {
+          // only append new tail
+          _pendingBuffers[sessionId] = text.substring(existing.length);
+        } else {
+          // fallback: append as delta
+          _pendingBuffers[sessionId] = pendingSoFar + text;
+        }
+        _startReveal(sessionId);
       }
 
       final last = session.messages.isNotEmpty ? session.messages.last : null;
@@ -287,6 +323,23 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
         }
       });
     } finally {
+      // Flush any remaining pending reveal and stop timers for this session
+      final sid = session.id;
+      final pending = _pendingBuffers[sid] ?? '';
+      if (pending.isNotEmpty) {
+        setState(() {
+          for (int i = session.messages.length - 1; i >= 0; --i) {
+            if (session.messages[i].role == _Role.assistant) {
+              session.messages[i] = _ChatMessage(
+                role: _Role.assistant,
+                text: session.messages[i].text + pending,
+              );
+              break;
+            }
+          }
+        });
+      }
+      _stopReveal(sid);
       _stopThinkingPulse();
       setState(() {
         _typingIndicator = false;
