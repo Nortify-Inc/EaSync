@@ -8,7 +8,6 @@
 
 import 'handler.dart';
 
-
 String _loadedCoreLibraryPath = 'libeasync_core.so';
 
 DynamicLibrary _openCoreLibrary() {
@@ -61,7 +60,6 @@ DynamicLibrary _openCoreLibrary() {
       } catch (_) {}
     }
 
-
     if (firstLoadable != null) {
       _loadedCoreLibraryPath = 'fallback-first-loadable';
       return firstLoadable;
@@ -69,7 +67,7 @@ DynamicLibrary _openCoreLibrary() {
   }
 
   _loadedCoreLibraryPath = 'libeasync_core.so';
-  
+
   return DynamicLibrary.open('libeasync_core.so');
 }
 
@@ -107,8 +105,10 @@ DynamicLibrary _openAiLibrary() {
 
 final DynamicLibrary aiLib = _openAiLibrary();
 
-typedef _aiQueryC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
-typedef _aiQueryDart = int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
+typedef _aiQueryC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _aiQueryDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
 final _aiQuery = aiLib.lookupFunction<_aiQueryC, _aiQueryDart>('ai_query');
 
@@ -118,7 +118,9 @@ String aiQuery(String prompt) {
   const outLen = 8192;
   final outBuf = malloc.allocate<Int8>(outLen);
   try {
-    print('[Bridge] aiQuery: prompt="${prompt.length > 120 ? prompt.substring(0,120)+"..." : prompt}"');
+    print(
+      '[Bridge] aiQuery: prompt="${prompt.length > 120 ? "${prompt.substring(0, 120)}..." : prompt}"',
+    );
     final rc = _aiQuery(nullptr, inPtr, outBuf, outLen);
     print('[Bridge] aiQuery: rc=$rc');
     if (rc != 0) {
@@ -134,35 +136,65 @@ String aiQuery(String prompt) {
   }
 }
 
-typedef _aiQueryStartC = Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
-typedef _aiQueryStartDart = int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+typedef _aiQueryStartC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
+typedef _aiQueryStartDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>);
 
-typedef _aiQueryPollC = Int32 Function(Pointer<Void>, Uint64, Pointer<Uint8>, Pointer<Int8>, Uint32);
-typedef _aiQueryPollDart = int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int);
+typedef _aiQueryPollC =
+    Int32 Function(
+      Pointer<Void>,
+      Uint64,
+      Pointer<Uint8>,
+      Pointer<Int8>,
+      Uint32,
+    );
+typedef _aiQueryPollDart =
+    int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int);
 
-final _aiQueryStart = aiLib.lookupFunction<_aiQueryStartC, _aiQueryStartDart>('ai_query_async_start');
-final _aiQueryPoll = aiLib.lookupFunction<_aiQueryPollC, _aiQueryPollDart>('ai_query_async_poll');
+final _aiQueryStart = aiLib.lookupFunction<_aiQueryStartC, _aiQueryStartDart>(
+  'ai_query_async_start',
+);
+final _aiQueryPoll = aiLib.lookupFunction<_aiQueryPollC, _aiQueryPollDart>(
+  'ai_query_async_poll',
+);
 
 Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 150}) async {
   final inPtr = prompt.toNativeUtf8();
   final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
   try {
-    print('[Bridge] aiQueryAsync: starting prompt="${prompt.length > 120 ? prompt.substring(0,120)+"..." : prompt}"');
+    print(
+      '[Bridge] aiQueryAsync: starting prompt="${prompt.length > 120 ? "${prompt.substring(0, 120)}..." : prompt}"',
+    );
     final rc = _aiQueryStart(nullptr, inPtr, handlePtr);
+
     print('[Bridge] aiQueryAsync: start rc=$rc');
+
     if (rc != 0) {
       print('[Bridge] aiQueryAsync: start failed rc=$rc');
       return '';
     }
+
     final handle = handlePtr.value;
+
     print('[Bridge] aiQueryAsync: handle=$handle');
+
     final outLen = 8192;
     final outBuf = malloc.allocate<Int8>(outLen);
     final finishedFlag = malloc.allocate<Uint8>(1);
+
     try {
       while (true) {
-        final pollRc = _aiQueryPoll(nullptr, handle, finishedFlag, outBuf, outLen);
-        print('[Bridge] aiQueryAsync: pollRc=$pollRc finished=${finishedFlag.value}');
+        final pollRc = _aiQueryPoll(
+          nullptr,
+          handle,
+          finishedFlag,
+          outBuf,
+          outLen,
+        );
+        print(
+          '[Bridge] aiQueryAsync: pollRc=$pollRc finished=${finishedFlag.value}',
+        );
         if (pollRc == 0) {
           final res = outBuf.cast<Utf8>().toDartString();
           print('[Bridge] aiQueryAsync: got result len=${res.length}');
@@ -585,7 +617,6 @@ final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
 
 final _coreSimulateDart _coreSimulate = coreLib
     .lookupFunction<_coreSimulateC, _coreSimulateDart>('core_simulate');
-
 
 class DeviceInfo {
   final String uuid;
@@ -2132,7 +2163,6 @@ class Bridge {
       _throwLastError(res);
     }
   }
-
 
   static void _onCoreEvent(
     Pointer<CoreEventNative> eventPtr,

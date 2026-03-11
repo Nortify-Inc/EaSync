@@ -20,10 +20,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.easync"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        applicationId = "com.nortify.easync"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -35,26 +32,49 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DANDROID_STL=c++_shared")
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DORT_ROOT=${rootDir}/../../lib/thirdParty/onnxruntime-android-1.20.1"
+                )
             }
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }
 
     externalNativeBuild {
         cmake {
-            path = file("../../lib/core/CMakeLists.txt")
+            path = file("../../lib/CMakeLists.txt")
         }
     }
 }
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.1")
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+}
+
+// Ensure prebuilt AI native library is packaged: copy any built libeasync_ai.so
+// from the project's `lib/ai/build` into the module jniLibs for the ABI we target.
+val copyAIBinaries by tasks.registering(Copy::class) {
+    val aiBuildDir = file("../../lib/ai/build")
+    from(aiBuildDir) {
+        include("**/libeasync_ai.so")
+    }
+    into(file("src/main/jniLibs/arm64-v8a"))
+    doFirst {
+        println("copyAIBinaries: copying libeasync_ai.so from $aiBuildDir to src/main/jniLibs/arm64-v8a")
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(copyAIBinaries)
 }

@@ -8,7 +8,7 @@
 
 import 'dart:ui';
 
-import 'package:easync/ui/assistant_chat.dart';
+import 'package:easync/ui/agent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'handler.dart';
@@ -32,7 +32,7 @@ class _HomeState extends State<Home> {
     'Dashboard',
     'Profiles',
     'Manage',
-    'Assistant',
+    'Agent',
     'Account',
   ];
 
@@ -40,7 +40,7 @@ class _HomeState extends State<Home> {
     Dashboard(),
     Profiles(),
     Manage(),
-    AssistantChat(),
+    Agent(),
     Account(),
   ];
 
@@ -212,7 +212,10 @@ class _HomeState extends State<Home> {
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.only(left: 0),
-                    child: Align(alignment: Alignment.centerLeft, child: _buildTitle()),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _buildTitle(),
+                    ),
                   ),
                 ),
                 Spacer(),
@@ -348,18 +351,21 @@ class _HomeState extends State<Home> {
                         final scale = 0.985 + (0.015 * t);
                         final opacity = 0.9 + (0.1 * t);
 
-                              const double pageMaxBlur = 3.0;
-                              final double blurSigma = _settings.animationsEnabled
-                                  ? (pageMaxBlur * distance)
-                                  : 0.0;
+                        const double pageMaxBlur = 3.0;
+                        final double blurSigma = _settings.animationsEnabled
+                            ? (pageMaxBlur * distance)
+                            : 0.0;
 
-                              return ImageFiltered(
-                                imageFilter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
-                                child: Opacity(
-                                  opacity: opacity,
-                                  child: Transform.scale(scale: scale, child: child),
-                                ),
-                              );
+                        return ImageFiltered(
+                          imageFilter: ImageFilter.blur(
+                            sigmaX: blurSigma,
+                            sigmaY: blurSigma,
+                          ),
+                          child: Opacity(
+                            opacity: opacity,
+                            child: Transform.scale(scale: scale, child: child),
+                          ),
+                        );
                       },
                       child: content,
                     ),

@@ -27,14 +27,12 @@ void main() async {
 
   try {
     await Bridge.init().timeout(const Duration(seconds: 8));
-
   } catch (e) {
     debugPrint('[boot] Bridge init skipped/timed out: $e');
   }
 
   try {
     await EaAppSettings.instance.load().timeout(const Duration(seconds: 4));
-    
   } catch (e) {
     debugPrint('[boot] Settings load skipped: $e');
   }

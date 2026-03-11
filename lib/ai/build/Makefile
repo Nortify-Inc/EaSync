@@ -174,6 +174,30 @@ easync_ai/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/build
 .PHONY : easync_ai/fast
 
+src/SGLM.o: src/SGLM.cpp.o
+.PHONY : src/SGLM.o
+
+# target to build an object file
+src/SGLM.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.o
+.PHONY : src/SGLM.cpp.o
+
+src/SGLM.i: src/SGLM.cpp.i
+.PHONY : src/SGLM.i
+
+# target to preprocess a source file
+src/SGLM.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.i
+.PHONY : src/SGLM.cpp.i
+
+src/SGLM.s: src/SGLM.cpp.s
+.PHONY : src/SGLM.s
+
+# target to generate assembly for a file
+src/SGLM.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.s
+.PHONY : src/SGLM.cpp.s
+
 src/engine.o: src/engine.cpp.o
 .PHONY : src/engine.o
 
@@ -198,6 +222,30 @@ src/engine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/engine.cpp.s
 .PHONY : src/engine.cpp.s
 
+src/tokenizer.o: src/tokenizer.cpp.o
+.PHONY : src/tokenizer.o
+
+# target to build an object file
+src/tokenizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o
+.PHONY : src/tokenizer.cpp.o
+
+src/tokenizer.i: src/tokenizer.cpp.i
+.PHONY : src/tokenizer.i
+
+# target to preprocess a source file
+src/tokenizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i
+.PHONY : src/tokenizer.cpp.i
+
+src/tokenizer.s: src/tokenizer.cpp.s
+.PHONY : src/tokenizer.s
+
+# target to generate assembly for a file
+src/tokenizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s
+.PHONY : src/tokenizer.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -211,9 +259,15 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... easync_ai"
+	@echo "... src/SGLM.o"
+	@echo "... src/SGLM.i"
+	@echo "... src/SGLM.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"
+	@echo "... src/tokenizer.o"
+	@echo "... src/tokenizer.i"
+	@echo "... src/tokenizer.s"
 .PHONY : help
 
 

@@ -24,9 +24,7 @@ class _SettingsState extends State<Settings> {
   }
 
   Future<void> _persistAll() async {
-    try {
-
-    } catch (_) {}
+    try {} catch (_) {}
 
     await _settings.persist();
   }

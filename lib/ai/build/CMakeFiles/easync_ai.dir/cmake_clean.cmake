@@ -1,6 +1,10 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/easync_ai.dir/src/SGLM.cpp.o"
+  "CMakeFiles/easync_ai.dir/src/SGLM.cpp.o.d"
   "CMakeFiles/easync_ai.dir/src/engine.cpp.o"
   "CMakeFiles/easync_ai.dir/src/engine.cpp.o.d"
+  "CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o"
+  "CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o.d"
   "libeasync_ai.pdb"
   "libeasync_ai.so"
 )

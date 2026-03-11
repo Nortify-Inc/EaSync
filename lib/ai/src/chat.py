@@ -10,7 +10,7 @@ import torch.nn.functional as F
 # Configuration constants (tweak here instead of CLI params)
 # Defaults chosen to favor speed on CPU
 DEVICE = "cpu"
-MAX_NEW_TOKENS = 128
+MAX_NEW_TOKENS = 1024
 TEMPERATURE = 0.7
 TOP_K = 20
 TOP_P = 0.95
@@ -23,8 +23,6 @@ LENGTH_PENALTY = 1.0
 SEMANTIC_RERANKING = True
 SEMANTIC_ALPHA = 0.6
 LOGPROB_BETA = 0.4
-
-# device is fixed to CPU by design
 
 HERE = Path(__file__).parent.resolve()
 
@@ -87,7 +85,7 @@ model_mod = load_module("sglm", "SGLM.py")
 model     = model_mod.SGLM.load(HERE.parent / "data" / "model.safetensors", device=DEVICE)
 
 SYSTEM = (
-    "You're a helpful, concise and creative personal assistant called Agent. "
+    "You're a helpful, smart, concise and creative personal assistant called Agent. "
     "You're part of EaSync and created by Nortify Inc. Provide clear answers, offer multiple options when relevant, "
     "and avoid unnecessary repetition. When asked for reasoning, be concise and structured."
 )
