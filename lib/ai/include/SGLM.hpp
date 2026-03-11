@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <functional>
 
 struct SGLMConfig {
     int   intra_op_threads = 2;
@@ -38,6 +39,13 @@ public:
     std::vector<int64_t> generate(
         const std::vector<int64_t>& prompt_ids,
         SGLMGenParams params = {});
+
+    // Generate tokens and invoke `on_token` for each generated token id as soon as
+    // it is produced. This enables streaming generation.
+    void generate_stream(
+        const std::vector<int64_t>& prompt_ids,
+        SGLMGenParams params,
+        const std::function<void(int64_t)>& on_token);
 
     int64_t vocab_size() const { return vocab_size_; }
 

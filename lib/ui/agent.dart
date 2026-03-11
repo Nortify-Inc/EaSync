@@ -201,23 +201,57 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       await _persistState();
       return;
     }
-    _stopThinkingPulse();
-    try {
-      final aiResp = await aiQueryAsync(raw);
 
-      if (aiResp.trim().isNotEmpty) {
-        reply = aiResp.trim();
-      } else {
-        reply = noResponseText;
+    // Add an assistant placeholder so we can stream partial replies into it
+    setState(() {
+      session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
+    });
+
+    try {
+      final stream = aiQueryStream(raw);
+      await for (final chunk in stream) {
+        if (!_canUpdateUi) break;
+        final text = chunk.toString();
+
+        setState(() {
+          for (int i = session.messages.length - 1; i >= 0; --i) {
+            if (session.messages[i].role == _Role.assistant) {
+              session.messages[i] = _ChatMessage(role: _Role.assistant, text: text);
+              break;
+            }
+          }
+        });
+        _scrollToBottom();
+      }
+
+      final last = session.messages.isNotEmpty ? session.messages.last : null;
+      
+      if (last == null || last.text.trim().isEmpty) {
+        setState(() {
+          for (int i = session.messages.length - 1; i >= 0; --i) {
+            if (session.messages[i].role == _Role.assistant) {
+              session.messages[i] = _ChatMessage(role: _Role.assistant, text: noResponseText);
+              break;
+            }
+          }
+        });
       }
     } catch (_) {
-      reply = noResponseText;
+      setState(() {
+        for (int i = session.messages.length - 1; i >= 0; --i) {
+          if (session.messages[i].role == _Role.assistant) {
+            session.messages[i] = _ChatMessage(role: _Role.assistant, text: noResponseText);
+            break;
+          }
+        }
+      });
+    } finally {
+      _stopThinkingPulse();
+      setState(() {
+        _typingIndicator = false;
+        _sending = false;
+      });
     }
-    setState(() {
-      _typingIndicator = false;
-      _sending = false;
-      session.messages.add(_ChatMessage(role: _Role.assistant, text: reply));
-    });
     await _persistState();
     _scrollToBottom();
   }

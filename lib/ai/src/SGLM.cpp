@@ -24,9 +24,6 @@ SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
     opts.SetInterOpNumThreads(cfg.inter_op_threads);
     opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
 
-    // Habilita memory-mapped loading para o .onnx.data externo (modelo grande)
-    opts.AddConfigEntry("session.use_env_allocators", "1");
-
 #ifdef ORT_WITH_CUDA
     if (cfg.use_gpu) {
         OrtCUDAProviderOptions cuda_opts{};
@@ -37,23 +34,21 @@ SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
 
     session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), opts);
 
-    // vocab_size = último dim do output [1, T, vocab_size]
-    auto out_info  = session_->GetOutputTypeInfo(0).GetTensorTypeAndShapeInfo();
-    auto out_shape = out_info.GetShape();
-    if (out_shape.size() < 3)
-        throw std::runtime_error("SGLM: output shape inesperado (esperado rank 3)");
+    // Output shape: [1, -1, vocab_size]
+    // dim[1] é dinâmico (-1), dim[2] é fixo (151936 para Qwen2).
+    // Lemos diretamente do shape estático — sem dummy forward.
+    auto shape = session_->GetOutputTypeInfo(0)
+                          .GetTensorTypeAndShapeInfo().GetShape();
 
-    vocab_size_ = out_shape.back();
-    fprintf(stderr, "[SGLM] vocab_size=%lld\n", static_cast<long long>(vocab_size_));
+    if (shape.size() < 3 || shape.back() <= 0)
+        throw std::runtime_error("SGLM: vocab_size inválido no shape do output");
+
+    vocab_size_ = shape.back();
+
+    fprintf(stderr, "[SGLM] Pronto. vocab_size=%lld\n",
+            static_cast<long long>(vocab_size_));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  forward()
-//
-//  Retorna apenas os logits do ÚLTIMO token: shape [vocab_size].
-//  Isso evita alocar T * vocab_size * 4 bytes por step de geração.
-//  Com vocab_size=151936 e float32, o tensor completo seria ~600KB * T por step.
-// ─────────────────────────────────────────────────────────────────────────────
 std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
 {
     if (token_ids.empty())
@@ -62,8 +57,7 @@ std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
     const int64_t T = static_cast<int64_t>(token_ids.size());
     std::array<int64_t, 2> in_shape{1, T};
 
-    auto mem_info = Ort::MemoryInfo::CreateCpu(
-        OrtArenaAllocator, OrtMemTypeDefault);
+    auto mem_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
     Ort::Value in_tensor = Ort::Value::CreateTensor<int64_t>(
         mem_info,
@@ -79,12 +73,11 @@ std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
         in_names,  &in_tensor, 1,
         out_names, 1);
 
-    // output shape: [1, T, vocab_size]
-    // Extrai apenas o último token: offset = (T-1) * vocab_size_
     const float* data   = outputs[0].GetTensorData<float>();
     const size_t offset = static_cast<size_t>(T - 1) * static_cast<size_t>(vocab_size_);
 
-    return std::vector<float>(data + offset, data + offset + static_cast<size_t>(vocab_size_));
+    return std::vector<float>(data + offset,
+                               data + offset + static_cast<size_t>(vocab_size_));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -145,15 +138,28 @@ std::vector<int64_t> SGLM::generate(
     const std::vector<int64_t>& prompt_ids,
     SGLMGenParams params)
 {
+    // Delegate to the streaming generator and collect tokens.
+    std::vector<int64_t> generated;
+    generated.reserve(static_cast<size_t>(params.max_new_tokens));
+
+    generate_stream(prompt_ids, params, [&](int64_t token_id) {
+        generated.push_back(token_id);
+    });
+
+    return generated;
+}
+
+void SGLM::generate_stream(
+    const std::vector<int64_t>& prompt_ids,
+    SGLMGenParams params,
+    const std::function<void(int64_t)>& on_token)
+{
     constexpr int64_t EOS1 = 151643;
     constexpr int64_t EOS2 = 151645;
 
     std::vector<int64_t> ids = prompt_ids;
-    std::vector<int64_t> generated;
-    generated.reserve(static_cast<size_t>(params.max_new_tokens));
 
     for (int step = 0; step < params.max_new_tokens; ++step) {
-        // forward() já retorna apenas os logits do último token [vocab_size]
         auto next_logits = forward(ids);
 
         const int64_t token_id = sample(
@@ -165,9 +171,11 @@ std::vector<int64_t> SGLM::generate(
 
         if (token_id == EOS1 || token_id == EOS2) break;
 
-        generated.push_back(token_id);
+        // Emit token to caller
+        try {
+            on_token(token_id);
+        } catch (...) {}
+
         ids.push_back(token_id);
     }
-
-    return generated;
 }

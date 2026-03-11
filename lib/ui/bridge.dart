@@ -1,3 +1,5 @@
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
 /*!
  * @file bridge.dart
  * @brief FFI layer between Flutter and the EaSync Core native library.
@@ -7,6 +9,7 @@
  */
 
 import 'handler.dart';
+import 'dart:isolate';
 
 String _loadedCoreLibraryPath = 'libeasync_core.so';
 
@@ -159,7 +162,18 @@ final _aiQueryPoll = aiLib.lookupFunction<_aiQueryPollC, _aiQueryPollDart>(
   'ai_query_async_poll',
 );
 
-Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 150}) async {
+typedef _aiInitializeC = Int32 Function(Pointer<Void>);
+typedef _aiInitializeDart = int Function(Pointer<Void>);
+
+final _aiInitialize = (() {
+  try {
+    return aiLib.lookupFunction<_aiInitializeC, _aiInitializeDart>('ai_initialize');
+  } catch (_) {
+    return null;
+  }
+})();
+
+Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
   final inPtr = prompt.toNativeUtf8();
   final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
   try {
@@ -210,6 +224,105 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 150}) async {
   } finally {
     malloc.free(inPtr);
     malloc.free(handlePtr);
+  }
+}
+
+// Run the AI query inside a separate isolate to avoid blocking the main UI isolate.
+Stream<String> aiQueryStream(String prompt, {int pollIntervalMs = 50}) {
+  final controller = StreamController<String>();
+  final rp = ReceivePort();
+
+  rp.listen((dynamic msg) {
+    try {
+      if (msg is Map) {
+        if (msg.containsKey('chunk')) {
+          final c = msg['chunk'];
+          if (c is String) controller.add(c);
+        }
+        if (msg.containsKey('done')) {
+          controller.close();
+        }
+      }
+    } catch (_) {}
+  });
+
+  Isolate.spawn(_aiQueryIsolateEntry, [rp.sendPort, prompt, pollIntervalMs]);
+
+  controller.onCancel = () {
+    try {
+      rp.close();
+    } catch (_) {}
+  };
+
+  return controller.stream;
+}
+
+// Entry point executed in the spawned isolate. Opens the AI dynamic library locally
+// and performs the same async start/poll loop, sending chunk maps back to main.
+Future<void> _aiQueryIsolateEntry(dynamic message) async {
+  final args = message as List<dynamic>;
+  final SendPort reply = args[0] as SendPort;
+  final String prompt = (args.length > 1 && args[1] != null) ? args[1] as String : '';
+  final int pollIntervalMs = (args.length > 2 && args[2] != null) ? args[2] as int : 150;
+
+  try {
+    final lib = DynamicLibrary.open('libeasync_ai.so');
+
+    final _aiQueryStartLocal = lib.lookupFunction<
+        Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>),
+        int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Uint64>)
+    >('ai_query_async_start');
+
+    final _aiQueryPollLocal = lib.lookupFunction<
+        Int32 Function(Pointer<Void>, Uint64, Pointer<Uint8>, Pointer<Int8>, Uint32),
+        int Function(Pointer<Void>, int, Pointer<Uint8>, Pointer<Int8>, int)
+    >('ai_query_async_poll');
+
+    final inPtr = prompt.toNativeUtf8();
+    final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
+    try {
+      final rc = _aiQueryStartLocal(nullptr, inPtr, handlePtr);
+      if (rc != 0) {
+        reply.send({'chunk': ''});
+        reply.send({'done': true});
+        return;
+      }
+      final handle = handlePtr.value;
+      final outLen = 8192;
+      final outBuf = malloc.allocate<Int8>(outLen);
+      final finishedFlag = malloc.allocate<Uint8>(1);
+      try {
+        while (true) {
+          final pollRc = _aiQueryPollLocal(nullptr, handle, finishedFlag, outBuf, outLen);
+          final res = outBuf.cast<Utf8>().toDartString();
+          if (pollRc == 1) {
+            reply.send({'chunk': res});
+            // continue streaming
+            await Future.delayed(Duration(milliseconds: pollIntervalMs));
+            continue;
+          }
+          if (pollRc == 0) {
+            // final chunk
+            reply.send({'chunk': res});
+            reply.send({'done': true});
+            return;
+          }
+          // not ready: wait
+          await Future.delayed(Duration(milliseconds: pollIntervalMs));
+        }
+      } finally {
+        malloc.free(outBuf);
+        malloc.free(finishedFlag);
+      }
+    } finally {
+      malloc.free(inPtr);
+      malloc.free(handlePtr);
+    }
+  } catch (_) {
+    try {
+      reply.send({'chunk': ''});
+      reply.send({'done': true});
+    } catch (_) {}
   }
 }
 
@@ -931,6 +1044,17 @@ class Bridge {
     if (cbRes != 0) {
       _log('core', 'core_set_event_callback failed with code $cbRes');
       _throwLastError(cbRes);
+    }
+
+    // Preload AI tokenizer/model so streaming can start immediately.
+    if (_aiInitialize != null) {
+      try {
+        _log('core', 'Preloading AI model...');
+        final rc = _aiInitialize!(_ctx!);
+        _log('core', 'ai_initialize returned $rc');
+      } catch (e) {
+        _log('core', 'ai_initialize failed: $e');
+      }
     }
 
     if (_enableAutoSimulation) {

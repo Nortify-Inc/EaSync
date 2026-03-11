@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+find_package(Threads REQUIRED)
+
 if(NOT DEFINED ORT_INCLUDE OR NOT DEFINED ORT_LIB)
     if(NOT DEFINED ORT_ROOT)
         if(DEFINED ENV{ORT_ROOT})
@@ -45,7 +47,7 @@ target_include_directories(easync_ai PRIVATE
 
 target_link_libraries(easync_ai PRIVATE
     onnxruntime
-    pthread
+    Threads::Threads
 )
 
 set_target_properties(easync_ai PROPERTIES

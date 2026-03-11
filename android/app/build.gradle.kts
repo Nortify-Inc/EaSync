@@ -33,8 +33,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments += listOf(
-                    "-DANDROID_STL=c++_shared",
-                    "-DORT_ROOT=${rootDir}/../../lib/thirdParty/onnxruntime-android-1.20.1"
+                    "-DANDROID_STL=c++_shared"
                 )
             }
         }
@@ -55,26 +54,15 @@ android {
 
 flutter {
     source = "../.."
+    // Use the app's actual Flutter entrypoint
+    target = "lib/ui/main.dart"
 }
 
 dependencies {
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.1")
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.20.0")
+    // No Java-level ONNX Runtime dependency required; native code links against
+    // the ONNX Runtime libraries provided via `ORT_ROOT` for native builds.
 }
 
-// Ensure prebuilt AI native library is packaged: copy any built libeasync_ai.so
-// from the project's `lib/ai/build` into the module jniLibs for the ABI we target.
-val copyAIBinaries by tasks.registering(Copy::class) {
-    val aiBuildDir = file("../../lib/ai/build")
-    from(aiBuildDir) {
-        include("**/libeasync_ai.so")
-    }
-    into(file("src/main/jniLibs/arm64-v8a"))
-    doFirst {
-        println("copyAIBinaries: copying libeasync_ai.so from $aiBuildDir to src/main/jniLibs/arm64-v8a")
-    }
-}
-
-tasks.named("preBuild").configure {
-    dependsOn(copyAIBinaries)
-}
+// If you need to package a prebuilt `libeasync_ai.so`, add a copy task here.
+// Currently the native library is built via CMake (externalNativeBuild), so
+// pre-copying is disabled to avoid duplicate native libs during packaging.

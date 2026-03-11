@@ -117,6 +117,7 @@ class SGLM:
         sin = sin[offset:]
 
         mask = None
+        
         if T > 1:
             mask = torch.full((T, T), float("-inf"), device=x.device, dtype=x.dtype).triu(1)
 

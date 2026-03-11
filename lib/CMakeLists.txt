@@ -5,8 +5,8 @@ if(NOT DEFINED ORT_ROOT)
     if(DEFINED ENV{ORT_ROOT})
         set(ORT_ROOT $ENV{ORT_ROOT})
     elseif(ANDROID)
-        # Padrão relativo ao projeto — ajuste se mover o thirdParty
-        set(ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../thirdParty/onnxruntime-android-1.20.1")
+        # Padrão relativo ao projeto — thirdParty is in the lib/ folder
+        set(ORT_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/thirdParty/onnxruntime-android-1.20.1")
     else()
         message(FATAL_ERROR "Defina ORT_ROOT: cmake .. -DORT_ROOT=/caminho/onnxruntime")
     endif()

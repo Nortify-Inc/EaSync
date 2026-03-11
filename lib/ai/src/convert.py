@@ -56,7 +56,6 @@ class SGLMTrace(nn.Module):
         return getattr(self, key.replace(".", "__DOT__"))
 
     def forward(self, token_ids: torch.Tensor) -> torch.Tensor:
-        """token_ids [1, T] → logits [1, T, vocab_size]"""
         a = self.args
         T = token_ids.shape[1]
 
@@ -98,7 +97,7 @@ class SGLMTrace(nn.Module):
         if a.n_heads > a.n_kv_heads:
             r = a.n_heads // a.n_kv_heads
             k = k.repeat_interleave(r, 0); v = v.repeat_interleave(r, 0)
-            
+
         attn = torch.matmul(q, k.transpose(-2, -1)) * (a.head_dim ** -0.5) + mask
         attn = F.softmax(attn, dim=-1)
         out  = torch.matmul(attn, v).transpose(0, 1).contiguous().view(T, -1)
@@ -109,11 +108,6 @@ class SGLMTrace(nn.Module):
         g = F.silu(x @ self._b(f"{p}.gate_proj.weight").T)
         u = x @ self._b(f"{p}.up_proj.weight").T
         return (g * u) @ self._b(f"{p}.down_proj.weight").T
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Inferir args do state-dict
-# ─────────────────────────────────────────────────────────────────────────────
 
 def infer_args(sd: dict) -> ModelArgs:
     indices  = {int(k.split(".")[2]) for k in sd if k.startswith("model.layers.")}
@@ -131,11 +125,6 @@ def infer_args(sd: dict) -> ModelArgs:
     return ModelArgs(vocab_size=vocab, n_layer=n_layer, n_embd=n_embd,
                      n_heads=q_out // hd, n_kv_heads=k_out // hd, ffn_hidden=ffn_hid)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Carregar safetensors
-# ─────────────────────────────────────────────────────────────────────────────
-
 def load_sf(path: Path) -> dict:
     try:
         from safetensors.torch import load_file
@@ -148,11 +137,6 @@ def load_sf(path: Path) -> dict:
     sd = {k: v.float() for k, v in load_file(str(sf), device="cpu").items()}
     print(f"[INFO] {len(sd)} tensors carregados.")
     return sd
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Export ONNX
-# ─────────────────────────────────────────────────────────────────────────────
 
 def do_export(sd: dict, args: ModelArgs, out: Path, dtype: torch.dtype, opset: int):
     module = SGLMTrace(sd, args)
@@ -175,14 +159,9 @@ def do_export(sd: dict, args: ModelArgs, out: Path, dtype: torch.dtype, opset: i
     return module   # retorna para validação
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Validação completa
-# ─────────────────────────────────────────────────────────────────────────────
-
 def do_validate(onnx_path: Path, module: SGLMTrace, seq_len: int, bench_runs: int):
     sep = "─" * 52
 
-    # ── 1. Estrutura ONNX ────────────────────────────────────────────────
     print(f"\n{sep}\n  [1/4] Estrutura do grafo\n{sep}")
     try:
         import onnx
@@ -209,7 +188,6 @@ def do_validate(onnx_path: Path, module: SGLMTrace, seq_len: int, bench_runs: in
     except ImportError:
         print("  [SKIP] onnx não instalado.")
 
-    # ── 2. Carregar sessão ORT ───────────────────────────────────────────
     print(f"\n{sep}\n  [2/4] Carregamento ONNX Runtime\n{sep}")
     sess = None
     try:
@@ -240,18 +218,23 @@ def do_validate(onnx_path: Path, module: SGLMTrace, seq_len: int, bench_runs: in
         print("  [SKIP]")
 
     print(f"\n{sep}\n  [4/4] Benchmark (seq_len={seq_len})\n{sep}")
+
     if sess:
         dummy_np = np.zeros((1, seq_len), dtype=np.int64)
         for _ in range(3): sess.run(["logits"], {"token_ids": dummy_np})
         times = []
+
         for _ in range(bench_runs):
             t0 = time.perf_counter()
             sess.run(["logits"], {"token_ids": dummy_np})
             times.append(time.perf_counter() - t0)
+
         avg = sum(times)/len(times)*1000
         print(f"  média: {avg:.1f} ms   min: {min(times)*1000:.1f} ms   "
               f"p95: {sorted(times)[int(.95*len(times))]*1000:.1f} ms")
+
         print(f"  throughput prefill: {seq_len/(avg/1000):.0f} tokens/s")
+
     else:
         print("  [SKIP]")
 
@@ -276,6 +259,7 @@ def main():
     args = infer_args(sd)
 
     total = sum(v.numel() for v in sd.values())
+    
     print(f"\n  vocab={args.vocab_size}  layers={args.n_layer}  "
           f"d={args.n_embd}  heads={args.n_heads}(kv:{args.n_kv_heads})  "
           f"params={total/1e6:.1f}M\n")
