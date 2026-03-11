@@ -11,9 +11,6 @@
 #include <numeric>
 #include <stdexcept>
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  Construtor
-// ─────────────────────────────────────────────────────────────────────────────
 SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
     : env_(cfg.verbose ? ORT_LOGGING_LEVEL_VERBOSE : ORT_LOGGING_LEVEL_WARNING,
            "SGLM"),
@@ -80,9 +77,6 @@ std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
                                data + offset + static_cast<size_t>(vocab_size_));
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  sample() — top-k / top-p
-// ─────────────────────────────────────────────────────────────────────────────
 int64_t SGLM::sample(
     std::vector<float>& logits,
     float temperature,
@@ -131,9 +125,6 @@ int64_t SGLM::sample(
     return dist(rng);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  generate()
-// ─────────────────────────────────────────────────────────────────────────────
 std::vector<int64_t> SGLM::generate(
     const std::vector<int64_t>& prompt_ids,
     SGLMGenParams params)

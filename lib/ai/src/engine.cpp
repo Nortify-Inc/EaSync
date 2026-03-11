@@ -17,6 +17,9 @@ namespace fs = std::filesystem;
 
 static std::string find_data_dir()
 {
+    if (!g_data_dir_override.empty() && fs::exists(g_data_dir_override + "/model.onnx"))
+        return g_data_dir_override;
+
     if (const char* env = std::getenv("EASYNC_AI_DATA_DIR"))
         if (env && std::strlen(env) > 0 && fs::exists(env))
             return std::string(env);
@@ -43,10 +46,12 @@ static std::string find_data_dir()
     return {};
 }
 
-static std::string                g_system_prompt = "You are/your name is Agent, you're created by Nortify Inc.";
+static std::string                g_system_prompt = "Your name is Agent, AI of EaSync App created by Nortify Inc. Professional, minimalist, and direct. Always answer in a concise and clear manner, without unnecessary explanations. If you don't know the answer, say you don't know. Never try to make up an answer. Always be truthful and accurate.";
 static std::unique_ptr<SGLM>      g_model;
 static std::unique_ptr<Tokenizer> g_tokenizer;
 static std::mutex                 g_mutex;
+static std::atomic<int>          g_decode_every{4};
+static std::string               g_data_dir_override;
 
 struct JobState {
     std::string buf;
@@ -74,8 +79,6 @@ static uint32_t adjust_to_utf8_boundary(const std::string &s, size_t start, uint
     size_t end = start + toCopy;
     if (end > s.size()) end = s.size();
 
-    // If the last byte is a UTF-8 continuation byte (0b10xxxxxx), step back
-    // until we reach a non-continuation byte or start.
     while (end > start) {
         unsigned char c = static_cast<unsigned char>(s[end - 1]);
         if ((c & 0xC0) != 0x80) break;
@@ -126,7 +129,23 @@ static std::string extract_field(const std::string& json, const std::string& key
 static bool ensure_initialized()
 {
     if (g_model && g_tokenizer) return true;
-
+    
+    if (const char* env_sp = std::getenv("EASYNC_SYSTEM_PROMPT")) {
+        if (std::strlen(env_sp) > 0) {
+            std::lock_guard<std::mutex> lk(g_mutex);
+            g_system_prompt = std::string(env_sp);
+            fprintf(stderr, "[SGLM] Using system prompt from EASYNC_SYSTEM_PROMPT\n");
+        }
+    }
+    if (const char* env_de = std::getenv("EASYNC_DECODE_EVERY")) {
+        try {
+            int v = std::stoi(env_de);
+            if (v > 0) {
+                g_decode_every.store(v);
+                fprintf(stderr, "[SGLM] Using EASYNC_DECODE_EVERY=%d\n", v);
+            }
+        } catch (...) {}
+    }
     const std::string data_dir = find_data_dir();
     if (data_dir.empty()) {
         fprintf(stderr, "[SGLM] ERROR: lib/ai/data not found.\n");
@@ -208,6 +227,7 @@ static bool run_inference(const std::string& prompt, std::string& result)
 // Initialize tokenizer and model synchronously. Returns 0 on success.
 int ai_initialize(void* /*ctx*/)
 {
+    fprintf(stderr, "[SGLM] ai_initialize called\n");
     if (ensure_initialized()) return 0;
     return -1;
 }
@@ -218,6 +238,20 @@ extern "C" {
 int ai_set_chat_model_script(void* /*ctx*/, const char* /*path*/)
 {
     return 0;
+}
+
+// Allow Dart/host to tell native code where model/tokenizer data is located.
+int ai_set_data_dir(void* /*ctx*/, const char* path)
+{
+    if (!path) return -1;
+    try {
+        std::lock_guard<std::mutex> lk(g_mutex);
+        g_data_dir_override = std::string(path);
+        fprintf(stderr, "[SGLM] ai_set_data_dir: %s\n", path);
+        return 0;
+    } catch (...) {
+        return -1;
+    }
 }
 
 int ai_set_system_prompt(void* /*ctx*/, const char* system_prompt)
@@ -273,19 +307,21 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
             // prepare tokenizer and model in this thread
             std::lock_guard<std::mutex> lk(g_mutex);
             if (!ensure_initialized()) {
-                std::lock_guard<std::mutex> lk2(g_jobs_mutex);
-                auto it = g_jobs.find(id);
-                if (it != g_jobs.end()) it->second.finished = true;
-                return;
+                    fprintf(stderr, "[SGLM] ai_query_async_start: ensure_initialized() failed\n");
+                    std::lock_guard<std::mutex> lk2(g_jobs_mutex);
+                    auto it = g_jobs.find(id);
+                    if (it != g_jobs.end()) it->second.finished = true;
+                    return;
             }
             ids = g_tokenizer->encode_chat(prompt, g_system_prompt);
         }
 
         if (ids.empty()) {
-            std::lock_guard<std::mutex> lk(g_jobs_mutex);
-            auto it = g_jobs.find(id);
-            if (it != g_jobs.end()) it->second.finished = true;
-            return;
+                fprintf(stderr, "[SGLM] ai_query_async_start: tokenizer produced empty ids (prompt len=%zu)\n", prompt.size());
+                std::lock_guard<std::mutex> lk(g_jobs_mutex);
+                auto it = g_jobs.find(id);
+                if (it != g_jobs.end()) it->second.finished = true;
+                return;
         }
 
         SGLMGenParams params;
@@ -298,13 +334,14 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         generated.reserve(static_cast<size_t>(params.max_new_tokens));
 
         // Decode only every N tokens to reduce overhead and improve throughput.
-        const int DECODE_EVERY = 4;
         int token_counter = 0;
         auto on_token = [&](int64_t token_id) {
             generated.push_back(token_id);
             ++token_counter;
 
-                if (token_counter % DECODE_EVERY == 0) {
+            int de = g_decode_every.load();
+            if (de <= 0) de = 4;
+            if (token_counter % de == 0) {
                 std::string cur = g_tokenizer->decode(generated);
                 std::lock_guard<std::mutex> lk(g_jobs_mutex);
                 auto it = g_jobs.find(id);
@@ -329,6 +366,7 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         try {
             g_model->generate_stream(ids, params, on_token);
         } catch (const std::exception& e) {
+            fprintf(stderr, "[SGLM] ai_query_async_start: generate_stream exception: %s\n", e.what());
             std::lock_guard<std::mutex> lk(g_jobs_mutex);
             auto it = g_jobs.find(id);
             if (it != g_jobs.end()) it->second.buf += "\n[model error]";
@@ -418,5 +456,28 @@ int ai_get_permissions(void* /*ctx*/, void* /*p*/)                      { return
 int ai_record_pattern(void* /*ctx*/, const char* /*p*/, uint64_t /*t*/) { return 0; }
 int ai_observe_app_open(void* /*ctx*/, uint64_t /*t*/)                  { return 0; }
 int ai_observe_profile_apply(void* /*ctx*/, const char* /*p*/, uint64_t /*t*/) { return 0; }
+
+// Set how many tokens between decode operations for streaming.
+int ai_set_decode_every(void* /*ctx*/, int n)
+{
+    if (n <= 0) return -1;
+    g_decode_every.store(n);
+    fprintf(stderr, "[SGLM] ai_set_decode_every: %d\n", n);
+    return 0;
+}
+
+// Cleanly free model/tokenizer resources. Returns 0 on success.
+int ai_shutdown(void* /*ctx*/)
+{
+    std::lock_guard<std::mutex> lk(g_mutex);
+    try {
+        g_model.reset();
+        g_tokenizer.reset();
+        fprintf(stderr, "[SGLM] ai_shutdown completed\n");
+        return 0;
+    } catch (...) {
+        return -1;
+    }
+}
 
 } // extern "C"

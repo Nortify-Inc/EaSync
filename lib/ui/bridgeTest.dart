@@ -6,7 +6,7 @@
  * @author Erick Radmann
  */
 
-import 'bridge.dart';
+import 'utils/bridge.dart';
 
 Future<void> main() async {
   Bridge.init();

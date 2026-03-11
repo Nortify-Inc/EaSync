@@ -52,6 +52,7 @@ dependencies:
   firebase_auth: ^5.7.0
   image_picker: ^1.1.2
   pinput: ^5.0.1
+  path_provider: ^2.1.5
 
 
 dev_dependencies:
@@ -82,6 +83,8 @@ flutter:
     - assets/
     - assets/images/
     - assets/images/mocks/
+    # Package AI model and tokenizer so they are available on-device
+    - lib/ai/data/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

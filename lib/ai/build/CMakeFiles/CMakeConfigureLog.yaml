@@ -274,3 +274,42 @@ events:
       
       
 ...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.27/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/local/share/cmake-3.27/Modules/CheckCXXSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/usr/local/share/cmake-3.27/Modules/FindThreads.cmake:99 (CHECK_CXX_SOURCE_COMPILES)"
+      - "/usr/local/share/cmake-3.27/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "CMakeLists.txt:8 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4"
+      binary: "/home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_POSITION_INDEPENDENT_CODE: "ON"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_900fb/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_900fb.dir/build.make CMakeFiles/cmTC_900fb.dir/build
+        gmake[1]: Entering directory '/home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4'
+        Building CXX object CMakeFiles/cmTC_900fb.dir/src.cxx.o
+        /usr/bin/g++ -DCMAKE_HAVE_LIBC_PTHREAD  -std=gnu++20 -fPIE -o CMakeFiles/cmTC_900fb.dir/src.cxx.o -c /home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4/src.cxx
+        Linking CXX executable cmTC_900fb
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_900fb.dir/link.txt --verbose=1
+        /usr/bin/g++ CMakeFiles/cmTC_900fb.dir/src.cxx.o -o cmTC_900fb 
+        gmake[1]: Leaving directory '/home/radmann/easync/lib/ai/build/CMakeFiles/CMakeScratch/TryCompile-TA2zh4'
+        
+      exitCode: 0
+...

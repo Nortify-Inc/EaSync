@@ -50,20 +50,17 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
 
   bool get _canUpdateUi => mounted && _isInTree;
 
-  // Pending reveal buffers per session id. Incoming chunks are enqueued
-  // here and revealed character-by-character by a periodic timer to
-  // produce a smooth typewriter effect.
   final Map<String, String> _pendingBuffers = {};
   final Map<String, Timer?> _revealTimers = {};
 
   void _startReveal(String sessionId) {
     _revealTimers[sessionId]?.cancel();
-    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 90), (_) {
+    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 65), (_) {
+
       if (!mounted) return;
       final pending = _pendingBuffers[sessionId] ?? '';
       if (pending.isEmpty) return;
 
-      // Reveal one character per tick for a slower, smoother effect.
       final take = 1;
       final reveal = pending.substring(0, take);
       _pendingBuffers[sessionId] = pending.substring(reveal.length);
@@ -72,6 +69,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
         final idx = _sessions.indexWhere((s) => s.id == sessionId);
         if (idx < 0) return;
         final session = _sessions[idx];
+
         for (int i = session.messages.length - 1; i >= 0; --i) {
           if (session.messages[i].role == _Role.assistant) {
             session.messages[i] = _ChatMessage(
@@ -208,7 +206,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
 
     final noResponseText = EaI18n.t(
       context,
-      'No response generated. Try rephrasing your request.',
+      'No response generated.',
     );
 
     if (_settings.hapticsEnabled) {
@@ -245,8 +243,6 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       return;
     }
 
-    // Show a global thinking indicator while waiting for the first token.
-    // Do NOT create an empty assistant message yet (avoids the empty bubble).
     try {
       final stream = aiQueryStream(raw);
       var firstChunk = true;
@@ -254,50 +250,54 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       await for (final chunk in stream) {
         if (!_canUpdateUi) break;
         var text = chunk.toString();
-        // Strip leading replacement characters and control bytes that
-        // may survive decoding, to avoid showing the strange box glyph.
+
         text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
         if (text.isEmpty) continue;
 
         if (firstChunk) {
-          // Create placeholder assistant message and start revealing.
           setState(() {
             session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
             _typingIndicator = false;
           });
+
           _stopThinkingPulse();
-          // Enqueue text into pending buffer and start reveal timer.
+
           final pending = _pendingBuffers[sessionId] ?? '';
           _pendingBuffers[sessionId] = pending;
-          // Merge/append carefully to avoid duplicates between displayed + pending
+
           final displayed = '';
           final curPending = _pendingBuffers[sessionId] ?? '';
+
           if ((displayed + curPending).isEmpty) {
             _pendingBuffers[sessionId] = text;
+
           } else {
             final existing = displayed + curPending;
             if (text.length >= existing.length && text.startsWith(existing)) {
               _pendingBuffers[sessionId] = text.substring(existing.length);
+
             } else {
               _pendingBuffers[sessionId] = curPending + text;
+
             }
           }
           _startReveal(sessionId);
           firstChunk = false;
           _scrollToBottom();
+
           continue;
         }
 
-        // Enqueue incoming chunk into pending buffer with overlap detection
         final displayedMsg = session.messages.isNotEmpty ? session.messages.last.text : '';
         final pendingSoFar = _pendingBuffers[sessionId] ?? '';
         final existing = displayedMsg + pendingSoFar;
+
         if (text.length >= existing.length && text.startsWith(existing)) {
-          // only append new tail
           _pendingBuffers[sessionId] = text.substring(existing.length);
+
         } else {
-          // fallback: append as delta
           _pendingBuffers[sessionId] = pendingSoFar + text;
+          
         }
         _startReveal(sessionId);
       }
