@@ -58,19 +58,20 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
 
   void _startReveal(String sessionId) {
     _revealTimers[sessionId]?.cancel();
-    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 30), (_) {
+    _revealTimers[sessionId] = Timer.periodic(const Duration(milliseconds: 90), (_) {
       if (!mounted) return;
       final pending = _pendingBuffers[sessionId] ?? '';
       if (pending.isEmpty) return;
 
-      // Take a small number of characters to reveal per tick.
-      final take = pending.length >= 3 ? 3 : 1;
+      // Reveal one character per tick for a slower, smoother effect.
+      final take = 1;
       final reveal = pending.substring(0, take);
       _pendingBuffers[sessionId] = pending.substring(reveal.length);
 
       setState(() {
-        final session = _sessions.firstWhere((s) => s.id == sessionId, orElse: () => null);
-        if (session == null) return;
+        final idx = _sessions.indexWhere((s) => s.id == sessionId);
+        if (idx < 0) return;
+        final session = _sessions[idx];
         for (int i = session.messages.length - 1; i >= 0; --i) {
           if (session.messages[i].role == _Role.assistant) {
             session.messages[i] = _ChatMessage(
