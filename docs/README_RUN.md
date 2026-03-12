@@ -1,5 +1,7 @@
 How to run `bridge_test` as a pure Dart script
 
+> Recent updates (2026-03-11): added quantization and Q4 helper scripts under `lib/ai/tools/`. A quick ONNX INT8 workflow (`lib/ai/tools/quantize_model.py`) is recommended before attempting 4-bit pipelines.
+
 This project is a Flutter app, but `bridge` is plain Dart using `dart:ffi` and `dart:io`.
 
 If you want to run the test as a standalone Dart CLI (no Flutter runner), use the included `bin/bridge_test.dart`.

@@ -1,5 +1,9 @@
 ## Correção do build Android (ORT_ROOT / ONNX Runtime)
 
+### Recent updates (2026-03-11)
+- Document notes added after a successful fix applied to `lib/CMakeLists.txt` to normalize `ORT_ROOT` and fall back to `lib/thirdParty/onnxruntime-android-1.20.1`.
+- See `lib/CMakeLists.txt` for the exact change; this resolved the missing `onnxruntime_cxx_api.h` during Android NDK builds.
+
 - Problema: durante o build Android o compilador NDK/Clang não encontrava o header `onnxruntime_cxx_api.h` apesar dos headers estarem em
   `lib/thirdParty/onnxruntime-android-1.20.1/headers`. Isso aconteceu porque o CMake recebeu um `ORT_ROOT` com segmentos relativos
   (ex.: `../../...`) que resultaram num caminho não resolvido/ignorado pelo compilador.

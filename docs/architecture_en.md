@@ -1,5 +1,7 @@
 # EaSync Project Architecture (English)
 
+> Recent updates (2026-03-11): ONNX INT8 quantization helper added (`lib/ai/tools/quantize_model.py`), Q4/GPTQ guidance (`docs/Q4_GPTQ.md`), and Android build CMake fixes documented in `docs/ANDROID_BUILD_FIX.md`.
+
 ---
 
 ## 1. Overview

@@ -1,5 +1,7 @@
 # EaSync — Documentação de Arquitetura (Completa, Didática e Profunda)
 
+> Recent updates (2026-03-11): repository now includes ONNX INT8 quantization tools (`lib/ai/tools/quantize_model.py`) and Q4/GPTQ guidance (`docs/Q4_GPTQ.md`). Android CMake ORT_ROOT normalization fix applied (`lib/CMakeLists.txt`). See docs for details.
+
 ---
 
 ## 1. Visão Geral

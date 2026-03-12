@@ -128,6 +128,13 @@ flutter run -d android
 > `android/app/build.gradle.kts` + `lib/core/CMakeLists.txt`.
 > The host Linux install path (`/usr/lib`) is **not** used on device.
 
+## Recent updates (2026-03-11)
+
+- Added ONNX INT8 quantization helper script: `lib/ai/tools/quantize_model.py`.
+- Added Q4/GPTQ guidance and helper pipeline: `docs/Q4_GPTQ.md`, `lib/ai/tools/q4_pipeline.sh`.
+- Documented Android CMake fix for ONNX Runtime path normalization: `docs/ANDROID_BUILD_FIX.md`.
+- Small utilities and inference/compare scripts added under `lib/ai/tools/` for local experimentation.
+
 ---
 
 ## 🧠 Assistant notes
