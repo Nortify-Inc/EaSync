@@ -52,7 +52,7 @@ static std::string                g_system_prompt = "Your name is Agent, AI of E
 static std::unique_ptr<SGLM>      g_model;
 static std::unique_ptr<Tokenizer> g_tokenizer;
 static std::mutex                 g_mutex;
-static std::atomic<int>          g_decode_every{4};
+static std::atomic<int>           g_decode_every{4};
 
 struct JobState {
     std::string buf;
@@ -224,7 +224,6 @@ static bool run_inference(const std::string& prompt, std::string& result)
     return true;
 }
 
-// Initialize tokenizer and model synchronously. Returns 0 on success.
 int ai_initialize(void* /*ctx*/)
 {
     fprintf(stderr, "[SGLM] ai_initialize called\n");
@@ -240,7 +239,6 @@ int ai_set_chat_model_script(void* /*ctx*/, const char* /*path*/)
     return 0;
 }
 
-// Allow Dart/host to tell native code where model/tokenizer data is located.
 int ai_set_data_dir(void* /*ctx*/, const char* path)
 {
     if (!path) return -1;
@@ -300,17 +298,19 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         g_jobs.emplace(id, JobState{});
     }
 
-    // Spawn a worker thread that streams tokens into the job buffer.
     std::thread([id, prompt]() {
         std::vector<int64_t> ids;
         {
-            // prepare tokenizer and model in this thread
             std::lock_guard<std::mutex> lk(g_mutex);
+
             if (!ensure_initialized()) {
                     fprintf(stderr, "[SGLM] ai_query_async_start: ensure_initialized() failed\n");
+
                     std::lock_guard<std::mutex> lk2(g_jobs_mutex);
                     auto it = g_jobs.find(id);
+
                     if (it != g_jobs.end()) it->second.finished = true;
+
                     return;
             }
             ids = g_tokenizer->encode_chat(prompt, g_system_prompt);
@@ -319,8 +319,10 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         if (ids.empty()) {
                 fprintf(stderr, "[SGLM] ai_query_async_start: tokenizer produced empty ids (prompt len=%zu)\n", prompt.size());
                 std::lock_guard<std::mutex> lk(g_jobs_mutex);
+
                 auto it = g_jobs.find(id);
                 if (it != g_jobs.end()) it->second.finished = true;
+
                 return;
         }
 
@@ -333,29 +335,30 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         std::vector<int64_t> generated;
         generated.reserve(static_cast<size_t>(params.max_new_tokens));
 
-        // Decode only every N tokens to reduce overhead and improve throughput.
         int token_counter = 0;
+
         auto on_token = [&](int64_t token_id) {
             generated.push_back(token_id);
             ++token_counter;
 
             int de = g_decode_every.load();
-            if (de <= 0) de = 4;
+
+            if (de <= 0) 
+                de = 4;
+
             if (token_counter % de == 0) {
                 std::string cur = g_tokenizer->decode(generated);
                 std::lock_guard<std::mutex> lk(g_jobs_mutex);
+
                 auto it = g_jobs.find(id);
+
                 if (it != g_jobs.end()) {
-                    // If the tokenizer returned a cumulative string that
-                    // starts with our existing buffer, append only the
-                    // new tail to preserve job.pos semantics and avoid
-                    // copying from mid-codepoint when buffers change.
                     std::string &old = it->second.buf;
+
                     if (!old.empty() && cur.size() >= old.size() && cur.rfind(old, 0) == 0) {
                         old.append(cur.substr(old.size()));
+
                     } else {
-                        // Otherwise replace full buffer and reset pos to 0
-                        // to ensure readers don't use stale indices.
                         old = cur;
                         it->second.pos = 0;
                     }
@@ -365,29 +368,35 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
 
         try {
             g_model->generate_stream(ids, params, on_token);
+
         } catch (const std::exception& e) {
             fprintf(stderr, "[SGLM] ai_query_async_start: generate_stream exception: %s\n", e.what());
             std::lock_guard<std::mutex> lk(g_jobs_mutex);
+
             auto it = g_jobs.find(id);
             if (it != g_jobs.end()) it->second.buf += "\n[model error]";
         }
 
-        // Final decode and mark finished
         {
             std::lock_guard<std::mutex> lk2(g_jobs_mutex);
             auto it2 = g_jobs.find(id);
+
             if (it2 != g_jobs.end()) {
-                // ensure final decoded text is available
                 try {
                     std::string finalDec = g_tokenizer->decode(generated);
                     std::string &old = it2->second.buf;
+
                     if (!old.empty() && finalDec.size() >= old.size() && finalDec.rfind(old, 0) == 0) {
                         old.append(finalDec.substr(old.size()));
+
                     } else {
                         old = finalDec;
                         it2->second.pos = 0;
+
                     }
+
                 } catch (...) {}
+
                 it2->second.finished = true;
             }
         }
@@ -409,22 +418,22 @@ int ai_query_async_poll(void* /*ctx*/, uint64_t handle, bool* finished,
     JobState& job = it->second;
 
     const size_t available = (job.buf.size() > job.pos) ? (job.buf.size() - job.pos) : 0;
+
     if (available == 0) {
         if (job.finished) {
             *finished = true;
-            // nothing to send, remove job
-            // clear outBuf to avoid returning stale data
             if (outBuf && outLen > 0) outBuf[0] = '\0';
             g_jobs.erase(it);
+
             return 0;
         }
-        // not ready and no data yet: clear outBuf so caller doesn't reuse old data
+
         *finished = false;
         if (outBuf && outLen > 0) outBuf[0] = '\0';
-        return 1; // indicate partial/not-ready
+
+        return 1;
     }
 
-    // copy up to outLen-1 bytes but avoid splitting UTF-8 codepoints
     const uint32_t maxCopy = (outLen > 0) ? (outLen - 1) : 0;
     uint32_t toCopy = static_cast<uint32_t>(std::min<size_t>(available, maxCopy));
     toCopy = adjust_to_utf8_boundary(job.buf, job.pos, toCopy);
@@ -432,17 +441,18 @@ int ai_query_async_poll(void* /*ctx*/, uint64_t handle, bool* finished,
     if (toCopy > 0) {
         std::memcpy(outBuf, job.buf.data() + job.pos, toCopy);
     }
+
     outBuf[toCopy] = '\0';
     job.pos += toCopy;
 
     if (job.finished && job.pos >= job.buf.size()) {
         *finished = true;
         g_jobs.erase(it);
-        return 0; // final chunk
+        return 0;
     }
 
     *finished = false;
-    return 1; // partial chunk available
+    return 1;
 }
 
 int ai_model_execute_command_async_start(void* ctx, const char* r, uint64_t* h) { return ai_query_async_start(ctx, r, h); }
@@ -457,7 +467,6 @@ int ai_record_pattern(void* /*ctx*/, const char* /*p*/, uint64_t /*t*/) { return
 int ai_observe_app_open(void* /*ctx*/, uint64_t /*t*/)                  { return 0; }
 int ai_observe_profile_apply(void* /*ctx*/, const char* /*p*/, uint64_t /*t*/) { return 0; }
 
-// Set how many tokens between decode operations for streaming.
 int ai_set_decode_every(void* /*ctx*/, int n)
 {
     if (n <= 0) return -1;
@@ -466,15 +475,16 @@ int ai_set_decode_every(void* /*ctx*/, int n)
     return 0;
 }
 
-// Cleanly free model/tokenizer resources. Returns 0 on success.
 int ai_shutdown(void* /*ctx*/)
 {
     std::lock_guard<std::mutex> lk(g_mutex);
     try {
         g_model.reset();
         g_tokenizer.reset();
+
         fprintf(stderr, "[SGLM] ai_shutdown completed\n");
         return 0;
+        
     } catch (...) {
         return -1;
     }

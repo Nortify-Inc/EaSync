@@ -40,8 +40,6 @@ public:
         const std::vector<int64_t>& prompt_ids,
         SGLMGenParams params = {});
 
-    // Generate tokens and invoke `on_token` for each generated token id as soon as
-    // it is produced. This enables streaming generation.
     void generate_stream(
         const std::vector<int64_t>& prompt_ids,
         SGLMGenParams params,

@@ -1,13 +1,5 @@
 #pragma once
 
-/*
- * Tokenizer.hpp
- * ─────────────
- * Tokenizer BPE Qwen2 puro C++17.
- * Lê tokenizer.json (vocab + merges) e vocab.json.
- * Sem dependências externas além da stdlib.
- */
-
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -15,7 +7,6 @@
 
 class Tokenizer {
 public:
-    // Tokens especiais Qwen2
     static constexpr int64_t TOK_IM_START = 151644; // <|im_start|>
     static constexpr int64_t TOK_IM_END   = 151645; // <|im_end|>
     static constexpr int64_t TOK_EOS      = 151643; // <|endoftext|>

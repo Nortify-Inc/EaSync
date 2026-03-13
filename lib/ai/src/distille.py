@@ -30,7 +30,6 @@ from loadTeacher import teacherForward
 torch.set_num_threads(os.cpu_count())
 torch.set_num_interop_threads(os.cpu_count())
 
-# ── paths ────────────────────────────────────────────────────────────────────
 baseDir    = os.path.dirname(os.path.dirname(__file__))
 dataDir    = os.path.join(baseDir, "data")
 datasetDir = os.path.join(dataDir, "dataset")
@@ -43,32 +42,25 @@ os.makedirs(distillDir, exist_ok=True)
 tokenizer = Tokenizer.from_file(os.path.join(dataDir, "tokenizer.json"))
 vocabSize  = tokenizer.get_vocab_size()
 
-# ── hiperparâmetros ───────────────────────────────────────────────────────────
 SEQ_LEN     = 128
 TEMPERATURE = 2.0
 ALPHA_START = 0.5
 ALPHA_END   = 0.9
-ALPHA_STEPS = 2000     # steps para alpha ir de START até END
-MAX_SAMPLES = 200_000  # ~4x mais que antes
-TOP_K       = 128      # mais sinal da cauda do teacher
+ALPHA_STEPS = 2000
+MAX_SAMPLES = 200_000
+TOP_K       = 128
 BATCH_SIZE  = 8
 LR          = 1e-4
 WARMUP      = 500
-MAX_STEPS   = MAX_SAMPLES // BATCH_SIZE   # ~25000 steps por epoch
+MAX_STEPS   = MAX_SAMPLES // BATCH_SIZE
 GRAD_CLIP   = 1.0
 
-# token especial de separação entre documentos no sequence packing
 EOS_ID      = 151643
 
 dataset = load_dataset(
     "parquet",
     data_files={"train": os.path.join(datasetDir, "train-*.parquet")}
 )["train"]
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 1. Geração do dataset distilado com sequence packing
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def encode_raw(text: str):
     """Tokeniza sem truncar nem paddar — retorna lista crua de ids."""
@@ -77,22 +69,16 @@ def encode_raw(text: str):
 
 
 def pack_sequences(dataset_iter, seq_len: int = SEQ_LEN):
-    """
-    Gerador que empacota textos consecutivos em janelas de seq_len tokens.
-
-    Estratégia:
-      - Mantém um buffer de tokens
-      - Insere EOS_ID entre documentos para marcar fronteiras
-      - Quando o buffer tem >= seq_len tokens, emite uma janela e avança
-      - Sem padding — cada janela emitida está 100% preenchida
-    """
     buffer = []
     for item in dataset_iter:
         ids = encode_raw(item["text"])
+
         if ids is None:
             continue
+
         if buffer:
-            buffer.append(EOS_ID)   # separador entre documentos
+            buffer.append(EOS_ID)
+
         buffer.extend(ids)
 
         while len(buffer) >= seq_len:
@@ -107,11 +93,10 @@ def generate_distilled():
     for tokens in packer:
         logits = torch.tensor(teacherForward(tokens), dtype=torch.float32)
 
-        # normaliza para exatamente (T, V) independente do output do ONNX
         while logits.dim() > 2:
             logits = logits.squeeze(0)
 
-        values, indices = torch.topk(logits, TOP_K, dim=-1)   # (T, K)
+        values, indices = torch.topk(logits, TOP_K, dim=-1)
 
         torch.save(
             {
@@ -130,11 +115,6 @@ def generate_distilled():
 
     print(f"[distill] Total: {index} amostras geradas")
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 2. Loader com batching
-# ═══════════════════════════════════════════════════════════════════════════════
-
 def load_distilled(batch_size: int = BATCH_SIZE):
     files = sorted(os.listdir(distillDir))
     random.shuffle(files)
@@ -143,11 +123,12 @@ def load_distilled(batch_size: int = BATCH_SIZE):
     for f in files:
         data = torch.load(os.path.join(distillDir, f), map_location="cpu")
 
-        # normaliza shapes para (T, K) independente de como foi salvo
         v = data["values"]
         i = data["indices"]
+
         while v.dim() > 2:
             v = v.squeeze(0)
+
         while i.dim() > 2:
             i = i.squeeze(0)
 
@@ -159,29 +140,25 @@ def load_distilled(batch_size: int = BATCH_SIZE):
             indices = torch.stack([d["indices"] for d in batch])                    # (B, T, K)
             yield tokens, values, indices
             batch = []
-    # descarta último batch incompleto para manter shapes consistentes
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 3. Loss de distillation (sparse KL)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def sparse_kl_loss(
     student_logits: torch.Tensor,   # (B, T, V)
     values:         torch.Tensor,   # (B, T, K)
     indices:        torch.Tensor,   # (B, T, K)
+
 ) -> torch.Tensor:
-    # achata dims extras
     while student_logits.dim() > 3:
         student_logits = student_logits.squeeze(0)
+
     while values.dim() > 3:
         values = values.squeeze(0)
+
     while indices.dim() > 3:
         indices = indices.squeeze(0)
 
-    # promove para 3D se vier sem dim de batch
     if student_logits.dim() == 2:
         student_logits = student_logits.unsqueeze(0)
+
     if values.dim() == 2:
         values  = values.unsqueeze(0)
         indices = indices.unsqueeze(0)
@@ -195,11 +172,6 @@ def sparse_kl_loss(
 
     kl = (t_prob * (t_prob.log() - s_lp)).sum(-1).mean()
     return kl * (TEMPERATURE ** 2)
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 4. Treinamento
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def train():
     args = ModelArgs()
@@ -215,36 +187,30 @@ def train():
     optimizer = AdamW(student.parameters(), lr=LR, weight_decay=0.1)
     scheduler = CosineAnnealingLR(optimizer, T_max=MAX_STEPS, eta_min=LR / 10)
 
-    step      = 0
-    loss_acc  = 0.0
-    kl_acc    = 0.0
-    ce_acc    = 0.0
+    step = 0
+    loss_acc = 0.0
+    kl_acc = 0.0
+    ce_acc = 0.0
 
     for input_ids, values, indices in load_distilled():
-        # input_ids: (B, T)  |  values, indices: (B, T, K)
 
-        # warmup linear
         if step < WARMUP:
             for g in optimizer.param_groups:
                 g["lr"] = LR * (step + 1) / WARMUP
 
         student_logits = student(input_ids)   # (B, T, V)
 
-        # distillation loss
         kl = sparse_kl_loss(student_logits, values, indices)
 
-        # CE loss: prevê token[t+1] dado token[t]
-        # ignora padding (0) e separador EOS entre documentos
-        preds   = student_logits[:, :-1, :]   # (B, T-1, V)
-        targets = input_ids[:, 1:]            # (B, T-1)
+        preds   = student_logits[:, :-1, :]
+        targets = input_ids[:, 1:]
 
         ce = F.cross_entropy(
             preds.reshape(-1, vocabSize),
             targets.reshape(-1),
-            ignore_index=0,    # padding
+            ignore_index=0, 
         )
 
-        # alpha cresce de ALPHA_START até ALPHA_END em ALPHA_STEPS steps
         alpha = ALPHA_START + (ALPHA_END - ALPHA_START) * min(step / ALPHA_STEPS, 1.0)
         loss  = alpha * kl + (1.0 - alpha) * ce
 
@@ -256,7 +222,6 @@ def train():
         if step >= WARMUP:
             scheduler.step()
 
-        # acumula para log suavizado
         loss_acc += loss.item()
         kl_acc   += kl.item()
         ce_acc   += ce.item()
@@ -266,6 +231,7 @@ def train():
             avg_loss = loss_acc / 100 if step > 0 else loss_acc
             avg_kl   = kl_acc   / 100 if step > 0 else kl_acc
             avg_ce   = ce_acc   / 100 if step > 0 else ce_acc
+
             print(
                 f"step {step:6d} | "
                 f"loss {avg_loss:.4f} | "
@@ -287,11 +253,6 @@ def train():
     torch.save(student.state_dict(), ckptPath)
     print(f"Treinamento concluído. Modelo salvo em {ckptPath}")
     return student
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 5. Export ONNX
-# ═══════════════════════════════════════════════════════════════════════════════
 
 def export_onnx():
     print("Exportando ONNX...")
@@ -318,8 +279,6 @@ def export_onnx():
     )
     print(f"ONNX exportado: {onnxPath}")
 
-
-# ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     if len(os.listdir(distillDir)) == 0:
