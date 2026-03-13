@@ -46,3 +46,5 @@ app.*.map.json
 
 lib/ai/data/dataset/
 lib/ai/data/distilled/
+
+.venv/
