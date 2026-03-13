@@ -1,14 +1,3 @@
-"""
-SGLMLite — Student model ~50M params para distillation do SGLM (Qwen2-0.5B style).
-
-Arquitetura alinhada ao teacher:
-  - RoPE posicional (mesma base)
-  - SwiGLU (gate * up -> down), igual ao teacher
-  - GQA: n_heads=8, n_kv_heads=2
-  - Causal mask
-  - Weight tying embed <-> lm_head
-"""
-
 import math
 import torch
 import torch.nn as nn
@@ -185,5 +174,5 @@ if __name__ == "__main__":
 
     ids = torch.randint(0, 100, (2, 32))
     out = m(ids)
-    
+
     print(f"Output shape: {out.shape}")

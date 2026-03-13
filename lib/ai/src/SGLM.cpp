@@ -31,9 +31,6 @@ SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
 
     session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), opts);
 
-    // Output shape: [1, -1, vocab_size]
-    // dim[1] é dinâmico (-1), dim[2] é fixo (151936 para Qwen2).
-    // Lemos diretamente do shape estático — sem dummy forward.
     auto shape = session_->GetOutputTypeInfo(0)
                           .GetTensorTypeAndShapeInfo().GetShape();
 
@@ -90,9 +87,12 @@ int64_t SGLM::sample(
 
     if (top_k > 0 && static_cast<size_t>(top_k) < V) {
         std::vector<float> tmp(logits);
+
         std::nth_element(tmp.begin(), tmp.begin() + top_k - 1,
                          tmp.end(), std::greater<float>());
+
         const float kth = tmp[top_k - 1];
+
         for (auto& v : logits)
             if (v < kth) v = -std::numeric_limits<float>::infinity();
     }
@@ -100,25 +100,40 @@ int64_t SGLM::sample(
     const float maxv = *std::max_element(logits.begin(), logits.end());
     std::vector<float> probs(V);
     float sum = 0.f;
+
     for (size_t i = 0; i < V; ++i) {
         probs[i] = std::exp(logits[i] - maxv);
         sum += probs[i];
     }
-    for (auto& p : probs) p /= sum;
+
+    for (auto& p : probs) 
+        p /= sum;
 
     if (top_p < 1.f) {
         std::vector<size_t> idx(V);
         std::iota(idx.begin(), idx.end(), 0);
+
         std::sort(idx.begin(), idx.end(),
                   [&](size_t a, size_t b){ return probs[a] > probs[b]; });
+
         float cum = 0.f;
+
         for (size_t i = 0; i < V; ++i) {
-            if (cum >= top_p) probs[idx[i]] = 0.f;
-            else              cum += probs[idx[i]];
+            if (cum >= top_p) 
+                probs[idx[i]] = 0.f;
+
+            else              
+                cum += probs[idx[i]];
         }
+
         sum = 0.f;
-        for (const auto& p : probs) sum += p;
-        if (sum > 0.f) for (auto& p : probs) p /= sum;
+
+        for (const auto& p : probs) 
+            sum += p;
+
+        if (sum > 0.f) 
+            for (auto& p : probs) 
+                p /= sum;
     }
 
     std::discrete_distribution<int64_t> dist(probs.begin(), probs.end());
@@ -129,7 +144,6 @@ std::vector<int64_t> SGLM::generate(
     const std::vector<int64_t>& prompt_ids,
     SGLMGenParams params)
 {
-    // Delegate to the streaming generator and collect tokens.
     std::vector<int64_t> generated;
     generated.reserve(static_cast<size_t>(params.max_new_tokens));
 
@@ -160,11 +174,12 @@ void SGLM::generate_stream(
             params.top_p,
             rng_);
 
-        if (token_id == EOS1 || token_id == EOS2) break;
+        if (token_id == EOS1 || token_id == EOS2) 
+            break;
 
-        // Emit token to caller
         try {
             on_token(token_id);
+            
         } catch (...) {}
 
         ids.push_back(token_id);
