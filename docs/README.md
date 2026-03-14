@@ -97,12 +97,21 @@ lib/
 
 ## ⚙️ Installation
 
-### 1) Backend (C++)
+### 1) Backend nativo (C++) e runtime AI (separado)
+
+O projeto agora separa o runtime de AI do core principal. O core nativo (drivers, device management) é construído em `lib/core` e produz `libeasync_core.so`. O runtime de AI (exportando as funções `ai_*`) vive em `lib/ai` e produz `libeasync_ai.so` — ambos são empacotados na APK/instalação quando configurados corretamente no Android Gradle/CMake.
+
+Passos para compilar localmente os binários nativos (core + AI):
 
 ```bash
-cd easync/lib/core
+# Build do core + AI nativo
+cd lib/
 chmod +x build.sh
 ./build.sh
+
+
+# Observação: no Android, o Gradle/CMake deve encontrar ambos os .so
+# (libeasync_core.so e libeasync_ai.so) e empacotá-los em `android/app/src/main/jniLibs/`
 ```
 
 ### 2) Flutter dependencies
@@ -115,13 +124,14 @@ flutter pub get
 ### 3) Run app
 
 ```bash
-flutter run -d linux
+# Linux (desktop)
+flutter run -d linux --target lib/ui/main.dart
 ```
 
-For Android:
+Para Android (assegure que os .so nativos foram construídos e estão sendo empacotados):
 
 ```bash
-flutter run -d android
+flutter run -d android --target lib/ui/main.dart
 ```
 
 > On Android, `libeasync_core.so` is built and packaged into the APK via
@@ -130,16 +140,13 @@ flutter run -d android
 
 ## Recent updates (2026-03-11)
 
-- Added ONNX INT8 quantization helper script: `lib/ai/tools/quantize_model.py`.
-- Added Q4/GPTQ guidance and helper pipeline: `docs/Q4_GPTQ.md`, `lib/ai/tools/q4_pipeline.sh`.
 - Documented Android CMake fix for ONNX Runtime path normalization: `docs/ANDROID_BUILD_FIX.md`.
-- Small utilities and inference/compare scripts added under `lib/ai/tools/` for local experimentation.
 
 ---
 
 ## 🧠 Assistant notes
 
-- Voice recognition is currently enabled for Android.
+- Voice recognition is currently enabled but not implemented yet for Android.
 - Assistant recommendations and annotations improve over time as user/device interactions are observed.
 
 ---
@@ -151,15 +158,6 @@ flutter analyze
 flutter test
 ```
 
-Native core can be rebuilt anytime with:
-
-```bash
-cd lib/core
-./build.sh
-```
-
----
-
 ## 🧱 Architecture overview
 
 - Flutter UI layer in [lib/ui/assistant.dart](lib/ui/assistant.dart), [lib/ui/dashboard.dart](lib/ui/dashboard.dart), [lib/ui/manage.dart](lib/ui/manage.dart), [lib/ui/profiles.dart](lib/ui/profiles.dart)
@@ -167,17 +165,6 @@ cd lib/core
 - Native core and protocol drivers in [lib/core/src/core.cpp](lib/core/src/core.cpp) and [lib/core/drivers](lib/core/drivers)
 - Platform runners in [linux/runner](linux/runner), [windows/runner](windows/runner), [android/app](android/app), [ios/Runner](ios/Runner)
 
----
-
-## ⚡ Quickstart (Linux)
-
-```bash
-git clone <your-repo-url>
-cd easync
-flutter pub get
-cd lib/core && ./build.sh && cd ../..
-flutter run -d linux
-```
 
 ---
 
