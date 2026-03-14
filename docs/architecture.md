@@ -192,7 +192,9 @@ Raiz do projeto
 
 #### Exemplo de assinatura FFI:
 - `Bridge.registerDevice()` → C++: `core_register_device()`
-- `Bridge.aiExecuteCommandAsync()` → C++: `core_ai_execute_command_async()`
+- `Bridge.aiExecuteCommandAsync()` → AI runtime (separado): `ai_query_async_start()` / `ai_query_async_poll()` (exports em `libeasync_ai.so`)
+
+Note: The AI/runtime APIs were split out of the main core — device management remains in `libeasync_core` (core_*) while model/AI functions live in a separate native library (`libeasync_ai`) with `ai_*` exports. `bridge.dart` opens both libraries and forwards calls accordingly.
 
 #### Diagrama de integração:
 ```
