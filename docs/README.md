@@ -114,6 +114,41 @@ chmod +x build.sh
 # (libeasync_core.so e libeasync_ai.so) e empacotá-los em `android/app/src/main/jniLibs/`
 ```
 
+### Empacotamento Android (.so)
+
+Para garantir que os binários nativos sejam empacotados na APK, copie os artefatos gerados para os diretórios de `jniLibs` por ABI ou configure o `CMakeLists.txt`/Gradle para instalá-los automaticamente. Exemplo simples por ABI:
+
+```bash
+# após build, por exemplo em lib/core/build/<abi>/libeasync_core.so
+mkdir -p android/app/src/main/jniLibs/arm64-v8a
+cp lib/core/build/<abi>/libeasync_core.so android/app/src/main/jniLibs/arm64-v8a/
+cp lib/ai/build/<abi>/libeasync_ai.so android/app/src/main/jniLibs/arm64-v8a/
+```
+
+Alternativas:
+- Ajustar `android/app/CMakeLists.txt` para apontar para os diretórios de build.
+- Usar `jniLibs` por ABI com nomes corretos (`armeabi-v7a`, `arm64-v8a`, `x86_64`).
+
+Depois de incluir os .so, reconstruir a APK (`flutter run -d android`) garantirá que os binários nativos sejam incluídos.
+
+### Incluir modelo quantizado (exemplo)
+
+Se quiser empacotar um modelo quantizado (por exemplo `model.quant.onnx`) e usá-lo no dispositivo:
+
+1. Adicione o arquivo como asset no `pubspec.yaml` ou copie para `android/app/src/main/assets/`.
+2. No runtime, use o downloader/asset-copy flow para mover o modelo para um diretório de dados do app e então chamar `ai_set_data_dir()` (via `Bridge`/downloader) para apontar o runtime ao diretório contendo o arquivo.
+
+Exemplo (alto nível):
+
+```bash
+# colocar o modelo em android/app/src/main/assets/model.quant.onnx
+flutter run -d android --target lib/ui/main.dart
+# o app deve copiar o asset para um data dir em runtime e chamar ai_set_data_dir(path)
+```
+
+Isso permite alternar entre modelos (original/quantizado) sem recompilar o código nativo.
+
+
 ### 2) Flutter dependencies
 
 ```bash
@@ -220,6 +255,12 @@ flutter pub get
 
 - Voice commands unavailable on desktop:
 	- expected behavior (voice recognition is Android-focused currently).
+
+- ONNX / external-data mismatch:
+	- Sintoma: erro ao carregar um ONNX com external-data (`.data`) dizendo que offsets/tamanhos não batem.
+	- Causa comum: o arquivo `.data` não corresponde exatamente ao `model.onnx` (nomes/paths/offsets differ) — isso acontece durante testes de quantize/swap quando os nomes de arquivo não são preservados.
+	- Solução rápida: preserve backups originais e substitua os pares `model.onnx` + `model.onnx.data` juntos; ou use symlink para apontar o nome esperado para o arquivo `.data` correto.
+	- Veja também: [docs/ANDROID_BUILD_FIX.md](docs/ANDROID_BUILD_FIX.md) para problemas relacionados ao build nativo.
 
 ---
 
