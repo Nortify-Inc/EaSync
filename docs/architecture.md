@@ -1,4 +1,122 @@
-# EaSync — Documentação de Arquitetura (Completa, Didática e Profunda)
+# EaSync — Documentação de Arquitetura (atualizada)
+
+Data: 2026-03-14
+
+Resumo rápido
+- EaSync é uma aplicação multiplataforma com UI Flutter (`lib/ui`) e um núcleo nativo em C++ (`lib/core`) que gerencia dispositivos, drivers e estado. O subsistema de IA vive em `lib/ai` e fornece tanto uma biblioteca nativa C++/ONNX quanto scripts Python para pesquisa/treino.
+
+Objetivo deste documento
+- Descrever de forma fiel a arquitetura atual do backend (núcleo C++ + motor de IA), o contrato FFI com o Flutter, fluxo de dados, artefatos, variáveis de ambiente relevantes e workflows de desenvolvimento e build.
+
+1. Visão geral da arquitetura
+- Componentes principais:
+  - UI Flutter: `lib/ui` (páginas, widgets, `bridge.dart` — camada FFI).
+  - Núcleo nativo (Core): `lib/core` (API C pública, registro de dispositivos, drivers, despacho de eventos, cache de estado).
+  - IA: `lib/ai` (runtime nativo em C++ que carrega um modelo ONNX e tokenizador; scripts Python para pesquisa/treino).
+  - Assets: `assets/` (templates JSON de dispositivos, imagens) e `lib/ai/data` (modelo/tokenizer) — a UI pode empacotar esses assets para copiar em tempo de execução.
+
+2. Fluxo principal de dados
+- UI ↔ Bridge (Dart FFI) ↔ Núcleo (`libeasync_core.so`) : operações de dispositivo (registro, estado, comandos), eventos e callbacks.
+- UI ↔ Bridge (Dart FFI) ↔ IA (`libeasync_ai.so`) : consultas ao assistente, geração de texto síncrona e assíncrona (streaming).
+- Drivers ↔ Núcleo ↔ Bridge ↔ UI : drivers de protocolos (BLE, Wi‑Fi, Zigbee, MQTT, Mock) conectam dispositivos físicos ao core.
+
+3. Núcleo (lib/core)
+- Localização-chave: `lib/core/include/core.h` (contrato público C) e `lib/core/src/core.cpp` (implementação).
+- Responsabilidades:
+  - Registro e remoção de dispositivos (`core_register_device[_ex]`, `core_remove_device`).
+  - Consulta e atualização de estado (`core_get_state`, `core_set_power`, `core_set_brightness`, `core_set_color`, etc.).
+  - Gerenciamento de drivers por protocolo e inicialização sob demanda.
+  - Cache de estado local e despacho de eventos via `core_set_event_callback` (estrutura `CoreEvent`).
+  - Operações utilitárias: simulação (`core_simulate`), provisionamento Wi‑Fi (`core_provision_wifi`), rastreamento de erros (`core_last_error`).
+- Driver model:
+  - Drivers vivem em `lib/core/drivers/` e implementam a interface comum `drivers::Driver` (mock, BLE, opcional MQTT/Wi‑Fi/Zigbee via defines de build).
+  - O núcleo cria instâncias de driver (ex.: `MockDriver`, `BleDriver`) no `core_create()` e inicializa conforme necessário (`ensureDriverInitialized`).
+- Concorrência e segurança:
+  - `core.cpp` usa mutexes/locks para proteger mapa de dispositivos e dados compartilhados; eventos do driver são encaminhados por trampolins que comparam estados e disparam callbacks quando há mudanças.
+
+4. IA (lib/ai)
+- Localização-chave: `lib/ai/include/engine.hpp` (API C `ai_*`) e `lib/ai/src/engine.cpp` (implementação nativa principal).
+- Papel do engine nativo:
+  - Carregar `model.onnx` e `tokenizer.json` de `lib/ai/data` (pasta pesquisada automaticamente ou definida por `EASYNC_AI_DATA_DIR`).
+  - Inicializar tokenizador (`Tokenizer`) e motor de inferência (classe `SGLM` / ONNX runtime wrapper).
+  - Expor APIs C para o `Bridge` usar: `ai_initialize`, `ai_query`, `ai_query_async_start`/`ai_query_async_poll`, `ai_set_data_dir`, `ai_set_system_prompt`, `ai_set_decode_every`, `ai_shutdown`, entre outras auxiliares (`ai_record_pattern`, `ai_get_annotations`, etc.).
+  - Suporte a geração síncrona (`ai_query`) e assíncrona (jobs com `ai_query_async_start` devolvendo handle e `ai_query_async_poll` para ler chunks/streaming).
+- Artefatos e scripts auxiliares:
+  - `lib/ai/src/chat.py`, `SGLMLite.py`, e outros scripts PyTorch existem para pesquisa/treino e como referência de implementação, mas a inferência de produção está implementada no runtime C++/ONNX quando disponível.
+  - `lib/ai/data/` contém `model.onnx`, `tokenizer.json`, vocabulários e amostras; o engine procura automaticamente por esses arquivos e aceita override via `EASYNC_AI_DATA_DIR` ou `ai_set_data_dir()`.
+- Variáveis de ambiente relevantes:
+  - `EASYNC_AI_DATA_DIR` — local alternativo para `lib/ai/data`.
+  - `EASYNC_SYSTEM_PROMPT` — prompt do sistema usado pelo motor.
+  - `EASYNC_DECODE_EVERY` — controla frequência de decodificação durante geração streaming.
+  - (ferramentas) `EASYNC_CHAT_INFER_SCRIPT` e `EASYNC_CHAT_INFER_PYTHON` — usados por componentes auxiliares que apontam para scripts Python (fallbacks/experimentais).
+
+5. FFI / Bridge (Flutter ↔ Nativo)
+- Implementação: `lib/ui/utils/bridge.dart`.
+- Comportamento principal:
+  - Abre dinamicamente as bibliotecas nativas (`libeasync_core.so` e `libeasync_ai.so`) procurando em múltiplos caminhos (build outputs, diretórios do executável, `/usr/lib` etc.).
+  - Define typedefs e lookup das funções C (`core_*` e `ai_*`) e fornece wrappers Dart/OOP que o restante da UI consome (`aiQuery`, `aiQueryAsync`, `aiQueryStream`, `coreCreate`, `coreInit`, `registerDevice`, etc.).
+  - Copia assets de IA empacotados (AssetManifest) para uma pasta de suporte da aplicação quando necessário (`_ensureAiAssetsCopied`).
+  - Fornece abstrações de streaming: spawn de isolate para chamar `ai_query_async_start` / `ai_query_async_poll` e encaminhar chunks ao UI.
+- Contratos importantes (exemplos):
+  - `core_create()` / `core_destroy()` — criar/destuir contexto nativo.
+  - `core_init()` — inicializar o núcleo.
+  - `core_register_device[_ex]`, `core_set_power`, `core_set_brightness`, etc. — controle de dispositivos.
+  - `ai_query`, `ai_query_async_start`, `ai_query_async_poll` — chamadas de inferência.
+
+6. Assets e templates
+- Templates de dispositivos JSON ficam em `assets/*.json` (ex.: `lamps.json`, `locks.json`, `mocks.json`). UI usa `TemplateRepository`/`manage.dart` para carregar templates e gerar fluxos de registro.
+- Imagens e outros binários em `assets/images/`.
+
+7. Build e execução (resumo prático)
+- Pré-requisitos: Flutter toolchain (para UI) e compilador C++/CMake (para libs nativas). ONNX runtime e dependências devem estar disponíveis para construir `lib/ai` (você verá subpastas `thirdParty/onnxruntime-*`).
+- Passos comuns:
+  - Build do core nativo:
+    ```bash
+    cd lib/core
+    ./build.sh
+    ```
+  - Build do engine AI (quando aplicável): siga scripts CMake em `lib/ai/CMakeLists.txt` (ex.: gerar `libeasync_ai.so`).
+  - Dependências Flutter e execução:
+    ```bash
+    flutter pub get
+    flutter run -d linux --target lib/ui/main.dart
+    ```
+  - Opcional: copiar assets AI para suporte da aplicação é feito automaticamente pelo `Bridge` se os assets estiverem empacotados.
+
+8. Workflows de desenvolvimento
+- Desenvolvimento UI: editar `lib/ui`, depende do contrato FFI em `bridge.dart`. Teste manual com `flutter run`.
+- Desenvolvimento Core/Drivers: editar `lib/core/*`, use `lib/core/build.sh` e verifique se `libeasync_core.so` está acessível ao app (paths listados em `bridge.dart`).
+- Desenvolvimento AI: treinar/experimentar com scripts em `lib/ai/` e gerar `model.onnx` para o runtime nativo. Use `EASYNC_AI_DATA_DIR` para apontar para dados locais durante testes.
+
+9. Padrões e convenções importantes
+- Mantenha as assinaturas FFI em `lib/ui/utils/bridge.dart` sincronizadas com os headers C (`lib/core/include/core.h` e `lib/ai/include/engine.hpp`).
+- Não contornar o `Bridge` na UI: todas as chamadas nativas devem passar por `bridge.dart`.
+- Docblocks no estilo do projeto: preserve `@file`, `@brief`, etc., em C++/Dart.
+
+10. Pontos de integração cruciais e arquivos a checar
+- `lib/ui/utils/bridge.dart` — carregamento dinâmico das bibliotecas e wrappers Dart.
+- `lib/core/include/core.h` e `lib/core/src/core.cpp` — API do núcleo.
+- `lib/core/drivers/*` — drivers (mock, ble.cpp, mqtt.cpp, wifi.cpp, zigbee.cpp).
+- `lib/ai/include/engine.hpp` e `lib/ai/src/engine.cpp` — engine de inferência nativo (ONNX/tokenizer, async streaming).
+- `lib/ai/data/*` — modelo/tokenizer/vocab (essenciais para o engine).
+- `assets/*.json` — templates e mocks usados pelo `manage.dart`.
+
+11. Observações e recomendações
+- A inferência de produção é implementada no runtime nativo (C++/ONNX). Os scripts Python permanecem úteis para pesquisa, treino e debugging, mas não são o caminho primário para runtime embarcado em produção.
+- Ao alterar assinaturas FFI, atualize simultaneamente `core.h`/`engine.hpp` e `bridge.dart` para evitar crashes em tempo de execução.
+- Para testar mudanças de AI localmente sem empacotar assets, defina `EASYNC_AI_DATA_DIR` apontando para `lib/ai/data`.
+
+12. Exemplos rápidos
+- Registrar um dispositivo (conceitual): Flutter faz `Bridge.registerDevice(template)` → `core_register_device_ex(...)` → driver inicializa e `CoreEvent` com `CORE_EVENT_DEVICE_ADDED` é disparado → UI atualiza lista.
+- Executar uma query de IA (conceitual): Flutter chama `aiQuery(prompt)` → `ai_query` no `libeasync_ai` → engine roda tokenização + inferência ONNX → resposta retornada (ou `ai_query_async_start`/`ai_query_async_poll` para streaming de chunks).
+
+13. Onde checar quando algo quebra
+- Erros de carregamento de bibliotecas: verifique caminhos listados em `lib/ui/utils/bridge.dart`.
+- Falha de inferência: logs do engine C++ (stderr) indicam falta de `model.onnx` ou `tokenizer.json`.
+- Falha de driver/conexão: `core_last_error()` lê a última mensagem do núcleo; drivers imprimem mensagens no stderr.
+
+Fim — documento mantido por equipe EaSync. Contacto: ver autor nos docblocks dos arquivos principais.
+# EaSync — Documentação de Arquitetura
 
 > Recent updates (2026-03-11): repository now includes ONNX INT8 quantization tools (`lib/ai/tools/quantize_model.py`) and Q4/GPTQ guidance (`docs/Q4_GPTQ.md`). Android CMake ORT_ROOT normalization fix applied (`lib/CMakeLists.txt`). See docs for details.
 
@@ -6,7 +124,7 @@
 
 ## 1. Visão Geral
 
-EaSync é uma plataforma de automação residencial inteligente, modular e multiplataforma. O projeto une uma interface Flutter moderna, um núcleo nativo C++ robusto e módulos de IA para controle, automação, aprendizado de padrões e assistente virtual. O foco é flexibilidade, segurança, extensibilidade e facilidade de integração.
+EaSync é uma plataforma de automação residencial inteligente, modular e multiplataforma. O projeto une uma interface Flutter moderna, um núcleo nativo C++ robusto e módulos C++ de IA para controle, automação, aprendizado de padrões e assistente virtual. O foco é flexibilidade, segurança, extensibilidade e facilidade de integração.
 
 EaSync foi projetado para ser utilizado tanto por usuários finais quanto por desenvolvedores, permitindo customização, expansão de funcionalidades e integração com novos dispositivos e protocolos.
 
@@ -62,7 +180,7 @@ Raiz do projeto
 
 ### Componentes principais:
 - **assets/**: Templates de dispositivos, imagens, mocks, arquivos de configuração.
-- **lib/ai/**: IA, modelos, scripts de treinamento, vocabulário.
+- **lib/ai/**: Núcleo C++ IA, modelos, scripts de treinamento, vocabulário.
 - **lib/core/**: Núcleo C++ (drivers, API, eventos, build).
 - **lib/ui/**: Interface Flutter (páginas, widgets, bridge FFI).
 - **docs/**: Documentação técnica e de arquitetura.
@@ -102,11 +220,12 @@ Raiz do projeto
 
 ### 3.3. Assistente Virtual e IA
 - Comandos do usuário são enviados pelo UI (`assistant.dart`) para `Bridge.aiExecuteCommandAsync()`.
-- Núcleo C++ pode acionar scripts Python para inferência (`chatInferenceCli.py`).
-- Resultados são retornados ao Flutter e exibidos ao usuário.
+- A lógica de inferência de IA vive em `lib/ai` e é oferecida tanto como uma biblioteca nativa C++ (exportando as funções `ai_*` descritas em `lib/ai/include/engine.hpp`) quanto por scripts Python usados para experimentação e ferramentas de treinamento (`lib/ai/src/chat.py`, `lib/ai/src/SGLMLite.py`, etc.).
+- O runtime nativo (`lib/ai/src/engine.cpp`) carrega um modelo ONNX (`lib/ai/data/model.onnx`) e o `tokenizer.json`, expõe chamadas síncronas e assíncronas (streaming) como `ai_query`, `ai_query_async_start` / `ai_query_async_poll` e funções de configuração como `ai_set_data_dir`, `ai_set_system_prompt` e `ai_set_decode_every`.
+  - O `Bridge` abre a biblioteca nativa de IA (`libeasync_ai`) e a biblioteca do núcleo (`libeasync_core`). As chamadas de IA vão diretamente para `libeasync_ai` (runtime C++/ONNX) — elas não passam pelo núcleo C++; scripts Python são apenas auxiliares/experimentais para pesquisa e treino.
 
 #### Exemplo de comando:
-> "Acenda a luz da sala e ajuste para 50% de brilho"
+- "Acenda a luz da sala e ajuste para 50% de brilho"
 
 ### 3.4. Aprendizado de Padrões
 - Padrões de uso são salvos no Flutter (`SharedPreferences`) e sincronizados com o núcleo.
@@ -157,29 +276,27 @@ Raiz do projeto
 - `mock.cpp` simula dispositivos para testes.
 
 ### 4.3. IA (`lib/ai`)
-- **chatModelRuntime.cpp**: Motor de inferência.
-- **models/**: Tokenizer, attention, feedforward, MoE, transformer, etc.
-- **train_and_export.py**: Treinamento e exportação de modelos.
-- **chatInferenceCli.py**: Script Python para inferência.
-- **data/**: Vocabulário, comandos, interações.
+- **engine.cpp**: Motor de inferência nativo (implementado em `lib/ai/src/engine.cpp`) que carrega um modelo ONNX e o `tokenizer.json`, fornece geração síncrona e assíncrona (streaming) e expõe uma API C (`lib/ai/include/engine.hpp`) para uso pelo `Bridge`.
+- **SGLM / SGLMLite**: Implementações e bindings do modelo (C++/ONNX e scripts PyTorch para pesquisa) usadas pelo `engine` ou por scripts experimentais.
+- **tokenizer.cpp / tokenizer.json**: Tokenizador nativo (e artefatos JSON) usados para codificar/decodificar texto.
+- **scripts Python**: `lib/ai/src/chat.py`, `SGLMLite.py` e scripts de treino/avaliação na pasta `lib/ai/models/` são mantidos para desenvolvimento, experimentação e treinamento, mas a inferência de produção é feita pelo runtime nativo quando disponível.
+- **data/**: Vocabulário, `model.onnx`, `tokenizer.json` e arquivos relacionados. O runtime procura `lib/ai/data` por padrão, e pode ser apontado com `EASYNC_AI_DATA_DIR` ou via `ai_set_data_dir()`.
 
 #### Exemplo de fluxo IA:
 1. Usuário envia comando de voz.
-2. UI chama Bridge → núcleo C++ → script Python.
-3. Script Python processa, retorna resposta.
+2. UI chama Bridge → `libeasync_ai` (runtime ONNX nativo).
+3. Engine nativo processa (tokenização + inferência ONNX) e retorna resposta.
 4. UI exibe resultado.
 
-#### Modelos:
-- **tokenizer.cpp/hpp**: Tokenização de texto.
-- **attention.cpp/hpp**: Mecanismo de atenção.
-- **feedForward.cpp/hpp**: Camada feedforward.
-- **moe.cpp/hpp**: Mixture of Experts.
-- **transformer.cpp/hpp**: Modelo transformer.
+#### Modelos e artefatos (em `lib/ai`):
+- **`engine.cpp` / `engine.hpp`**: runtime nativo que orquestra tokenização e inferência ONNX e expõe as APIs C `ai_*` usadas pelo `Bridge`.
+- **SGLM / SGLMLite** (`SGLM.cpp`, `SGLM.py`, `SGLMLite.py`): implementações do modelo e bindings usados para geração e pesquisa; `SGLM` é a implementação carregada pelo engine quando `model.onnx` estiver disponível.
+- **`tokenizer.cpp` / `tokenizer.json`**: implementação do tokenizador e artefatos JSON usados para codificação/decodificação.
+- **Modelos exportados** (`model.onnx`, `model.safetensors`, `model.onnx.data`): artefatos presentes em `lib/ai/data/` que o engine carrega em tempo de execução.
 
-#### Scripts:
-- **train_and_export.py**: Treinamento de modelos.
-- **datasetCleaner.cpp**: Limpeza de datasets.
-- **buildVocab.cpp**: Construção de vocabulário.
+#### Scripts e utilitários:
+- **`chat.py`**, **`distille.py`**, **`loadTeacher.py`**, **`SGLMLite.py`**: scripts Python para pesquisa, inferência experimental e preparação/treino de modelos.
+- Existem utilitários e ferramentas de preparo/quantização no repositório (ex.: scripts sob `lib/ai/` e `lib/ai/tools`), porém o runtime de produção é o C++/ONNX implementado em `engine.cpp`.
 
 ---
 
@@ -315,13 +432,14 @@ public:
 
 ---
 
-## 11. Referências dos Arquivos Críticos
+### 11. Referências dos Arquivos Críticos
 
 - `lib/ui/bridge.dart`: Contrato FFI, orquestração de dispositivos e IA.
-- `lib/core/include/core.h` e `lib/core/src/core.cpp`: API nativa.
+- `lib/core/include/core.h` e `lib/core/src/core.cpp`: API nativa do núcleo (registro de dispositivos, drivers, estado, eventos).
 - `lib/ui/manage.dart`: Registro e descoberta de dispositivos.
 - `lib/ui/assistant.dart`: UX do assistente e telemetria.
-- `lib/ai/src/chatModelRuntime.cpp` e `lib/ai/models/chatInferenceCli.py`: Fronteira de inferência Python.
+- `lib/ai/include/engine.hpp` e `lib/ai/src/engine.cpp`: Motor nativo de IA (ONNX) que fornece as APIs `ai_*` utilizadas pelo `Bridge`.
+- `lib/ai/src/chat.py` e outros scripts Python em `lib/ai/src/` são scripts auxiliares/experimentais para desenvolvimento e treino.
 
 ---
 
