@@ -53,10 +53,10 @@ RM = /usr/local/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/radmann/easync/lib/ai
+CMAKE_SOURCE_DIR = /home/radmann/EaSync/lib/ai
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/radmann/easync/lib/ai/build
+CMAKE_BINARY_DIR = /home/radmann/EaSync/lib/ai/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/easync_ai.dir/depend.make
@@ -70,46 +70,46 @@ include CMakeFiles/easync_ai.dir/progress.make
 include CMakeFiles/easync_ai.dir/flags.make
 
 CMakeFiles/easync_ai.dir/src/engine.cpp.o: CMakeFiles/easync_ai.dir/flags.make
-CMakeFiles/easync_ai.dir/src/engine.cpp.o: /home/radmann/easync/lib/ai/src/engine.cpp
+CMakeFiles/easync_ai.dir/src/engine.cpp.o: /home/radmann/EaSync/lib/ai/src/engine.cpp
 CMakeFiles/easync_ai.dir/src/engine.cpp.o: CMakeFiles/easync_ai.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/easync_ai.dir/src/engine.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/engine.cpp.o -MF CMakeFiles/easync_ai.dir/src/engine.cpp.o.d -o CMakeFiles/easync_ai.dir/src/engine.cpp.o -c /home/radmann/easync/lib/ai/src/engine.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/easync_ai.dir/src/engine.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/engine.cpp.o -MF CMakeFiles/easync_ai.dir/src/engine.cpp.o.d -o CMakeFiles/easync_ai.dir/src/engine.cpp.o -c /home/radmann/EaSync/lib/ai/src/engine.cpp
 
 CMakeFiles/easync_ai.dir/src/engine.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_ai.dir/src/engine.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/ai/src/engine.cpp > CMakeFiles/easync_ai.dir/src/engine.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/ai/src/engine.cpp > CMakeFiles/easync_ai.dir/src/engine.cpp.i
 
 CMakeFiles/easync_ai.dir/src/engine.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_ai.dir/src/engine.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/ai/src/engine.cpp -o CMakeFiles/easync_ai.dir/src/engine.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/ai/src/engine.cpp -o CMakeFiles/easync_ai.dir/src/engine.cpp.s
 
 CMakeFiles/easync_ai.dir/src/SGLM.cpp.o: CMakeFiles/easync_ai.dir/flags.make
-CMakeFiles/easync_ai.dir/src/SGLM.cpp.o: /home/radmann/easync/lib/ai/src/SGLM.cpp
+CMakeFiles/easync_ai.dir/src/SGLM.cpp.o: /home/radmann/EaSync/lib/ai/src/SGLM.cpp
 CMakeFiles/easync_ai.dir/src/SGLM.cpp.o: CMakeFiles/easync_ai.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/easync_ai.dir/src/SGLM.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/SGLM.cpp.o -MF CMakeFiles/easync_ai.dir/src/SGLM.cpp.o.d -o CMakeFiles/easync_ai.dir/src/SGLM.cpp.o -c /home/radmann/easync/lib/ai/src/SGLM.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/easync_ai.dir/src/SGLM.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/SGLM.cpp.o -MF CMakeFiles/easync_ai.dir/src/SGLM.cpp.o.d -o CMakeFiles/easync_ai.dir/src/SGLM.cpp.o -c /home/radmann/EaSync/lib/ai/src/SGLM.cpp
 
 CMakeFiles/easync_ai.dir/src/SGLM.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_ai.dir/src/SGLM.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/ai/src/SGLM.cpp > CMakeFiles/easync_ai.dir/src/SGLM.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/ai/src/SGLM.cpp > CMakeFiles/easync_ai.dir/src/SGLM.cpp.i
 
 CMakeFiles/easync_ai.dir/src/SGLM.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_ai.dir/src/SGLM.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/ai/src/SGLM.cpp -o CMakeFiles/easync_ai.dir/src/SGLM.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/ai/src/SGLM.cpp -o CMakeFiles/easync_ai.dir/src/SGLM.cpp.s
 
 CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o: CMakeFiles/easync_ai.dir/flags.make
-CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o: /home/radmann/easync/lib/ai/src/tokenizer.cpp
+CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o: /home/radmann/EaSync/lib/ai/src/tokenizer.cpp
 CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o: CMakeFiles/easync_ai.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/easync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o -MF CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o.d -o CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o -c /home/radmann/easync/lib/ai/src/tokenizer.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o -MF CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o.d -o CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o -c /home/radmann/EaSync/lib/ai/src/tokenizer.cpp
 
 CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/easync/lib/ai/src/tokenizer.cpp > CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/ai/src/tokenizer.cpp > CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i
 
 CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/easync/lib/ai/src/tokenizer.cpp -o CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/ai/src/tokenizer.cpp -o CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s
 
 # Object files for target easync_ai
 easync_ai_OBJECTS = \
@@ -124,9 +124,9 @@ libeasync_ai.so: CMakeFiles/easync_ai.dir/src/engine.cpp.o
 libeasync_ai.so: CMakeFiles/easync_ai.dir/src/SGLM.cpp.o
 libeasync_ai.so: CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o
 libeasync_ai.so: CMakeFiles/easync_ai.dir/build.make
-libeasync_ai.so: /home/radmann/easync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib/libonnxruntime.so
+libeasync_ai.so: /home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib/libonnxruntime.so
 libeasync_ai.so: CMakeFiles/easync_ai.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/easync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX shared library libeasync_ai.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX shared library libeasync_ai.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/easync_ai.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -138,6 +138,6 @@ CMakeFiles/easync_ai.dir/clean:
 .PHONY : CMakeFiles/easync_ai.dir/clean
 
 CMakeFiles/easync_ai.dir/depend:
-	cd /home/radmann/easync/lib/ai/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/radmann/easync/lib/ai /home/radmann/easync/lib/ai /home/radmann/easync/lib/ai/build /home/radmann/easync/lib/ai/build /home/radmann/easync/lib/ai/build/CMakeFiles/easync_ai.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/radmann/EaSync/lib/ai/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/radmann/EaSync/lib/ai /home/radmann/EaSync/lib/ai /home/radmann/EaSync/lib/ai/build /home/radmann/EaSync/lib/ai/build /home/radmann/EaSync/lib/ai/build/CMakeFiles/easync_ai.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/easync_ai.dir/depend
 

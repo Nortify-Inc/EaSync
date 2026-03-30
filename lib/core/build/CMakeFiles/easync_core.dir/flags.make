@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -DEASYNC_ENABLE_MQTT_DRIVER=1 -DEASYNC_ENABLE_WIFI_DRIVER=1 -DEASYNC_ENABLE_ZIGBEE_DRIVER=1 -Deasync_core_EXPORTS
 
-CXX_INCLUDES = -I/home/radmann/easync/lib/core/include -I/home/radmann/easync/lib/core/drivers -I/home/radmann/easync/lib/core
+CXX_INCLUDES = -I/home/radmann/EaSync/lib/core/include -I/home/radmann/EaSync/lib/core/drivers -I/home/radmann/EaSync/lib/core
 
 CXX_FLAGS = -std=gnu++20 -fPIC
 

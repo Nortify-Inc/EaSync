@@ -1,4 +1,4 @@
-# Install script for directory: /home/radmann/easync/lib/ai
+# Install script for directory: /home/radmann/EaSync/lib/ai
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -57,12 +57,12 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   if(CMAKE_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION)
     message(FATAL_ERROR "ABSOLUTE path INSTALL DESTINATION forbidden (by caller): ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
   endif()
-  file(INSTALL DESTINATION "/usr/lib" TYPE SHARED_LIBRARY FILES "/home/radmann/easync/lib/ai/build/libeasync_ai.so")
+  file(INSTALL DESTINATION "/usr/lib" TYPE SHARED_LIBRARY FILES "/home/radmann/EaSync/lib/ai/build/libeasync_ai.so")
   if(EXISTS "$ENV{DESTDIR}/usr/lib/libeasync_ai.so" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}/usr/lib/libeasync_ai.so")
     file(RPATH_CHANGE
          FILE "$ENV{DESTDIR}/usr/lib/libeasync_ai.so"
-         OLD_RPATH "/home/radmann/easync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib:"
+         OLD_RPATH "/home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib:"
          NEW_RPATH "")
     if(CMAKE_INSTALL_DO_STRIP)
       execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}/usr/lib/libeasync_ai.so")
@@ -82,7 +82,7 @@ if(CMAKE_INSTALL_COMPONENT STREQUAL "Unspecified" OR NOT CMAKE_INSTALL_COMPONENT
   if(CMAKE_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION)
     message(FATAL_ERROR "ABSOLUTE path INSTALL DESTINATION forbidden (by caller): ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
   endif()
-  file(INSTALL DESTINATION "/usr/lib" TYPE FILE FILES "/home/radmann/easync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib/libonnxruntime.so")
+  file(INSTALL DESTINATION "/usr/lib" TYPE FILE FILES "/home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/lib/libonnxruntime.so")
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -93,5 +93,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/radmann/easync/lib/ai/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/radmann/EaSync/lib/ai/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

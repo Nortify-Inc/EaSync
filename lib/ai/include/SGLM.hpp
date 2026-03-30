@@ -10,7 +10,7 @@
 #include <functional>
 
 struct SGLMConfig {
-    int   intra_op_threads = 2;
+    int   intra_op_threads = 4;
     int   inter_op_threads = 1;
     bool  use_gpu          = false;
     int   cuda_device_id   = 0;
@@ -19,9 +19,9 @@ struct SGLMConfig {
 
 struct SGLMGenParams {
     int   max_new_tokens = 512;
-    float temperature    = 0.7f;
+    float temperature    = 0.9f;
     int   top_k          = 40;
-    float top_p          = 0.9f;
+    float top_p          = 0.95f;
 };
 
 class SGLM {

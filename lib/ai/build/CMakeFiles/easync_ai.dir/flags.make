@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/g++
 CXX_DEFINES = -Deasync_ai_EXPORTS
 
-CXX_INCLUDES = -I/home/radmann/easync/lib/ai/include -I/home/radmann/easync/lib/ai/src -isystem /home/radmann/easync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/include
+CXX_INCLUDES = -I/home/radmann/EaSync/lib/ai/include -I/home/radmann/EaSync/lib/ai/src -isystem /home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/include
 
 CXX_FLAGS = -std=gnu++20 -fPIC
 

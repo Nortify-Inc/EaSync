@@ -1,6 +1,6 @@
 CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o: \
- /home/radmann/easync/lib/ai/src/tokenizer.cpp /usr/include/stdc-predef.h \
- /home/radmann/easync/lib/ai/include/tokenizer.hpp \
+ /home/radmann/EaSync/lib/ai/src/tokenizer.cpp /usr/include/stdc-predef.h \
+ /home/radmann/EaSync/lib/ai/include/tokenizer.hpp \
  /usr/include/c++/13/cstdint \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \

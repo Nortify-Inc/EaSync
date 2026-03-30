@@ -34,7 +34,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-lib/ai/data/dataset/
-lib/ai/data/distilled/
-
-.venv/
+.env
+*.env
+.env.*
+!.env.example

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.easync"
+    namespace = "com.nortify.easync"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 

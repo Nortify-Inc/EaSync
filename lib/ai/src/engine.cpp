@@ -48,7 +48,7 @@ static std::string find_data_dir()
     return {};
 }
 
-static std::string                g_system_prompt = "Your name is Agent, AI of EaSync App created by Nortify Inc. Professional, minimalist, and direct. Always answer in a concise and clear manner, without unnecessary explanations. If you don't know the answer, say you don't know. Never try to make up an answer. Always be truthful and accurate.";
+static std::string                g_system_prompt = "You are created by Nortify Inc. Be quick, direct and simple. If unsure, say you don't know. Don't invent info.";
 static std::unique_ptr<SGLM>      g_model;
 static std::unique_ptr<Tokenizer> g_tokenizer;
 static std::mutex                 g_mutex;

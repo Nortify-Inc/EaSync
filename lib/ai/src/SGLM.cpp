@@ -1,9 +1,3 @@
-/*
- * SGLM.cpp
- * ────────
- * Implementação do engine SGLM com ONNX Runtime.
- */
-
 #include "SGLM.hpp"
 
 #include <algorithm>

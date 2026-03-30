@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 /*!
  * @file assistant_chat.dart
  * @brief EaSync assistant page focused only on chat.
@@ -19,10 +21,13 @@ class Agent extends StatefulWidget {
   const Agent({super.key});
 
   @override
-  State<Agent> createState() => _AgentState();
+  State<Agent> createState() => AgentState();
 }
 
-class _AgentState extends State<Agent> with TickerProviderStateMixin {
+class AgentState extends State<Agent> with TickerProviderStateMixin {
+      String _revealingText = '';
+    StreamSubscription<String>? _aiStreamSub;
+    bool _aiCancelled = false;
   static const String _kChats = 'assistant.chats.v1';
   static const String _kActiveChatId = 'assistant.active_chat_id';
   static const String _kAuthName = 'account.auth.name';
@@ -205,7 +210,6 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     final raw = _commandController.text.trim();
     if (raw.isEmpty || _sending) return;
     final newChatText = EaI18n.t(context, 'New chat');
-
     final noResponseText = EaI18n.t(context, 'No response generated.');
 
     if (_settings.hapticsEnabled) {
@@ -219,17 +223,21 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
     final session = _activeSession;
     if (session == null) return;
 
+
     _commandController.clear();
+
     setState(() {
       session.messages.add(_ChatMessage(role: _Role.user, text: raw));
+      session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
       _sending = true;
       _typingIndicator = true;
+      _revealingText = '';
     });
     _startThinkingPulse();
     await _persistState();
     _scrollToBottom();
 
-    String reply = '';
+    _aiCancelled = false;
 
     if (!mounted) return;
 
@@ -237,70 +245,35 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
       _stopThinkingPulse();
       _typingIndicator = false;
       _sending = false;
-      session.messages.add(_ChatMessage(role: _Role.assistant, text: reply));
       await _persistState();
       return;
     }
 
     try {
       final stream = aiQueryStream(raw);
-      var firstChunk = true;
-      final sessionId = session.id;
-      await for (final chunk in stream) {
-        if (!_canUpdateUi) break;
+
+      String assistantText = '';
+      _aiStreamSub = stream.listen((chunk) {
+
+        if (_aiCancelled) return;
         var text = chunk.toString();
-
         text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
-        if (text.isEmpty) continue;
-
-        if (firstChunk) {
-          setState(() {
-            session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
-            _typingIndicator = false;
-          });
-
-          _stopThinkingPulse();
-
-          final pending = _pendingBuffers[sessionId] ?? '';
-          _pendingBuffers[sessionId] = pending;
-
-          final displayed = '';
-          final curPending = _pendingBuffers[sessionId] ?? '';
-
-          if ((displayed + curPending).isEmpty) {
-            _pendingBuffers[sessionId] = text;
-          } else {
-            final existing = displayed + curPending;
-            if (text.length >= existing.length && text.startsWith(existing)) {
-              _pendingBuffers[sessionId] = text.substring(existing.length);
-            } else {
-              _pendingBuffers[sessionId] = curPending + text;
-            }
-          }
-          _startReveal(sessionId);
-          firstChunk = false;
-          _scrollToBottom();
-
-          continue;
-        }
-
-        final displayedMsg = session.messages.isNotEmpty
-            ? session.messages.last.text
-            : '';
-        final pendingSoFar = _pendingBuffers[sessionId] ?? '';
-        final existing = displayedMsg + pendingSoFar;
-
-        if (text.length >= existing.length && text.startsWith(existing)) {
-          _pendingBuffers[sessionId] = text.substring(existing.length);
-        } else {
-          _pendingBuffers[sessionId] = pendingSoFar + text;
-        }
-        _startReveal(sessionId);
-      }
-
-      final last = session.messages.isNotEmpty ? session.messages.last : null;
-
-      if (last == null || last.text.trim().isEmpty) {
+        if (text.isEmpty) return;
+        assistantText += text;
+        _revealAssistantText(session, assistantText);
+      },
+      onDone: () {
+        _stopThinkingPulse();
+        setState(() {
+          _typingIndicator = false;
+          _sending = false;
+          _revealingText = '';
+        });
+        _aiStreamSub = null;
+        _persistState();
+        _scrollToBottom();
+      },
+      onError: (_) {
         setState(() {
           for (int i = session.messages.length - 1; i >= 0; --i) {
             if (session.messages[i].role == _Role.assistant) {
@@ -311,8 +284,14 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
               break;
             }
           }
+          _typingIndicator = false;
+          _sending = false;
+          _revealingText = '';
         });
-      }
+        _aiStreamSub = null;
+        _stopThinkingPulse();
+        _persistState();
+      });
     } catch (_) {
       setState(() {
         for (int i = session.messages.length - 1; i >= 0; --i) {
@@ -324,33 +303,51 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
             break;
           }
         }
-      });
-    } finally {
-      // Flush any remaining pending reveal and stop timers for this session
-      final sid = session.id;
-      final pending = _pendingBuffers[sid] ?? '';
-      if (pending.isNotEmpty) {
-        setState(() {
-          for (int i = session.messages.length - 1; i >= 0; --i) {
-            if (session.messages[i].role == _Role.assistant) {
-              session.messages[i] = _ChatMessage(
-                role: _Role.assistant,
-                text: session.messages[i].text + pending,
-              );
-              break;
-            }
-          }
-        });
-      }
-      _stopReveal(sid);
-      _stopThinkingPulse();
-      setState(() {
         _typingIndicator = false;
         _sending = false;
+        _revealingText = '';
       });
+      _aiStreamSub = null;
+      _stopThinkingPulse();
+      _persistState();
     }
-    await _persistState();
-    _scrollToBottom();
+  }
+
+  void _revealAssistantText(_ChatSession session, String fullText) {
+    // Revela texto aos poucos simulando digitação
+    const revealSpeed = Duration(milliseconds: 50);
+    int current = _revealingText.length;
+    if (current >= fullText.length) return;
+    void revealNext() {
+      if (!mounted || _aiCancelled) return;
+      current++;
+      setState(() {
+        _revealingText = fullText.substring(0, current);
+        for (int i = session.messages.length - 1; i >= 0; --i) {
+          if (session.messages[i].role == _Role.assistant) {
+            session.messages[i] = _ChatMessage(role: _Role.assistant, text: _revealingText);
+            break;
+          }
+        }
+      });
+      _scrollToBottom();
+      if (current < fullText.length) {
+        Future.delayed(revealSpeed, revealNext);
+      }
+    }
+    revealNext();
+  }
+
+  void _stopAiGeneration() {
+    _aiCancelled = true;
+    _aiStreamSub?.cancel();
+    _aiStreamSub = null;
+    _stopThinkingPulse();
+    setState(() {
+      _typingIndicator = false;
+      _sending = false;
+      // NÃO apaga o balão nem o texto já revelado
+    });
   }
 
   void _scrollToBottom() {
@@ -622,7 +619,7 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
             duration: const Duration(milliseconds: 180),
             beginBlur: 6,
             child: Text(
-              EaI18n.t(context, 'How can I help you {_profileName}?', {
+              EaI18n.t(context, 'How can I help you, {_profileName}?', {
                 '_profileName': _profileName,
               }),
               textAlign: TextAlign.center,
@@ -649,9 +646,6 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
           builder: (context, constraints) {
             final bubbleMax = max(120.0, constraints.maxWidth - 82);
 
-            // Render message bubble; if this is the last assistant message and
-            // the typing indicator is active, render a small typing indicator
-            // under the bubble to create a "typing" effect.
             return Align(
               alignment: user ? Alignment.centerRight : Alignment.centerLeft,
               child: Row(
@@ -689,14 +683,34 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        // Small inline typing indicator for assistant only and
-                        // only when this is the last message.
-                        if (!user &&
-                            _typingIndicator &&
-                            i == messages.length - 1)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6, top: 2),
-                            child: _smallTypingIndicator(),
+                        // Ícone de cérebro animado enquanto pensa
+                        if (!user && _typingIndicator && i == messages.length - 1)
+                          Row(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6, top: 2),
+                                child: _thinkingBrainIcon(),
+                              ),
+                              const SizedBox(width: 6),
+                              // Efeito de digitação: cursor piscando
+                              AnimatedOpacity(
+                                opacity: (_revealingText.isNotEmpty && _sending) ? 1.0 : 0.0,
+                                duration: const Duration(milliseconds: 300),
+                                child: Container(
+                                  width: 10,
+                                  height: 18,
+                                  alignment: Alignment.bottomLeft,
+                                  child: Container(
+                                    width: 2,
+                                    height: 16,
+                                    decoration: BoxDecoration(
+                                      color: EaColor.secondaryFore,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -707,6 +721,34 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  Widget _thinkingBrainIcon() {
+    // Ícone de cérebro com shimmer sutil (sem deslocamento)
+    return AnimatedBuilder(
+      animation: _thinkingPulse,
+      builder: (context, _) {
+        final shimmer = LinearGradient(
+          colors: [
+            EaColor.secondaryFore.withValues(alpha: 0.18),
+            EaColor.secondaryFore.withValues(alpha: 0.55),
+            EaColor.secondaryFore.withValues(alpha: 0.18),
+          ],
+          stops: const [0.0, 0.5, 1.0],
+          begin: Alignment(-1 + 2 * _thinkingPulse.value, 0),
+          end: Alignment(1 - 2 * _thinkingPulse.value, 0),
+        );
+        return ShaderMask(
+          shaderCallback: (rect) => shimmer.createShader(rect),
+          blendMode: BlendMode.srcATop,
+          child: Icon(
+            Icons.psychology_alt_rounded,
+            color: EaColor.secondaryFore,
+            size: 22,
+          ),
         );
       },
     );
@@ -842,16 +884,9 @@ class _AgentState extends State<Agent> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: IconButton(
-                onPressed: _sending ? null : _send,
+                onPressed: _sending ? _stopAiGeneration : _send,
                 icon: _sending
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: EaColor.back,
-                        ),
-                      )
+                    ? const Icon(Icons.stop_rounded, color: EaColor.back)
                     : const Icon(Icons.send_rounded, color: EaColor.back),
               ),
             ),

@@ -7,23 +7,11 @@
  */
 
 import 'handler.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    if (kIsWeb || Platform.isAndroid || Platform.isIOS) {
-      await Firebase.initializeApp().timeout(const Duration(seconds: 6));
-    } else {
-      debugPrint('[boot] Firebase init skipped: unsupported platform');
-    }
-  } catch (e) {
-    debugPrint('[boot] Firebase init skipped: $e');
-  }
 
   try {
     await Bridge.init().timeout(const Duration(seconds: 8));
@@ -37,6 +25,7 @@ void main() async {
     debugPrint('[boot] Settings load skipped: $e');
   }
 
+  await dotenv.load(fileName: '.env');
   runApp(const EaSync());
 }
 
