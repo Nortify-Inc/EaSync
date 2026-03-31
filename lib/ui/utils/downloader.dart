@@ -4,8 +4,6 @@ const _kModelDataUrl =
     'https://github.com/Nortify-Inc/EaSync/releases/download/v1.0.0-beta/model.onnx.data';
 
 const _kBundledAssets = [
-  'lib/ai/data/model.q4_0.bin',
-  'lib/ai/data/model.quant.onnx',
   'lib/ai/data/model.onnx',
   'lib/ai/data/tokenizer.json',
 ];
@@ -62,7 +60,7 @@ class Downloader {
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
-      final total = response.contentLength; // -1 if unknown
+      final total = response.contentLength;
       int received = 0;
       final sink = dest.openWrite();
       await for (final chunk in response) {

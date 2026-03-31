@@ -25,6 +25,7 @@ class Agent extends StatefulWidget {
 }
 
 class AgentState extends State<Agent> with TickerProviderStateMixin {
+        bool get _aiEnabled => EaAppSettings.instance.aiEnabled;
       String _revealingText = '';
     StreamSubscription<String>? _aiStreamSub;
     bool _aiCancelled = false;
@@ -343,11 +344,12 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
     _aiStreamSub?.cancel();
     _aiStreamSub = null;
     _stopThinkingPulse();
+
     setState(() {
       _typingIndicator = false;
       _sending = false;
-      // NÃO apaga o balão nem o texto já revelado
     });
+    
   }
 
   void _scrollToBottom() {
@@ -364,6 +366,22 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final compact = _settings.compactMode;
+
+    if (!_aiEnabled) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Assistant')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Text(
+              'The AI assistant is disabled on this device. Enable it on the home screen to use.',
+              textAlign: TextAlign.center,
+              style: EaText.secondary.copyWith(fontSize: 18),
+            ),
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       child: Padding(
@@ -642,6 +660,10 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
         final msg = messages[i];
         final user = msg.role == _Role.user;
 
+        // Se for a última mensagem do assistente, está "thinking" e ainda não começou a revelar texto:
+        final isLastAssistant = !user && i == messages.length - 1;
+        final showBrain = isLastAssistant && _typingIndicator && _revealingText.isEmpty;
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final bubbleMax = max(120.0, constraints.maxWidth - 82);
@@ -660,41 +682,44 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
+                        // Mostra só o cérebro animado enquanto thinking e não começou a revelar texto
+                        if (showBrain)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6, top: 2, bottom: 6),
+                            child: _thinkingBrainIcon(),
                           ),
-                          constraints: BoxConstraints(maxWidth: bubbleMax),
-                          decoration: BoxDecoration(
-                            color: user
-                                ? EaColor.fore.withValues(alpha: 0.18)
-                                : EaAdaptiveColor.field(context),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: EaAdaptiveColor.border(context),
+                        // Quando começar a revelar texto, mostra o balão normalmente
+                        if (!showBrain)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            constraints: BoxConstraints(maxWidth: bubbleMax),
+                            decoration: BoxDecoration(
+                              color: user
+                                  ? EaColor.fore.withValues(alpha: 0.18)
+                                  : EaAdaptiveColor.field(context),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: EaAdaptiveColor.border(context),
+                              ),
+                            ),
+                            child: Text(
+                              msg.text,
+                              style: EaText.small.copyWith(
+                                color: EaAdaptiveColor.bodyText(context),
+                              ),
                             ),
                           ),
-                          child: Text(
-                            msg.text,
-                            style: EaText.small.copyWith(
-                              color: EaAdaptiveColor.bodyText(context),
-                            ),
-                          ),
-                        ),
-                        // Ícone de cérebro animado enquanto pensa
-                        if (!user && _typingIndicator && i == messages.length - 1)
+                        // Efeito de digitação: cursor piscando (apenas quando revelando texto)
+                        if (!user && _revealingText.isNotEmpty && _sending && isLastAssistant)
                           Row(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6, top: 2),
-                                child: _thinkingBrainIcon(),
-                              ),
                               const SizedBox(width: 6),
-                              // Efeito de digitação: cursor piscando
                               AnimatedOpacity(
-                                opacity: (_revealingText.isNotEmpty && _sending) ? 1.0 : 0.0,
+                                opacity: 1.0,
                                 duration: const Duration(milliseconds: 300),
                                 child: Container(
                                   width: 10,
@@ -727,19 +752,19 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   }
 
   Widget _thinkingBrainIcon() {
-    // Ícone de cérebro com shimmer sutil (sem deslocamento)
+    // Ícone de cérebro com shimmer forte e largo, animando da esquerda para a direita
     return AnimatedBuilder(
       animation: _thinkingPulse,
       builder: (context, _) {
         final shimmer = LinearGradient(
           colors: [
-            EaColor.secondaryFore.withValues(alpha: 0.18),
-            EaColor.secondaryFore.withValues(alpha: 0.55),
-            EaColor.secondaryFore.withValues(alpha: 0.18),
+            EaColor.secondaryFore.withValues(alpha: 0.10),
+            EaColor.secondaryFore.withValues(alpha: 0.85),
+            EaColor.secondaryFore.withValues(alpha: 0.10),
           ],
-          stops: const [0.0, 0.5, 1.0],
-          begin: Alignment(-1 + 2 * _thinkingPulse.value, 0),
-          end: Alignment(1 - 2 * _thinkingPulse.value, 0),
+          stops: const [0.0, 0.45, 1.0],
+          begin: Alignment(-1.2 + 2.4 * _thinkingPulse.value, 0),
+          end: Alignment(1.2 - 2.4 * _thinkingPulse.value, 0),
         );
         return ShaderMask(
           shaderCallback: (rect) => shimmer.createShader(rect),
@@ -747,7 +772,14 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
           child: Icon(
             Icons.psychology_alt_rounded,
             color: EaColor.secondaryFore,
-            size: 22,
+            size: 32,
+            shadows: [
+              Shadow(
+                color: EaColor.secondaryFore.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
         );
       },

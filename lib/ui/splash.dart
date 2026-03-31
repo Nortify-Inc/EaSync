@@ -16,6 +16,7 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
+    bool _aiAllowed = false;
   late final AnimationController _fadeController;
   late final Animation<double> _fade;
 
@@ -53,17 +54,40 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       } catch (_) {}
     }
 
-    // On Android, run the downloader flow instead of waiting on modelReady
     if (Platform.isAndroid) {
-      await _runAndroidModelSetup();
+      final allow = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(EaI18n.t(context, 'Complete experience?')),
+          content: Text(EaI18n.t(context, 'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(EaI18n.t(context, 'No, skip')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(EaI18n.t(context, 'Yes, I want AI')),
+            ),
+          ],
+        ),
+      );
+
+      _aiAllowed = allow == true;
+      EaAppSettings.instance.aiEnabled = _aiAllowed;
+      
+      if (_aiAllowed) {
+        await _runAndroidModelSetup();
+      }
     } else {
-      // Desktop/iOS: model is bundled, just wait for preload
       try {
         await Bridge.modelReady.timeout(const Duration(seconds: 30));
         debugPrint('[splash] AI model preloaded during splash');
       } catch (e) {
         debugPrint('[splash] AI model preload timed out/failed: $e');
       }
+      EaAppSettings.instance.aiEnabled = true;
     }
 
     if (!mounted) return;
@@ -74,7 +98,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _runAndroidModelSetup() async {
-    // Check if model already downloaded — skip progress UI if so
     final ready = await Downloader.isReady();
     if (ready) {
       // Still need to set data dir + initialize
@@ -96,7 +119,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       });
 
       if (state.isError) {
-        // Show error briefly then proceed anyway (graceful degradation)
         await Future.delayed(const Duration(seconds: 2));
         return;
       }

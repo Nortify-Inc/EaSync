@@ -50,7 +50,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   final EaAppSettings _settings = EaAppSettings.instance;
   final ImagePicker _picker = ImagePicker();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   late final AnimationController _updatePulse;
 
   bool _isAuthenticated = false;
@@ -59,7 +58,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   String? _authPhoto;
   String? _authProvider;
   bool _fingerprintEnabled = false;
-  double _outsideTemp = 25.0;
+  double _outsideTemp = 0.0;
   DateTime? _outsideUpdatedAt;
   bool _outsideTempRefreshing = false;
   String _language = 'Português';
@@ -167,7 +166,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro inesperado: $e')),
+        SnackBar(content: Text('Unexpected error: $e')),
       );
     }
   }
@@ -1608,7 +1607,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-          content: Text(EaI18n.t(context, 'Dados salvos localmente.'))),
+          content: Text(EaI18n.t(context, 'Data saved locally.'))),
     );
   }
 

@@ -48,11 +48,11 @@ static std::string find_data_dir()
     return {};
 }
 
-static std::string                g_system_prompt = "You are created by Nortify Inc. Be quick, direct and simple. If unsure, say you don't know. Don't invent info.";
+static std::string                g_system_prompt = "You are an AI created by Nortify Inc. Be quick, direct and simple. If unsure, say you don't know. Don't invent info";
 static std::unique_ptr<SGLM>      g_model;
 static std::unique_ptr<Tokenizer> g_tokenizer;
 static std::mutex                 g_mutex;
-static std::atomic<int>           g_decode_every{4};
+    static std::atomic<int>       g_decode_every{1};
 
 struct JobState {
     std::string buf;
@@ -207,9 +207,9 @@ static bool run_inference(const std::string& prompt, std::string& result)
 
     SGLMGenParams params;
     params.max_new_tokens = 512;
-    params.temperature    = 0.7f;
+    params.temperature    = 0.9f;
     params.top_k          = 40;
-    params.top_p          = 0.9f;
+    params.top_p          = 0.95f;
 
     std::vector<int64_t> generated;
     try {

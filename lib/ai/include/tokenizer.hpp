@@ -6,6 +6,13 @@
 #include <vector>
 
 class Tokenizer {
+
+    std::vector<int64_t> encode_chat_with_history(
+        const std::string& user_message,
+        const std::string& system_prompt,
+        const std::string& prev_user,
+        const std::string& prev_assistant) const;
+        
 public:
     static constexpr int64_t TOK_IM_START = 151644; // <|im_start|>
     static constexpr int64_t TOK_IM_END   = 151645; // <|im_end|>
