@@ -14,12 +14,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
-    await Bridge.init().timeout(const Duration(seconds: 8));
-  } catch (e) {
-    debugPrint('[boot] Bridge init skipped/timed out: $e');
-  }
-
-  try {
     await EaAppSettings.instance.load().timeout(const Duration(seconds: 4));
   } catch (e) {
     debugPrint('[boot] Settings load skipped: $e');
@@ -27,6 +21,14 @@ void main() async {
 
   await dotenv.load(fileName: '.env');
   runApp(const EaSync());
+
+  Future<void>(() async {
+    try {
+      await Bridge.init().timeout(const Duration(seconds: 8));
+    } catch (e) {
+      debugPrint('[boot] Bridge init skipped/timed out: $e');
+    }
+  });
 }
 
 class EaSync extends StatelessWidget {

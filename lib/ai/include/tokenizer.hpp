@@ -14,9 +14,10 @@ class Tokenizer {
         const std::string& prev_assistant) const;
         
 public:
-    static constexpr int64_t TOK_IM_START = 151644; // <|im_start|>
-    static constexpr int64_t TOK_IM_END   = 151645; // <|im_end|>
-    static constexpr int64_t TOK_EOS      = 151643; // <|endoftext|>
+    // AgentLM tokenizer.json: 0=<|endoftext|>, 1=<|im_start|>, 2=<|im_end|>
+    static constexpr int64_t TOK_EOT      = 0; // <|endoftext|>
+    static constexpr int64_t TOK_IM_START = 1; // <|im_start|>
+    static constexpr int64_t TOK_IM_END   = 2; // <|im_end|>
 
     explicit Tokenizer(const std::string& tokenizer_json_path);
 

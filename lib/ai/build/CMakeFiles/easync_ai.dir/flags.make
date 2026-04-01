@@ -6,5 +6,5 @@ CXX_DEFINES = -Deasync_ai_EXPORTS
 
 CXX_INCLUDES = -I/home/radmann/EaSync/lib/ai/include -I/home/radmann/EaSync/lib/ai/src -isystem /home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1/include
 
-CXX_FLAGS = -std=gnu++20 -fPIC
+CXX_FLAGS = -O3 -DNDEBUG -std=gnu++20 -fPIC -fdata-sections -ffunction-sections -O3 -DNDEBUG -fomit-frame-pointer -fstrict-aliasing -ffp-contract=fast
 

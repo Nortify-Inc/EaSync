@@ -606,12 +606,18 @@ std::string Tokenizer::decode(const std::vector<int64_t>& ids) const
     std::string raw;
 
     for (int64_t id : ids) {
-        if (id >= 151643) continue; // Ignora tokens especiais
-
         auto it = id_to_str_.find(id);
 
-        if (it != id_to_str_.end())
-            raw += it->second;
+        if (it == id_to_str_.end())
+            continue;
+
+        const std::string& tok = it->second;
+
+        // Ignore chat/special tokens such as <|im_start|>, <|im_end|>, <|endoftext|>, etc.
+        if (!tok.empty() && tok.front() == '<' && tok.back() == '>')
+            continue;
+
+        raw += tok;
     }
 
     std::string result;

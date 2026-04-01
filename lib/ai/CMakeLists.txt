@@ -5,6 +5,35 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+add_compile_options(
+    -fdata-sections
+    -ffunction-sections
+)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    add_compile_options(
+        -O3
+        -DNDEBUG
+        -fomit-frame-pointer
+        -fstrict-aliasing
+        -ffp-contract=fast
+    )
+endif()
+
+if(ANDROID)
+    add_compile_options(
+        -fPIC
+        -funroll-loops
+    )
+    if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+        add_compile_options(-march=armv8-a)
+    endif()
+endif()
+
 find_package(Threads REQUIRED)
 
 if(NOT DEFINED ORT_INCLUDE OR NOT DEFINED ORT_LIB)
@@ -74,6 +103,13 @@ endif()
 set_target_properties(easync_ai PROPERTIES
     OUTPUT_NAME easync_ai
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_link_options(easync_ai PRIVATE
+        -Wl,--gc-sections
+        -Wl,-O1
+    )
+endif()
 
 if(NOT ANDROID)
     install(TARGETS easync_ai

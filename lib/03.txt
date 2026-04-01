@@ -1,5 +1,0 @@
-- Verificação Eai18n.
-
-- Autenticação com google e firebase
-
-- Update e improve AI e criação do sistema de detecção e aprendizado de padrões

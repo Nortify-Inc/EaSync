@@ -206,10 +206,10 @@ static bool run_inference(const std::string& prompt, std::string& result)
     fprintf(stderr, "[SGLM] Prompt: %zu tokens\n", ids.size());
 
     SGLMGenParams params;
-    params.max_new_tokens = 512;
-    params.temperature    = 0.9f;
+    params.max_new_tokens = 96;
+    params.temperature    = 0.45f;
     params.top_k          = 40;
-    params.top_p          = 0.95f;
+    params.top_p          = 0.9f;
 
     std::vector<int64_t> generated;
     try {
@@ -327,8 +327,8 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
         }
 
         SGLMGenParams params;
-        params.max_new_tokens = 512;
-        params.temperature = 0.7f;
+        params.max_new_tokens = 96;
+        params.temperature = 0.45f;
         params.top_k = 40;
         params.top_p = 0.9f;
 

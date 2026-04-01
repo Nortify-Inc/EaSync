@@ -1,7 +1,9 @@
 #include "SGLM.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdio>
 #include <numeric>
 #include <stdexcept>
 
@@ -24,6 +26,28 @@ SGLM::SGLM(const std::string& model_path, SGLMConfig cfg)
 #endif
 
     session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), opts);
+
+    Ort::AllocatorWithDefaultOptions allocator;
+
+    const size_t input_count = session_->GetInputCount();
+    for (size_t i = 0; i < input_count; ++i) {
+        auto name_alloc = session_->GetInputNameAllocated(i, allocator);
+        const std::string name = name_alloc.get() ? name_alloc.get() : "";
+
+        if (name == "input_ids" || name == "token_ids") {
+            input_ids_name_ = name;
+        } else if (name == "attention_mask") {
+            attention_mask_name_ = name;
+            has_attention_mask_ = true;
+        }
+    }
+
+    if (session_->GetOutputCount() > 0) {
+        auto out_name_alloc = session_->GetOutputNameAllocated(0, allocator);
+        if (out_name_alloc.get() != nullptr && out_name_alloc.get()[0] != '\0') {
+            output_logits_name_ = out_name_alloc.get();
+        }
+    }
 
     auto shape = session_->GetOutputTypeInfo(0)
                           .GetTensorTypeAndShapeInfo().GetShape();
@@ -53,12 +77,31 @@ std::vector<float> SGLM::forward(const std::vector<int64_t>& token_ids)
         token_ids.size(),
         in_shape.data(), in_shape.size());
 
-    const char* in_names[]  = {"token_ids"};
-    const char* out_names[] = {"logits"};
+    std::vector<const char*> input_names;
+    std::vector<Ort::Value> input_values;
+
+    input_names.push_back(input_ids_name_.c_str());
+    input_values.emplace_back(std::move(in_tensor));
+
+    std::vector<int64_t> attention_mask;
+    if (has_attention_mask_) {
+        attention_mask.assign(static_cast<size_t>(T), 1);
+
+        Ort::Value mask_tensor = Ort::Value::CreateTensor<int64_t>(
+            mem_info,
+            attention_mask.data(),
+            attention_mask.size(),
+            in_shape.data(), in_shape.size());
+
+        input_names.push_back(attention_mask_name_.c_str());
+        input_values.emplace_back(std::move(mask_tensor));
+    }
+
+    const char* out_names[] = {output_logits_name_.c_str()};
 
     auto outputs = session_->Run(
         Ort::RunOptions{nullptr},
-        in_names,  &in_tensor, 1,
+        input_names.data(), input_values.data(), input_values.size(),
         out_names, 1);
 
     const float* data   = outputs[0].GetTensorData<float>();
@@ -153,8 +196,8 @@ void SGLM::generate_stream(
     SGLMGenParams params,
     const std::function<void(int64_t)>& on_token)
 {
-    constexpr int64_t EOS1 = 151643;
-    constexpr int64_t EOS2 = 151645;
+    constexpr int64_t EOS1 = 2;
+    constexpr int64_t EOS2 = 0;
 
     std::vector<int64_t> ids = prompt_ids;
 

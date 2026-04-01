@@ -16,7 +16,7 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
-    bool _aiAllowed = false;
+  bool _aiAllowed = false;
   late final AnimationController _fadeController;
   late final Animation<double> _fade;
 
@@ -60,7 +60,12 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           title: Text(EaI18n.t(context, 'Complete experience?')),
-          content: Text(EaI18n.t(context, 'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?')),
+          content: Text(
+            EaI18n.t(
+              context,
+              'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?',
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
@@ -76,17 +81,19 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
 
       _aiAllowed = allow == true;
       EaAppSettings.instance.aiEnabled = _aiAllowed;
-      
+
       if (_aiAllowed) {
         await _runAndroidModelSetup();
       }
     } else {
-      try {
-        await Bridge.modelReady.timeout(const Duration(seconds: 30));
-        debugPrint('[splash] AI model preloaded during splash');
-      } catch (e) {
-        debugPrint('[splash] AI model preload timed out/failed: $e');
-      }
+      Future<void>(() async {
+        try {
+          await Bridge.modelReady.timeout(const Duration(seconds: 30));
+          debugPrint('[splash] AI model preloaded in background');
+        } catch (e) {
+          debugPrint('[splash] AI model preload timed out/failed: $e');
+        }
+      });
       EaAppSettings.instance.aiEnabled = true;
     }
 

@@ -52,6 +52,10 @@ private:
     std::unique_ptr<Ort::Session> session_;
     int64_t                       vocab_size_ = 0;
     std::mt19937                  rng_;
+    std::string                   input_ids_name_ = "token_ids";
+    std::string                   attention_mask_name_;
+    bool                          has_attention_mask_ = false;
+    std::string                   output_logits_name_ = "logits";
 
     static int64_t sample(
         std::vector<float>& logits,

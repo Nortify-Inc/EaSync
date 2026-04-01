@@ -95,6 +95,7 @@ flutter:
     - assets/images/mocks/
 
     - lib/ai/data/model.onnx
+    - lib/ai/data/model.onnx.data
     - lib/ai/data/tokenizer.json
 
     - .env

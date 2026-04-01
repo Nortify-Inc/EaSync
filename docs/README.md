@@ -148,6 +148,23 @@ flutter run -d android --target lib/ui/main.dart
 
 Isso permite alternar entre modelos (original/quantizado) sem recompilar o código nativo.
 
+### Reduzir o modelo local (meta: ~70%)
+
+Para reduzir o peso do modelo local rapidamente, use quantizacao INT8 no ONNX:
+
+```bash
+python3 lib/ai/tools/quantize_model.py \
+	--input lib/ai/data/model.onnx \
+	--output lib/ai/data/model_pruned_int8.onnx \
+	--per-channel
+```
+
+O script imprime tamanho antes/depois considerando tambem o sidecar `.onnx.data`.
+
+Regra pratica para decidir local x servidor:
+- Se reducao >= 70% e qualidade aceitavel: manter local.
+- Se reducao < 70% ou qualidade cair muito: usar estrategia hibrida (local para comandos simples e servidor para perguntas longas/complexas).
+
 
 ### 2) Flutter dependencies
 
