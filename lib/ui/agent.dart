@@ -30,7 +30,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   bool _aiCancelled = false;
   String _assistantTargetText = '';
   bool _revealLoopRunning = false;
-  DateTime? _thinkingStartedAt;
   Timer? _thinkingGateTimer;
   int _thinkingTokenEstimate = 0;
   static const String _kChats = 'assistant.chats.v1';
@@ -52,7 +51,10 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
 
   static const double _chatDrawerWidth = 252;
   static const Duration _thinkingMinDuration = Duration(milliseconds: 80);
-  static const int _thinkingTokenThreshold = 1;
+  static const int _thinkingTokenThreshold = 8;
+  static const Duration _typingFrameDelay = Duration(milliseconds: 28);
+  static const int _typingLeadCharsWhileStreaming = 10;
+  static const int _maxAssistantChars = 220;
 
   late final AnimationController _thinkingPulse = AnimationController(
     vsync: this,
@@ -199,7 +201,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
       _revealingText = '';
       _assistantTargetText = '';
       _revealLoopRunning = false;
-      _thinkingStartedAt = DateTime.now();
       _thinkingTokenEstimate = 0;
     });
 
@@ -242,7 +243,7 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
           text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
           if (text.isEmpty) return;
           assistantText += text;
-          _assistantTargetText = assistantText;
+          _assistantTargetText = _sanitizeAssistantText(assistantText);
           _thinkingTokenEstimate = _estimateTokenCount(_assistantTargetText);
           if (_canStartReveal()) {
             _revealAssistantText(session);
@@ -253,29 +254,14 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
             _assistantTargetText = noResponseText;
           }
 
-          if (_assistantTargetText.length > _revealingText.length) {
-            _revealingText = _assistantTargetText;
-            for (int i = session.messages.length - 1; i >= 0; --i) {
-              if (session.messages[i].role == _Role.assistant) {
-                session.messages[i] = _ChatMessage(
-                  role: _Role.assistant,
-                  text: _revealingText,
-                );
-                break;
-              }
-            }
-          }
+          _assistantTargetText = _sanitizeAssistantText(_assistantTargetText);
           _stopThinkingPulse();
           _thinkingGateTimer?.cancel();
           setState(() {
             _typingIndicator = false;
             _sending = false;
-            _revealingText = '';
-            _assistantTargetText = '';
-            _revealLoopRunning = false;
-            _thinkingStartedAt = null;
-            _thinkingTokenEstimate = 0;
           });
+          _revealAssistantText(session);
           _aiStreamSub = null;
           _persistState();
           _scrollToBottom();
@@ -299,7 +285,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
             _revealingText = '';
             _assistantTargetText = '';
             _revealLoopRunning = false;
-            _thinkingStartedAt = null;
             _thinkingTokenEstimate = 0;
           });
           _aiStreamSub = null;
@@ -324,7 +309,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
         _revealingText = '';
         _assistantTargetText = '';
         _revealLoopRunning = false;
-        _thinkingStartedAt = null;
         _thinkingTokenEstimate = 0;
       });
       _aiStreamSub = null;
@@ -341,17 +325,60 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   }
 
   bool _canStartReveal() {
-    if (_thinkingStartedAt == null) return true;
-    final elapsed = DateTime.now().difference(_thinkingStartedAt!);
-    return elapsed >= _thinkingMinDuration ||
-        _thinkingTokenEstimate >= _thinkingTokenThreshold;
+    if (!_sending) return _assistantTargetText.isNotEmpty;
+    return _thinkingTokenEstimate >= _thinkingTokenThreshold;
   }
 
   String _buildModelPrompt(_ChatSession session, String rawUserMessage) {
-    // Keep prompt as plain user text. The native tokenizer/engine already
-    // applies chat formatting, so adding "User:/Assistant:" scaffolding here
-    // causes the model to imitate those labels in the output.
+    // Keep prompt plain and direct. Native tokenizer already wraps roles.
     return rawUserMessage.trim();
+  }
+
+  String _sanitizeAssistantText(String text) {
+    if (text.isEmpty) return text;
+
+    var out = text;
+    const markers = <String>[
+      'Human:',
+      'User:',
+      'Assistant:',
+      '<|im_start|>',
+      '<|im_end|>',
+      '<|endoftext|>',
+    ];
+
+    for (final marker in markers) {
+      final idx = out.indexOf(marker);
+      if (idx >= 0) {
+        out = out.substring(0, idx);
+      }
+    }
+
+    out = out.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Keep answers concise and stable across long turns.
+    final sentenceEnd = RegExp(r'[.!?]');
+    var seenEnd = 0;
+    for (var i = 0; i < out.length; i++) {
+      if (sentenceEnd.hasMatch(out[i])) {
+        seenEnd++;
+        if (seenEnd >= 2) {
+          out = out.substring(0, i + 1).trim();
+          break;
+        }
+      }
+    }
+
+    if (out.length > _maxAssistantChars) {
+      out = out.substring(0, _maxAssistantChars).trimRight();
+      final lastSpace = out.lastIndexOf(' ');
+      if (lastSpace > 120) {
+        out = out.substring(0, lastSpace);
+      }
+      out = '$out...';
+    }
+
+    return out;
   }
 
   void _revealAssistantText(_ChatSession session) {
@@ -366,19 +393,18 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
 
         if (currentLen >= targetLen) {
           if (_sending) {
-            await Future.delayed(const Duration(milliseconds: 8));
+            await Future.delayed(const Duration(milliseconds: 10));
             continue;
           }
           break;
         }
 
-        final backlog = targetLen - currentLen;
-        final step = backlog > 120
-            ? 10
-            : backlog > 56
-            ? 6
-            : 3;
-        final nextLen = min(targetLen, currentLen + step);
+        if (_sending && (targetLen - currentLen) <= _typingLeadCharsWhileStreaming) {
+          await Future.delayed(const Duration(milliseconds: 10));
+          continue;
+        }
+
+        final nextLen = min(targetLen, currentLen + 1);
 
         if (!mounted) break;
         setState(() {
@@ -395,7 +421,7 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
         });
         _scrollToBottom();
 
-        await Future.delayed(const Duration(milliseconds: 8));
+        await Future.delayed(_typingFrameDelay);
       }
 
       _revealLoopRunning = false;
@@ -404,6 +430,15 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
           !_aiCancelled &&
           _revealingText.length < _assistantTargetText.length) {
         _revealAssistantText(session);
+        return;
+      }
+
+      if (mounted && !_sending) {
+        setState(() {
+          _revealingText = '';
+          _assistantTargetText = '';
+          _thinkingTokenEstimate = 0;
+        });
       }
     });
   }
@@ -419,7 +454,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
       _sending = false;
       _assistantTargetText = '';
       _revealLoopRunning = false;
-      _thinkingStartedAt = null;
       _thinkingTokenEstimate = 0;
     });
     _thinkingGateTimer?.cancel();

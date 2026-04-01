@@ -36,69 +36,35 @@ endif()
 
 find_package(Threads REQUIRED)
 
-if(NOT DEFINED ORT_INCLUDE OR NOT DEFINED ORT_LIB)
-    if(NOT DEFINED ORT_ROOT)
-        if(DEFINED ENV{ORT_ROOT})
-            set(ORT_ROOT $ENV{ORT_ROOT})
-        else()
-            message(FATAL_ERROR "Defina ORT_ROOT: cmake .. -DORT_ROOT=/caminho/onnxruntime")
-        endif()
-    endif()
-
-    set(ORT_INCLUDE "${ORT_ROOT}/include")
-    file(GLOB _ORT_SO "${ORT_ROOT}/lib/libonnxruntime.so*"
-                      "${ORT_ROOT}/lib/libonnxruntime.dylib"
-                      "${ORT_ROOT}/lib/onnxruntime.lib")
-    list(GET _ORT_SO 0 ORT_LIB)
+set(LLAMA_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../thirdParty/llama.cpp")
+if(NOT EXISTS "${LLAMA_ROOT}/CMakeLists.txt")
+    message(FATAL_ERROR "llama.cpp not found at ${LLAMA_ROOT}. Clone it into lib/thirdParty/llama.cpp")
 endif()
 
-if(NOT EXISTS "${ORT_LIB}")
-    # Try to find any matching runtime under ORT_ROOT as a fallback.
-    file(GLOB_RECURSE _FOUND_ORT_SO
-         "${ORT_ROOT}/*libonnxruntime*.so"
-         "${ORT_ROOT}/*libonnxruntime*.dylib")
-    if(_FOUND_ORT_SO)
-        list(GET _FOUND_ORT_SO 0 ORT_LIB_FALLBACK)
-        if(ORT_LIB_FALLBACK)
-        set(ORT_LIB "${ORT_LIB_FALLBACK}")
-        message(STATUS "Found ORT_LIB fallback: ${ORT_LIB}")
-        endif()
-    else()
-        message(WARNING "libonnxruntime não encontrada: ${ORT_LIB}; continuing without imported onnxruntime target. Ensure ONNX runtime .so is packaged into APK jniLibs.")
-        set(ORT_LIB "")
-    endif()
-endif()
+set(LLAMA_BUILD_COMMON OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_WEBUI OFF CACHE BOOL "" FORCE)
+set(LLAMA_TESTS_INSTALL OFF CACHE BOOL "" FORCE)
+set(LLAMA_TOOLS_INSTALL OFF CACHE BOOL "" FORCE)
+set(LLAMA_OPENSSL OFF CACHE BOOL "" FORCE)
 
-if(ORT_LIB)
-    add_library(onnxruntime SHARED IMPORTED)
-    set_target_properties(onnxruntime PROPERTIES
-        IMPORTED_LOCATION             "${ORT_LIB}"
-        INTERFACE_INCLUDE_DIRECTORIES "${ORT_INCLUDE}"
-    )
-endif()
+add_subdirectory(${LLAMA_ROOT} ${CMAKE_CURRENT_BINARY_DIR}/llama.cpp)
 
 add_library(easync_ai SHARED
     src/engine.cpp
-    src/SGLM.cpp
-    src/tokenizer.cpp
 )
 
 target_include_directories(easync_ai PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${ORT_INCLUDE}
 )
 
-if(ORT_LIB)
-    target_link_libraries(easync_ai PRIVATE
-        onnxruntime
-        Threads::Threads
-    )
-else()
-    target_link_libraries(easync_ai PRIVATE
-        Threads::Threads
-    )
-endif()
+target_link_libraries(easync_ai PRIVATE
+    llama
+    Threads::Threads
+)
 
 set_target_properties(easync_ai PROPERTIES
     OUTPUT_NAME easync_ai
@@ -112,10 +78,20 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 if(NOT ANDROID)
+    add_executable(easync_ai_chat
+        src/chat.cpp
+    )
+
+    target_include_directories(easync_ai_chat PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    target_link_libraries(easync_ai_chat PRIVATE
+        easync_ai
+        Threads::Threads
+    )
+
     install(TARGETS easync_ai
         LIBRARY DESTINATION /usr/lib
-    )
-    install(FILES "${ORT_LIB}"
-        DESTINATION /usr/lib
     )
 endif()

@@ -209,8 +209,34 @@ final aiSetDataDir = (() {
   }
 })();
 
+typedef _aiSetDecodeEveryC = Int32 Function(Pointer<Void>, Int32);
+typedef _aiSetDecodeEveryDart = int Function(Pointer<Void>, int);
+
+final aiSetDecodeEvery = (() {
+  try {
+    return aiLib.lookupFunction<_aiSetDecodeEveryC, _aiSetDecodeEveryDart>(
+      'ai_set_decode_every',
+    );
+  } catch (_) {
+    return null;
+  }
+})();
+
 bool _aiRuntimeReady = false;
 Future<void>? _aiRuntimeInitFuture;
+
+String? _findGgufInDir(String path) {
+  try {
+    final dir = Directory(path);
+    if (!dir.existsSync()) return null;
+    for (final e in dir.listSync(followLinks: false)) {
+      if (e is File && e.path.toLowerCase().endsWith('.gguf')) {
+        return e.path;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
 
 Future<String> _prepareAiRuntime() async {
   if (_aiRuntimeReady) return '';
@@ -221,7 +247,7 @@ Future<String> _prepareAiRuntime() async {
   }
 
   String selectedDir = '';
-  final requireSidecar = _modelSidecarExpected();
+  const requireSidecar = false;
 
   _aiRuntimeInitFuture = () async {
     selectedDir = await _ensureAiAssetsCopied(requireSidecar: requireSidecar);
@@ -241,8 +267,7 @@ Future<String> _prepareAiRuntime() async {
 
     if (selectedDir.isEmpty) {
       throw Exception(
-        'AI data files missing. Required: model.onnx, tokenizer.json'
-        '${requireSidecar ? ', model.onnx.data' : ''}',
+        'AI data files missing. Required: model.gguf',
       );
     }
 
@@ -267,6 +292,11 @@ Future<String> _prepareAiRuntime() async {
       }
     }
 
+    if (aiSetDecodeEvery != null) {
+      // Balance chunk frequency and bridge overhead for smoother UI streaming.
+      aiSetDecodeEvery!(nullptr, 4);
+    }
+
     _aiRuntimeReady = true;
   }();
 
@@ -279,22 +309,10 @@ Future<String> _prepareAiRuntime() async {
   return selectedDir;
 }
 
-bool _modelSidecarExpected() {
-  try {
-    final local = _findLocalAiDataDir(requireSidecar: false);
-    if (local.isEmpty) return false;
-    return File('$local/model.onnx.data').existsSync();
-  } catch (_) {
-    return false;
-  }
-}
-
 bool _aiDataDirLooksReady(String path, {required bool requireSidecar}) {
-  final model = File('$path/model.onnx').existsSync();
-  final tok = File('$path/tokenizer.json').existsSync();
-  if (!model || !tok) return false;
-  if (!requireSidecar) return true;
-  return File('$path/model.onnx.data').existsSync();
+  final fixed = File('$path/model.gguf').existsSync();
+  if (fixed) return true;
+  return _findGgufInDir(path) != null;
 }
 
 String _findLocalAiDataDir({required bool requireSidecar}) {
@@ -304,14 +322,11 @@ String _findLocalAiDataDir({required bool requireSidecar}) {
 
     for (var i = 0; i < 10; i++) {
       final candidate = Directory('${dir.path}/lib/ai/data');
-      final model = File('${candidate.path}/model.onnx');
-      final tok = File('${candidate.path}/tokenizer.json');
-      final sidecar = File('${candidate.path}/model.onnx.data');
+      final model = File('${candidate.path}/model.gguf');
+      final anyGguf = _findGgufInDir(candidate.path) != null;
 
       if (candidate.existsSync() &&
-          model.existsSync() &&
-          tok.existsSync() &&
-          (!requireSidecar || sidecar.existsSync())) {
+          (model.existsSync() || anyGguf)) {
         return candidate.path;
       }
 
@@ -340,9 +355,7 @@ Future<String> _ensureAiAssetsCopied({required bool requireSidecar}) async {
   if (entries.isEmpty) {
     // Fallback when AssetManifest is missing: probe expected assets directly.
     entries = <String>[
-      'lib/ai/data/model.onnx',
-      'lib/ai/data/tokenizer.json',
-      if (requireSidecar) 'lib/ai/data/model.onnx.data',
+      'lib/ai/data/model.gguf',
     ];
   }
 
@@ -421,7 +434,6 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
           print('[Bridge] aiQueryAsync: got result len=${res.length}');
           return res;
         }
-        // not ready yet: sleep and retry
         await Future.delayed(Duration(milliseconds: pollIntervalMs));
       }
     } finally {
@@ -434,8 +446,7 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
   }
 }
 
-// Run the AI query inside a separate isolate to avoid blocking the main UI isolate.
-Stream<String> aiQueryStream(String prompt, {int pollIntervalMs = 24}) {
+Stream<String> aiQueryStream(String prompt, {int pollIntervalMs = 12}) {
   if (Platform.isAndroid) {
     return _aiQueryStreamMain(prompt, pollIntervalMs: pollIntervalMs);
   }
@@ -486,7 +497,7 @@ Stream<String> aiQueryStream(String prompt, {int pollIntervalMs = 24}) {
   return controller.stream;
 }
 
-Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 24}) {
+Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 12}) {
   final controller = StreamController<String>();
 
   Future<void>(() async {
@@ -526,7 +537,7 @@ Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 24}) {
 
           if (res.isNotEmpty && !hasFirstChunk) {
             hasFirstChunk = true;
-            adaptivePollMs = pollIntervalMs.clamp(10, 40);
+            adaptivePollMs = pollIntervalMs.clamp(4, 20);
           }
 
           if (pollRc == 1) {
@@ -570,7 +581,7 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
       : '';
   final int pollIntervalMs = (args.length > 2 && args[2] != null)
       ? args[2] as int
-      : 150;
+      : 80;
   final String dataDir = (args.length > 3 && args[3] != null)
       ? args[3] as String
       : '';
@@ -656,7 +667,7 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
 
           if (res.isNotEmpty && !hasFirstChunk) {
             hasFirstChunk = true;
-            adaptivePollMs = pollIntervalMs.clamp(10, 40);
+            adaptivePollMs = pollIntervalMs.clamp(4, 20);
           }
 
           if (pollRc == 1) {

@@ -174,29 +174,94 @@ easync_ai/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/build
 .PHONY : easync_ai/fast
 
-src/SGLM.o: src/SGLM.cpp.o
-.PHONY : src/SGLM.o
+#=============================================================================
+# Target rules for targets named easync_ai_chat
+
+# Build rule for target.
+easync_ai_chat: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 easync_ai_chat
+.PHONY : easync_ai_chat
+
+# fast build rule for target.
+easync_ai_chat/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/build
+.PHONY : easync_ai_chat/fast
+
+#=============================================================================
+# Target rules for targets named ggml-base
+
+# Build rule for target.
+ggml-base: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ggml-base
+.PHONY : ggml-base
+
+# fast build rule for target.
+ggml-base/fast:
+	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build
+.PHONY : ggml-base/fast
+
+#=============================================================================
+# Target rules for targets named ggml
+
+# Build rule for target.
+ggml: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ggml
+.PHONY : ggml
+
+# fast build rule for target.
+ggml/fast:
+	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml.dir/build
+.PHONY : ggml/fast
+
+#=============================================================================
+# Target rules for targets named ggml-cpu
+
+# Build rule for target.
+ggml-cpu: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 ggml-cpu
+.PHONY : ggml-cpu
+
+# fast build rule for target.
+ggml-cpu/fast:
+	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/build
+.PHONY : ggml-cpu/fast
+
+#=============================================================================
+# Target rules for targets named llama
+
+# Build rule for target.
+llama: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 llama
+.PHONY : llama
+
+# fast build rule for target.
+llama/fast:
+	$(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/build
+.PHONY : llama/fast
+
+src/chat.o: src/chat.cpp.o
+.PHONY : src/chat.o
 
 # target to build an object file
-src/SGLM.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.o
-.PHONY : src/SGLM.cpp.o
+src/chat.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.o
+.PHONY : src/chat.cpp.o
 
-src/SGLM.i: src/SGLM.cpp.i
-.PHONY : src/SGLM.i
+src/chat.i: src/chat.cpp.i
+.PHONY : src/chat.i
 
 # target to preprocess a source file
-src/SGLM.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.i
-.PHONY : src/SGLM.cpp.i
+src/chat.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.i
+.PHONY : src/chat.cpp.i
 
-src/SGLM.s: src/SGLM.cpp.s
-.PHONY : src/SGLM.s
+src/chat.s: src/chat.cpp.s
+.PHONY : src/chat.s
 
 # target to generate assembly for a file
-src/SGLM.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/SGLM.cpp.s
-.PHONY : src/SGLM.cpp.s
+src/chat.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.s
+.PHONY : src/chat.cpp.s
 
 src/engine.o: src/engine.cpp.o
 .PHONY : src/engine.o
@@ -222,30 +287,6 @@ src/engine.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/engine.cpp.s
 .PHONY : src/engine.cpp.s
 
-src/tokenizer.o: src/tokenizer.cpp.o
-.PHONY : src/tokenizer.o
-
-# target to build an object file
-src/tokenizer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.o
-.PHONY : src/tokenizer.cpp.o
-
-src/tokenizer.i: src/tokenizer.cpp.i
-.PHONY : src/tokenizer.i
-
-# target to preprocess a source file
-src/tokenizer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.i
-.PHONY : src/tokenizer.cpp.i
-
-src/tokenizer.s: src/tokenizer.cpp.s
-.PHONY : src/tokenizer.s
-
-# target to generate assembly for a file
-src/tokenizer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai.dir/build.make CMakeFiles/easync_ai.dir/src/tokenizer.cpp.s
-.PHONY : src/tokenizer.cpp.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -259,15 +300,17 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... easync_ai"
-	@echo "... src/SGLM.o"
-	@echo "... src/SGLM.i"
-	@echo "... src/SGLM.s"
+	@echo "... easync_ai_chat"
+	@echo "... ggml"
+	@echo "... ggml-base"
+	@echo "... ggml-cpu"
+	@echo "... llama"
+	@echo "... src/chat.o"
+	@echo "... src/chat.i"
+	@echo "... src/chat.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"
-	@echo "... src/tokenizer.o"
-	@echo "... src/tokenizer.i"
-	@echo "... src/tokenizer.s"
 .PHONY : help
 
 

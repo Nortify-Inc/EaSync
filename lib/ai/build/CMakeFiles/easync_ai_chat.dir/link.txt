@@ -1,0 +1,1 @@
+/usr/bin/g++ -O3 -DNDEBUG CMakeFiles/easync_ai_chat.dir/src/chat.cpp.o -o easync_ai_chat  -Wl,-rpath,/home/radmann/EaSync/lib/ai/build:/home/radmann/EaSync/lib/ai/build/bin libeasync_ai.so -Wl,-rpath-link,/home/radmann/EaSync/lib/ai/build/bin 
