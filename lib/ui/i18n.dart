@@ -54,12 +54,13 @@ class EaI18n {
   };
 
   static const Map<String, String> _enToPt = {
-        // 'Data saved locally.' already present below, removed duplicate.
-        // Pop-up IA splash
-        'Complete experience?': 'Experiência completa?',
-        'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?': 'Para usar o assistente de IA, é necessário baixar o modelo (~2GB). Isso pode ser pesado em alguns dispositivos. Deseja baixar e ativar o assistente?',
-        'No, skip': 'Não, pular',
-        'Yes, I want AI': 'Sim, quero IA',
+    // 'Data saved locally.' already present below, removed duplicate.
+    // Pop-up IA splash
+    'Complete experience?': 'Experiência completa?',
+    'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?':
+        'Para usar o assistente de IA, é necessário baixar o modelo (~2GB). Isso pode ser pesado em alguns dispositivos. Deseja baixar e ativar o assistente?',
+    'No, skip': 'Não, pular',
+    'Yes, I want AI': 'Sim, quero IA',
     'Dashboard': 'Painel',
     'Profiles': 'Perfis',
     'Assistant': 'Assistente',

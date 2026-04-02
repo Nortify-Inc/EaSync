@@ -33,6 +33,14 @@ public:
     bool connect(const std::string& uuid) override;
     bool disconnect(const std::string& uuid) override;
 
+    void onDeviceRegistered(
+        const std::string& uuid,
+        const std::string& brand,
+        const std::string& model
+    ) override;
+
+    void onDeviceRemoved(const std::string& uuid) override;
+
     bool setPower(const std::string& uuid, bool value) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;
     bool setColor(const std::string& uuid, uint32_t rgb) override;
@@ -59,7 +67,9 @@ public:
 
 private:
 
-    void publishCommand(
+    bool ensureBrokerConnection(const std::string& preferredBroker = "");
+
+    bool publishCommand(
         const std::string& uuid,
         const std::string& json,
         const std::string& topicOverride = ""
@@ -81,12 +91,16 @@ private:
 
     std::string brokerUrl;
     std::string clientId;
+    std::string topicPrefix = "zigbee2mqtt";
 
     bool connected = false;
 
     std::mutex mutex;
 
     std::unordered_map<std::string, CoreDeviceState> states;
+    std::unordered_map<std::string, std::string> preferredBrokerByDevice;
+    std::unordered_map<std::string, std::string> preferredPrefixByDevice;
+    mqtt::connect_options cachedConnectOptions;
 
     DriverEventCallback eventCallback = nullptr;
     void* eventUserData = nullptr;

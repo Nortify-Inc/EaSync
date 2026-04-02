@@ -8,9 +8,9 @@ class OAuthTokenStore {
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
-  static const _kAccess   = 'oauth.access_token';
-  static const _kRefresh  = 'oauth.refresh_token';
-  static const _kExpiry   = 'oauth.token_expiry';
+  static const _kAccess = 'oauth.access_token';
+  static const _kRefresh = 'oauth.refresh_token';
+  static const _kExpiry = 'oauth.token_expiry';
   static const _kProvider = 'oauth.provider';
 
   Future<void> save({
@@ -24,26 +24,23 @@ class OAuthTokenStore {
         .toIso8601String();
 
     await Future.wait([
-      _s.write(key: _kAccess,   value: accessToken),
-      _s.write(key: _kExpiry,   value: expiry),
+      _s.write(key: _kAccess, value: accessToken),
+      _s.write(key: _kExpiry, value: expiry),
       _s.write(key: _kProvider, value: provider),
-      if (refreshToken != null)
-        _s.write(key: _kRefresh, value: refreshToken),
+      if (refreshToken != null) _s.write(key: _kRefresh, value: refreshToken),
     ]);
   }
 
-  Future<String?> readAccessToken()  => _s.read(key: _kAccess);
+  Future<String?> readAccessToken() => _s.read(key: _kAccess);
   Future<String?> readRefreshToken() => _s.read(key: _kRefresh);
-  Future<String?> readProvider()     => _s.read(key: _kProvider);
+  Future<String?> readProvider() => _s.read(key: _kProvider);
 
   Future<bool> isExpired() async {
     final raw = await _s.read(key: _kExpiry);
     if (raw == null) return false;
     final expiry = DateTime.tryParse(raw);
     if (expiry == null) return false;
-    return DateTime.now().isAfter(
-      expiry.subtract(const Duration(seconds: 60)),
-    );
+    return DateTime.now().isAfter(expiry.subtract(const Duration(seconds: 60)));
   }
 
   Future<void> clear() => Future.wait([

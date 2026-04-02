@@ -266,9 +266,7 @@ Future<String> _prepareAiRuntime() async {
     }
 
     if (selectedDir.isEmpty) {
-      throw Exception(
-        'AI data files missing. Required: model.gguf',
-      );
+      throw Exception('AI data files missing. Required: model.gguf');
     }
 
     if (selectedDir.isNotEmpty && aiSetDataDir != null) {
@@ -325,8 +323,7 @@ String _findLocalAiDataDir({required bool requireSidecar}) {
       final model = File('${candidate.path}/model.gguf');
       final anyGguf = _findGgufInDir(candidate.path) != null;
 
-      if (candidate.existsSync() &&
-          (model.existsSync() || anyGguf)) {
+      if (candidate.existsSync() && (model.existsSync() || anyGguf)) {
         return candidate.path;
       }
 
@@ -354,9 +351,7 @@ Future<String> _ensureAiAssetsCopied({required bool requireSidecar}) async {
 
   if (entries.isEmpty) {
     // Fallback when AssetManifest is missing: probe expected assets directly.
-    entries = <String>[
-      'lib/ai/data/model.gguf',
-    ];
+    entries = <String>['lib/ai/data/model.gguf'];
   }
 
   final support = await getApplicationSupportDirectory();

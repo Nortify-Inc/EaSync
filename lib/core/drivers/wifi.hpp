@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace drivers {
 
@@ -66,6 +67,15 @@ private:
 
     bool httpPost(const std::string& url, const std::string& body);
     bool httpGet(const std::string& url, std::string& out);
+
+    bool postCapabilityCommand(
+        const std::string& uuid,
+        const std::string& endpoint,
+        const std::string& capability,
+        const std::string& valueJson,
+        const std::string& fallbackJson,
+        const std::vector<std::string>& fallbackPaths
+    );
 
     void parseState(
         const std::string& uuid,

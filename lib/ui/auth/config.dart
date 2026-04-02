@@ -3,8 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class OAuthConfig {
   OAuthConfig._();
 
-  static String get googleClientId =>
-      dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
+  static String get googleClientId => dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
   static String get googleClientSecret =>
       dotenv.env['GOOGLE_CLIENT_SECRET'] ?? '';
   static const googleScopes = [

@@ -1,14 +1,14 @@
 import '../handler.dart';
 
 const _kModelDataUrl =
-    'https://github.com/Nortify-Inc/EaSync/releases/download/v1.0.0-beta/model.onnx.data';
+    'https://github.com/Nortify-Inc/EaSync/releases/download/v1.0.0-beta/model.gguf';
 
 const _kBundledAssets = [
-  'lib/ai/data/model.onnx',
+  'lib/ai/data/model.gguf',
   'lib/ai/data/tokenizer.json',
 ];
 
-const _kDownloadedFile = 'model.onnx.data';
+const _kDownloadedFile = 'model.gguf';
 
 enum DownloadStatus {
   checking,
@@ -122,8 +122,6 @@ class Downloader {
         message: 'Loading model…',
       );
 
-
-
       final pathPtr = dir.path.toNativeUtf8();
       int? rcSet;
       try {
@@ -158,13 +156,13 @@ class Downloader {
   static Future<bool> isReady() async {
     final dir = await _modelDir();
     return File('${dir.path}/$_kDownloadedFile').existsSync() &&
-        File('${dir.path}/model.onnx').existsSync() &&
+        File('${dir.path}/model.gguf').existsSync() &&
         File('${dir.path}/tokenizer.json').existsSync();
   }
 
   static Future<void> clearCache() async {
     final dir = await _modelDir();
-    for (final name in [_kDownloadedFile, 'model.onnx', 'tokenizer.json']) {
+    for (final name in [_kDownloadedFile, 'model.gguf', 'tokenizer.json']) {
       final f = File('${dir.path}/$name');
       if (f.existsSync()) f.deleteSync();
     }

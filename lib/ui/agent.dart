@@ -399,7 +399,8 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
           break;
         }
 
-        if (_sending && (targetLen - currentLen) <= _typingLeadCharsWhileStreaming) {
+        if (_sending &&
+            (targetLen - currentLen) <= _typingLeadCharsWhileStreaming) {
           await Future.delayed(const Duration(milliseconds: 10));
           continue;
         }

@@ -21,10 +21,10 @@ class OAuthService {
 
   final _store = OAuthTokenStore.instance;
 
-  static const _kUid      = 'account.auth.uid';
-  static const _kName     = 'account.auth.name';
-  static const _kEmail    = 'account.auth.email';
-  static const _kPhoto    = 'account.auth.photo';
+  static const _kUid = 'account.auth.uid';
+  static const _kName = 'account.auth.name';
+  static const _kEmail = 'account.auth.email';
+  static const _kPhoto = 'account.auth.photo';
   static const _kProvider = 'account.auth.provider';
 
   // ── Ponto de entrada ──────────────────────────────────────
@@ -47,22 +47,22 @@ class OAuthService {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8888);
     final redirectUri = Uri.parse('http://localhost:8888');
 
-    final verifier   = _makeVerifier();
-    final challenge  = _makeChallenge(verifier);
+    final verifier = _makeVerifier();
+    final challenge = _makeChallenge(verifier);
     final stateToken = _makeVerifier().substring(0, 24);
 
     final authUrl = meta.authorizationEndpoint.replace(
       queryParameters: {
-        'client_id':             meta.clientId,
-        'redirect_uri':          redirectUri.toString(),
-        'response_type':         'code',
-        'scope':                 meta.scopes.join(' '),
-        'state':                 stateToken,
-        'code_challenge':        challenge,
+        'client_id': meta.clientId,
+        'redirect_uri': redirectUri.toString(),
+        'response_type': 'code',
+        'scope': meta.scopes.join(' '),
+        'state': stateToken,
+        'code_challenge': challenge,
         'code_challenge_method': 'S256',
         if (provider == OAuthProvider.google) ...{
           'access_type': 'offline',
-          'prompt':      'consent',
+          'prompt': 'consent',
         },
       },
     );
@@ -70,7 +70,8 @@ class OAuthService {
     if (!await launchUrl(authUrl, mode: LaunchMode.externalApplication)) {
       await server.close(force: true);
       throw OAuthException(
-          'Não foi possível abrir o browser para autenticação.');
+        'Não foi possível abrir o browser para autenticação.',
+      );
     }
 
     late HttpRequest req;
@@ -92,30 +93,29 @@ class OAuthService {
     await server.close();
 
     if (req.uri.queryParameters['state'] != stateToken) {
-      throw OAuthException(
-          'Resposta inválida do provedor (state mismatch).');
+      throw OAuthException('Resposta inválida do provedor (state mismatch).');
     }
 
     final code = req.uri.queryParameters['code'];
     if (code == null) {
-      final desc = req.uri.queryParameters['error_description']
-          ?? req.uri.queryParameters['error']
-          ?? 'cancelado';
+      final desc =
+          req.uri.queryParameters['error_description'] ??
+          req.uri.queryParameters['error'] ??
+          'cancelado';
       throw OAuthException('Login não concluído: $desc');
     }
 
     final tokens = await _exchangeCode(
-      meta:         meta,
-      code:         code,
-      redirectUri:  redirectUri,
+      meta: meta,
+      code: code,
+      redirectUri: redirectUri,
       codeVerifier: verifier,
     );
 
     await _store.save(
-      accessToken:      tokens['access_token']!,
-      refreshToken:     tokens['refresh_token'],
-      expiresInSeconds:
-          int.tryParse(tokens['expires_in'] ?? '3600') ?? 3600,
+      accessToken: tokens['access_token']!,
+      refreshToken: tokens['refresh_token'],
+      expiresInSeconds: int.tryParse(tokens['expires_in'] ?? '3600') ?? 3600,
       provider: provider.name,
     );
 
@@ -143,10 +143,10 @@ class OAuthService {
 
     final prefs = await SharedPreferences.getInstance();
     final parts = [
-      credential.givenName  ?? '',
+      credential.givenName ?? '',
       credential.familyName ?? '',
     ].where((s) => s.isNotEmpty).toList();
-    final freshName  = parts.join(' ').trim();
+    final freshName = parts.join(' ').trim();
     final displayName = freshName.isNotEmpty
         ? freshName
         : (prefs.getString(_kName) ?? 'Usuário Apple');
@@ -156,18 +156,18 @@ class OAuthService {
         : (prefs.getString(_kEmail) ?? '');
 
     await _store.save(
-      accessToken:      credential.identityToken ?? '',
-      refreshToken:     credential.authorizationCode,
+      accessToken: credential.identityToken ?? '',
+      refreshToken: credential.authorizationCode,
       expiresInSeconds: 3600,
-      provider:         OAuthProvider.apple.name,
+      provider: OAuthProvider.apple.name,
     );
 
     final profile = OAuthUserProfile(
-      id:        credential.userIdentifier ?? '',
-      name:      displayName,
-      email:     email,
+      id: credential.userIdentifier ?? '',
+      name: displayName,
+      email: email,
       avatarUrl: null,
-      provider:  'Apple',
+      provider: 'Apple',
     );
 
     await _persistProfile(profile);
@@ -182,22 +182,24 @@ class OAuthService {
     required Uri redirectUri,
     required String codeVerifier,
   }) async {
-    final response = await http.post(
-      meta.tokenEndpoint,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept':       'application/json',
-      },
-      body: {
-        'grant_type':    'authorization_code',
-        'code':          code,
-        'redirect_uri':  redirectUri.toString(),
-        'client_id':     meta.clientId,
-        'code_verifier': codeVerifier,
-        if (meta.clientSecret.isNotEmpty)
-          'client_secret': meta.clientSecret,
-      },
-    ).timeout(const Duration(seconds: 20));
+    final response = await http
+        .post(
+          meta.tokenEndpoint,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          body: {
+            'grant_type': 'authorization_code',
+            'code': code,
+            'redirect_uri': redirectUri.toString(),
+            'client_id': meta.clientId,
+            'code_verifier': codeVerifier,
+            if (meta.clientSecret.isNotEmpty)
+              'client_secret': meta.clientSecret,
+          },
+        )
+        .timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
       throw OAuthException(
@@ -231,29 +233,31 @@ class OAuthService {
     final meta = _metaFor(provider);
 
     try {
-      final response = await http.post(
-        meta.tokenEndpoint,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept':       'application/json',
-        },
-        body: {
-          'grant_type':    'refresh_token',
-          'refresh_token': refreshToken,
-          'client_id':     meta.clientId,
-          if (meta.clientSecret.isNotEmpty)
-            'client_secret': meta.clientSecret,
-        },
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .post(
+            meta.tokenEndpoint,
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json',
+            },
+            body: {
+              'grant_type': 'refresh_token',
+              'refresh_token': refreshToken,
+              'client_id': meta.clientId,
+              if (meta.clientSecret.isNotEmpty)
+                'client_secret': meta.clientSecret,
+            },
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode != 200) return null;
-      final data     = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
       final newToken = data['access_token']?.toString();
       if (newToken == null) return null;
 
       await _store.save(
-        accessToken:      newToken,
-        refreshToken:     data['refresh_token']?.toString() ?? refreshToken,
+        accessToken: newToken,
+        refreshToken: data['refresh_token']?.toString() ?? refreshToken,
         expiresInSeconds:
             int.tryParse(data['expires_in']?.toString() ?? '') ?? 3600,
         provider: providerName,
@@ -270,13 +274,15 @@ class OAuthService {
     OAuthProviderMeta meta,
     String accessToken,
   ) async {
-    final response = await http.get(
-      meta.userInfoEndpoint,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Accept':        'application/json',
-      },
-    ).timeout(const Duration(seconds: 15));
+    final response = await http
+        .get(
+          meta.userInfoEndpoint,
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
       throw OAuthException(
@@ -284,25 +290,26 @@ class OAuthService {
       );
     }
 
-    final d     = jsonDecode(response.body) as Map<String, dynamic>;
-    final id    = (d['sub'] ?? d['oid'] ?? '').toString();
-    final name  = (d['name'] ?? d['displayName'] ?? '').toString();
-    final email = (d['email'] ?? d['userPrincipalName'] ?? d['mail'] ?? '').toString();
+    final d = jsonDecode(response.body) as Map<String, dynamic>;
+    final id = (d['sub'] ?? d['oid'] ?? '').toString();
+    final name = (d['name'] ?? d['displayName'] ?? '').toString();
+    final email = (d['email'] ?? d['userPrincipalName'] ?? d['mail'] ?? '')
+        .toString();
     final photo = d['picture']?.toString();
 
-    final host  = meta.userInfoEndpoint.host;
+    final host = meta.userInfoEndpoint.host;
     final label = host.contains('google')
         ? 'Google'
         : host.contains('microsoft') || host.contains('graph')
-            ? 'Microsoft'
-            : 'OAuth';
+        ? 'Microsoft'
+        : 'OAuth';
 
     return OAuthUserProfile(
-      id:        id,
-      name:      name.isEmpty ? email.split('@').first : name,
-      email:     email,
+      id: id,
+      name: name.isEmpty ? email.split('@').first : name,
+      email: email,
       avatarUrl: photo,
-      provider:  label,
+      provider: label,
     );
   }
 
@@ -311,10 +318,10 @@ class OAuthService {
   Future<void> _persistProfile(OAuthUserProfile p) async {
     final prefs = await SharedPreferences.getInstance();
     await Future.wait([
-      prefs.setString(_kUid,      p.id),
-      prefs.setString(_kName,     p.name),
-      prefs.setString(_kEmail,    p.email),
-      prefs.setString(_kPhoto,    p.avatarUrl ?? ''),
+      prefs.setString(_kUid, p.id),
+      prefs.setString(_kName, p.name),
+      prefs.setString(_kEmail, p.email),
+      prefs.setString(_kPhoto, p.avatarUrl ?? ''),
       prefs.setString(_kProvider, p.provider),
     ]);
   }
@@ -324,16 +331,15 @@ class OAuthService {
     final email = prefs.getString(_kEmail) ?? '';
     if (email.isEmpty) return null;
     return OAuthUserProfile(
-      id:        prefs.getString(_kUid)      ?? '',
-      name:      prefs.getString(_kName)     ?? '',
-      email:     email,
+      id: prefs.getString(_kUid) ?? '',
+      name: prefs.getString(_kName) ?? '',
+      email: email,
       avatarUrl: prefs.getString(_kPhoto),
-      provider:  prefs.getString(_kProvider) ?? '',
+      provider: prefs.getString(_kProvider) ?? '',
     );
   }
 
-  Future<bool> get isLoggedIn async =>
-      (await getSavedProfile()) != null;
+  Future<bool> get isLoggedIn async => (await getSavedProfile()) != null;
 
   Future<void> logout() async {
     await _store.clear();
@@ -353,39 +359,39 @@ class OAuthService {
     switch (provider) {
       case OAuthProvider.google:
         return OAuthProviderMeta(
-          authorizationEndpoint:
-              Uri.parse('https://accounts.google.com/o/oauth2/v2/auth'),
-          tokenEndpoint:
-              Uri.parse('https://oauth2.googleapis.com/token'),
-          userInfoEndpoint:
-              Uri.parse('https://www.googleapis.com/oauth2/v3/userinfo'),
-          clientId:     OAuthConfig.googleClientId,
+          authorizationEndpoint: Uri.parse(
+            'https://accounts.google.com/o/oauth2/v2/auth',
+          ),
+          tokenEndpoint: Uri.parse('https://oauth2.googleapis.com/token'),
+          userInfoEndpoint: Uri.parse(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+          ),
+          clientId: OAuthConfig.googleClientId,
           clientSecret: OAuthConfig.googleClientSecret,
-          scopes:       OAuthConfig.googleScopes,
+          scopes: OAuthConfig.googleScopes,
         );
       case OAuthProvider.microsoft:
         final t = OAuthConfig.microsoftTenant;
         return OAuthProviderMeta(
           authorizationEndpoint: Uri.parse(
-            'https://login.microsoftonline.com/$t/oauth2/v2.0/authorize'),
+            'https://login.microsoftonline.com/$t/oauth2/v2.0/authorize',
+          ),
           tokenEndpoint: Uri.parse(
-            'https://login.microsoftonline.com/$t/oauth2/v2.0/token'),
-          userInfoEndpoint:
-              Uri.parse('https://graph.microsoft.com/v1.0/me'),
+            'https://login.microsoftonline.com/$t/oauth2/v2.0/token',
+          ),
+          userInfoEndpoint: Uri.parse('https://graph.microsoft.com/v1.0/me'),
           clientId: OAuthConfig.microsoftClientId,
-          scopes:   OAuthConfig.microsoftScopes,
+          scopes: OAuthConfig.microsoftScopes,
         );
       case OAuthProvider.apple:
-        throw OAuthException(
-            'Apple usa _appleNativeFlow(), não _metaFor().');
+        throw OAuthException('Apple usa _appleNativeFlow(), não _metaFor().');
     }
   }
 
   // ── PKCE ─────────────────────────────────────────────────
 
   String _makeVerifier() {
-    final bytes =
-        List<int>.generate(32, (_) => Random.secure().nextInt(256));
+    final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
     return base64UrlEncode(bytes).replaceAll('=', '');
   }
 

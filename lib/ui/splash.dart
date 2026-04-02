@@ -63,7 +63,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
           content: Text(
             EaI18n.t(
               context,
-              'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?',
+              'To use the AI assistant, you need to download the model (~1.3GB). This may be heavy on some devices. Do you want to download and enable the assistant?',
             ),
           ),
           actions: [

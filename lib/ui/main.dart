@@ -46,8 +46,10 @@ class EaSync extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+
           supportedLocales: EaI18n.supportedLocales,
           locale: EaAppSettings.instance.localeOverride,
+
           localeResolutionCallback: (locale, supportedLocales) {
             if (locale == null) return const Locale('en');
             if (locale.languageCode.toLowerCase() == 'pt') {
@@ -55,6 +57,7 @@ class EaSync extends StatelessWidget {
             }
             return const Locale('en');
           },
+
           themeAnimationCurve: Curves.easeOutCubic,
           themeAnimationDuration: const Duration(milliseconds: 280),
           themeMode: EaAppSettings.instance.themeMode,

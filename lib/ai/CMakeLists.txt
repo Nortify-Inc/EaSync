@@ -51,6 +51,23 @@ set(LLAMA_TESTS_INSTALL OFF CACHE BOOL "" FORCE)
 set(LLAMA_TOOLS_INSTALL OFF CACHE BOOL "" FORCE)
 set(LLAMA_OPENSSL OFF CACHE BOOL "" FORCE)
 
+if(ANDROID)
+    # ABI-specific switches so each ARM target can enable/disable features independently.
+    set(EASYNC_GGML_LLAMAFILE_ARM64 ON CACHE BOOL "Enable GGML llamafile for arm64-v8a")
+    set(EASYNC_GGML_LLAMAFILE_ARMV7 OFF CACHE BOOL "Enable GGML llamafile for armeabi-v7a")
+
+    if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+        set(GGML_LLAMAFILE ${EASYNC_GGML_LLAMAFILE_ARM64} CACHE BOOL "" FORCE)
+    elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+        # armeabi-v7a fails to compile llamafile kernels due to missing FP16 intrinsics.
+        set(GGML_LLAMAFILE ${EASYNC_GGML_LLAMAFILE_ARMV7} CACHE BOOL "" FORCE)
+    else()
+        set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
+    endif()
+
+    message(STATUS "Android ABI: ${CMAKE_ANDROID_ARCH_ABI} | GGML_LLAMAFILE=${GGML_LLAMAFILE}")
+endif()
+
 add_subdirectory(${LLAMA_ROOT} ${CMAKE_CURRENT_BINARY_DIR}/llama.cpp)
 
 add_library(easync_ai SHARED

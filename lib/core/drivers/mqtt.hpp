@@ -30,6 +30,14 @@ public:
     bool connect(const std::string& uuid) override;
     bool disconnect(const std::string& uuid) override;
 
+    void onDeviceRegistered(
+        const std::string& uuid,
+        const std::string& brand,
+        const std::string& model
+    ) override;
+
+    void onDeviceRemoved(const std::string& uuid) override;
+
     bool setPower(const std::string& uuid, bool value) override;
     bool setColor(const std::string& uuid, uint32_t rgb) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;
@@ -51,6 +59,8 @@ public:
     ) override;
 
 private:
+    bool ensureBrokerConnection(const std::string& preferredBroker = "");
+
     void publishCommand(
         const std::string& uuid,
         const std::string& json,
@@ -75,6 +85,8 @@ private:
 private:
     std::mutex mutex;
     std::unordered_map<std::string, CoreDeviceState> states;
+    std::unordered_map<std::string, std::string> preferredBrokerByDevice;
+    std::unordered_map<std::string, std::string> preferredPrefixByDevice;
 
     std::unique_ptr<mqtt::async_client> client;
 
@@ -82,6 +94,8 @@ private:
 
     std::string brokerUrl = "tcp://localhost:1883";
     std::string clientId = "easync-client";
+    std::string topicPrefix = "easync";
+    mqtt::connect_options cachedConnectOptions;
 
     DriverEventCallback eventCallback = nullptr;
     void* eventUserData = nullptr;

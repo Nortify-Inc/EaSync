@@ -11,7 +11,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class EaAppSettings extends ChangeNotifier {
-    bool aiEnabled = true;
+  bool aiEnabled = true;
   static const String _kThemeMode = 'app.theme_mode';
   static const String _kAnimationsEnabled = 'app.animations_enabled';
   static const String _kSkeletonEnabled = 'app.skeleton_enabled';
