@@ -26,12 +26,15 @@ namespace {
 
 static std::string g_data_dir_override;
 static std::string g_system_prompt =
-    "You are called Agent, an helpful AI created by Nortify Inc."
-    "Be direct and concise." 
-    "Don't invent info.";
+    "You are Agent, a practical AI assistant created by Nortify Inc. "
+    "Be quick and concise. Don't invent info.";
 
 static std::mutex g_mutex;
-static std::atomic<int> g_decode_every{4};
+static std::atomic<int> g_decode_every{6};
+static std::atomic<int> g_max_new_tokens{512};
+static std::atomic<float> g_temperature{0.8f};
+static std::atomic<int> g_top_k{30};
+static std::atomic<float> g_top_p{0.98f};
 
 static std::atomic<bool> g_backend_inited{false};
 
@@ -322,10 +325,10 @@ static llama_token sample_next_token(
 }
 
 struct GenParams {
-    int max_new_tokens = 64;
-    float temperature = 0.45f;
-    int top_k = 40;
-    float top_p = 0.85f;
+    int max_new_tokens = 4096;
+    float temperature = 0.55f;
+    int top_k = 48;
+    float top_p = 0.90f;
 };
 
 static bool generate_text(
@@ -423,6 +426,60 @@ static bool ensure_initialized() {
         }
     }
 
+    if (const char* env_mnt = std::getenv("EASYNC_MAX_NEW_TOKENS")) {
+        try {
+            int v = std::stoi(env_mnt);
+            if (v > 0) {
+                g_max_new_tokens.store(v);
+                fprintf(stderr, "[LLAMA] Using EASYNC_MAX_NEW_TOKENS=%d\n", v);
+            }
+        } catch (...) {
+        }
+    }
+
+    if (const char* env_ctx = std::getenv("EASYNC_N_CTX")) {
+        try {
+            int v = std::stoi(env_ctx);
+            if (v >= 2048) {
+                fprintf(stderr, "[LLAMA] Using EASYNC_N_CTX=%d\n", v);
+            }
+        } catch (...) {
+        }
+    }
+
+    if (const char* env_temp = std::getenv("EASYNC_TEMPERATURE")) {
+        try {
+            float v = std::stof(env_temp);
+            if (v >= 0.0f && v <= 2.0f) {
+                g_temperature.store(v);
+                fprintf(stderr, "[LLAMA] Using EASYNC_TEMPERATURE=%.3f\n", v);
+            }
+        } catch (...) {
+        }
+    }
+
+    if (const char* env_top_k = std::getenv("EASYNC_TOP_K")) {
+        try {
+            int v = std::stoi(env_top_k);
+            if (v > 0) {
+                g_top_k.store(v);
+                fprintf(stderr, "[LLAMA] Using EASYNC_TOP_K=%d\n", v);
+            }
+        } catch (...) {
+        }
+    }
+
+    if (const char* env_top_p = std::getenv("EASYNC_TOP_P")) {
+        try {
+            float v = std::stof(env_top_p);
+            if (v > 0.0f && v <= 1.0f) {
+                g_top_p.store(v);
+                fprintf(stderr, "[LLAMA] Using EASYNC_TOP_P=%.3f\n", v);
+            }
+        } catch (...) {
+        }
+    }
+
     const std::string data_dir = find_data_dir();
     if (data_dir.empty()) {
         fprintf(stderr, "[LLAMA] ERROR: lib/ai/data with GGUF model not found.\n");
@@ -441,7 +498,16 @@ static bool ensure_initialized() {
     mparams.use_mlock = false;
 
     llama_context_params cparams = llama_context_default_params();
-    cparams.n_ctx = 2048;
+    cparams.n_ctx = 8192;
+    if (const char* env_ctx = std::getenv("EASYNC_N_CTX")) {
+        try {
+            int v = std::stoi(env_ctx);
+            if (v >= 2048) {
+                cparams.n_ctx = static_cast<uint32_t>(v);
+            }
+        } catch (...) {
+        }
+    }
     cparams.n_batch = 512;
     cparams.n_ubatch = 256;
 
@@ -482,7 +548,11 @@ static bool run_inference(const std::string& prompt, std::string& result) {
     std::lock_guard<std::mutex> lk(g_mutex);
     if (!ensure_initialized()) return false;
 
-    const GenParams params{};
+    GenParams params{};
+    params.max_new_tokens = g_max_new_tokens.load();
+    params.temperature = g_temperature.load();
+    params.top_k = g_top_k.load();
+    params.top_p = g_top_p.load();
     const bool ok = generate_text(prompt, params, result, [](const std::string&) {});
     if (!ok) return false;
 
@@ -492,8 +562,11 @@ static bool run_inference(const std::string& prompt, std::string& result) {
 } // namespace
 
 int ai_initialize(void* /*ctx*/) {
-    fprintf(stderr, "[LLAMA] ai_initialize called\n");
     std::lock_guard<std::mutex> lk(g_mutex);
+    if (g_model && g_ctx && g_vocab) {
+        return 0;
+    }
+    fprintf(stderr, "[LLAMA] ai_initialize called\n");
     return ensure_initialized() ? 0 : -1;
 }
 
@@ -579,7 +652,9 @@ int ai_query_async_start(void* /*ctx*/, const char* inputJson, uint64_t* outHand
             }
 
             const GenParams params{};
-            generate_text(prompt, params, full, [&](const std::string& piece) {
+            GenParams tuned = params;
+            tuned.max_new_tokens = g_max_new_tokens.load();
+            generate_text(prompt, tuned, full, [&](const std::string& piece) {
                 std::lock_guard<std::mutex> lk_jobs(g_jobs_mutex);
                 auto it = g_jobs.find(id);
                 if (it != g_jobs.end()) {
@@ -684,6 +759,10 @@ int ai_observe_profile_apply(void* /*ctx*/, const char* /*p*/, uint64_t /*t*/) {
 
 int ai_set_decode_every(void* /*ctx*/, int n) {
     if (n <= 0) return -1;
+    const int old = g_decode_every.load();
+    if (old == n) {
+        return 0;
+    }
     g_decode_every.store(n);
     fprintf(stderr, "[LLAMA] ai_set_decode_every: %d\n", n);
     return 0;

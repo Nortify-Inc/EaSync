@@ -8,6 +8,7 @@
  */
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -23,15 +24,19 @@ class Agent extends StatefulWidget {
   State<Agent> createState() => AgentState();
 }
 
-class AgentState extends State<Agent> with TickerProviderStateMixin {
+class AgentState extends State<Agent>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   bool get _aiEnabled => EaAppSettings.instance.aiEnabled;
-  String _revealingText = '';
   StreamSubscription<String>? _aiStreamSub;
   bool _aiCancelled = false;
   String _assistantTargetText = '';
-  bool _revealLoopRunning = false;
+  String _assistantRenderedText = '';
+  final Queue<String> _typingQueue = Queue<String>();
+  Timer? _typingTimer;
+  int _typingCharIndex = 0;
+  bool _streamFinished = false;
   Timer? _thinkingGateTimer;
-  int _thinkingTokenEstimate = 0;
+  Timer? _persistDebounce;
   static const String _kChats = 'assistant.chats.v1';
   static const String _kActiveChatId = 'assistant.active_chat_id';
   static const String _kAuthName = 'account.auth.name';
@@ -51,16 +56,15 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
 
   static const double _chatDrawerWidth = 252;
   static const Duration _thinkingMinDuration = Duration(milliseconds: 80);
-  static const int _thinkingTokenThreshold = 8;
-  static const Duration _typingFrameDelay = Duration(milliseconds: 28);
-  static const int _typingLeadCharsWhileStreaming = 10;
-  static const int _maxAssistantChars = 220;
 
   late final AnimationController _thinkingPulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
   );
   bool _isInTree = true;
+
+  @override
+  bool get wantKeepAlive => true;
 
   bool get _canUpdateUi => mounted && _isInTree;
 
@@ -94,6 +98,9 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   @override
   void dispose() {
     _thinkingGateTimer?.cancel();
+    _persistDebounce?.cancel();
+    _typingTimer?.cancel();
+    _aiStreamSub?.cancel();
     _stopThinkingPulse();
     _thinkingPulse.dispose();
     _commandController.dispose();
@@ -105,6 +112,7 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   void deactivate() {
     _isInTree = false;
     _stopThinkingPulse();
+    _persistState();
     super.deactivate();
   }
 
@@ -112,9 +120,21 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
   void activate() {
     super.activate();
     _isInTree = true;
+    _reloadProfileIdentity();
     if (_typingIndicator) {
       _startThinkingPulse();
     }
+  }
+
+  Future<void> _reloadProfileIdentity() async {
+    final prefs = await SharedPreferences.getInstance();
+    final name = prefs.getString(_kAuthName)?.trim() ?? '';
+    final photo = (prefs.getString(_kAuthPhoto) ?? '').trim();
+    if (!mounted) return;
+    setState(() {
+      _profileName = name;
+      _profilePhoto = photo;
+    });
   }
 
   Future<void> _loadState() async {
@@ -154,6 +174,13 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
     if (_activeChatId != null) {
       await prefs.setString(_kActiveChatId, _activeChatId!);
     }
+  }
+
+  void _schedulePersistState() {
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 420), () {
+      _persistState();
+    });
   }
 
   Future<void> _createNewChat({String? fromText, String? fallbackTitle}) async {
@@ -198,10 +225,11 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
       session.messages.add(_ChatMessage(role: _Role.assistant, text: ''));
       _sending = true;
       _typingIndicator = true;
-      _revealingText = '';
       _assistantTargetText = '';
-      _revealLoopRunning = false;
-      _thinkingTokenEstimate = 0;
+      _assistantRenderedText = '';
+      _typingQueue.clear();
+      _typingCharIndex = 0;
+      _streamFinished = false;
     });
 
     final modelPrompt = _buildModelPrompt(session, raw);
@@ -209,9 +237,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
     _thinkingGateTimer?.cancel();
     _thinkingGateTimer = Timer(_thinkingMinDuration, () {
       if (!mounted || _aiCancelled) return;
-      if (_assistantTargetText.isNotEmpty) {
-        _revealAssistantText(session);
-      }
     });
     _startThinkingPulse();
     await _persistState();
@@ -220,14 +245,6 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
     _aiCancelled = false;
 
     if (!mounted) return;
-
-    if (!_isInTree) {
-      _stopThinkingPulse();
-      _typingIndicator = false;
-      _sending = false;
-      await _persistState();
-      return;
-    }
 
     try {
       final stream = aiQueryStream(modelPrompt);
@@ -242,50 +259,56 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
           }
           text = text.replaceFirst(RegExp(r'^[\uFFFD\x00-\x1F]+'), '');
           if (text.isEmpty) return;
-          assistantText += text;
-          _assistantTargetText = _sanitizeAssistantText(assistantText);
-          _thinkingTokenEstimate = _estimateTokenCount(_assistantTargetText);
-          if (_canStartReveal()) {
-            _revealAssistantText(session);
-          }
-        },
-        onDone: () {
-          if (_assistantTargetText.trim().isEmpty) {
-            _assistantTargetText = noResponseText;
-          }
-
-          _assistantTargetText = _sanitizeAssistantText(_assistantTargetText);
-          _stopThinkingPulse();
-          _thinkingGateTimer?.cancel();
+          final streamChunk = _sanitizeStreamingChunk(text);
+          if (streamChunk.isEmpty) return;
+          assistantText += streamChunk;
+          _assistantTargetText += streamChunk;
+          if (!mounted) return;
           setState(() {
             _typingIndicator = false;
-            _sending = false;
+            _typingQueue.add(streamChunk);
           });
-          _revealAssistantText(session);
-          _aiStreamSub = null;
-          _persistState();
-          _scrollToBottom();
+          _startTypingPump(session);
+          _stopThinkingPulse();
+          _thinkingGateTimer?.cancel();
+        },
+        onDone: () {
+          _streamFinished = true;
+          if (_assistantTargetText.trim().isEmpty && _typingQueue.isEmpty) {
+            _assistantTargetText = noResponseText;
+            _assistantRenderedText = noResponseText;
+            _setLastAssistantMessage(session, _assistantRenderedText);
+            _finalizeSendState();
+            _persistState();
+            _scrollToBottom();
+            return;
+          }
+
+          if (_typingQueue.isEmpty && _typingTimer == null) {
+            _assistantRenderedText = _sanitizeAssistantText(
+              _assistantRenderedText,
+            );
+            _setLastAssistantMessage(session, _assistantRenderedText);
+            _finalizeSendState();
+            _persistState();
+            _scrollToBottom();
+          }
         },
         onError: (_) {
+          _typingTimer?.cancel();
+          _typingTimer = null;
+          _typingQueue.clear();
           setState(() {
             final fallbackText = assistantText.trim().isNotEmpty
                 ? assistantText
                 : noResponseText;
-            for (int i = session.messages.length - 1; i >= 0; --i) {
-              if (session.messages[i].role == _Role.assistant) {
-                session.messages[i] = _ChatMessage(
-                  role: _Role.assistant,
-                  text: fallbackText,
-                );
-                break;
-              }
-            }
+            _assistantRenderedText = _sanitizeAssistantText(fallbackText);
+            _setLastAssistantMessage(session, _assistantRenderedText);
             _typingIndicator = false;
             _sending = false;
-            _revealingText = '';
             _assistantTargetText = '';
-            _revealLoopRunning = false;
-            _thinkingTokenEstimate = 0;
+            _typingCharIndex = 0;
+            _streamFinished = false;
           });
           _aiStreamSub = null;
           _thinkingGateTimer?.cancel();
@@ -294,39 +317,23 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
         },
       );
     } catch (_) {
+      _typingTimer?.cancel();
+      _typingTimer = null;
+      _typingQueue.clear();
       setState(() {
-        for (int i = session.messages.length - 1; i >= 0; --i) {
-          if (session.messages[i].role == _Role.assistant) {
-            session.messages[i] = _ChatMessage(
-              role: _Role.assistant,
-              text: noResponseText,
-            );
-            break;
-          }
-        }
+        _assistantRenderedText = noResponseText;
+        _setLastAssistantMessage(session, _assistantRenderedText);
         _typingIndicator = false;
         _sending = false;
-        _revealingText = '';
         _assistantTargetText = '';
-        _revealLoopRunning = false;
-        _thinkingTokenEstimate = 0;
+        _typingCharIndex = 0;
+        _streamFinished = false;
       });
       _aiStreamSub = null;
       _thinkingGateTimer?.cancel();
       _stopThinkingPulse();
       _persistState();
     }
-  }
-
-  int _estimateTokenCount(String text) {
-    final clean = text.trim();
-    if (clean.isEmpty) return 0;
-    return clean.split(RegExp(r'\s+')).length;
-  }
-
-  bool _canStartReveal() {
-    if (!_sending) return _assistantTargetText.isNotEmpty;
-    return _thinkingTokenEstimate >= _thinkingTokenThreshold;
   }
 
   String _buildModelPrompt(_ChatSession session, String rawUserMessage) {
@@ -338,124 +345,119 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
     if (text.isEmpty) return text;
 
     var out = text;
-    const markers = <String>[
-      'Human:',
-      'User:',
-      'Assistant:',
-      '<|im_start|>',
-      '<|im_end|>',
-      '<|endoftext|>',
-    ];
 
-    for (final marker in markers) {
-      final idx = out.indexOf(marker);
-      if (idx >= 0) {
-        out = out.substring(0, idx);
-      }
-    }
+    // Remove role prefixes only when they appear at the beginning.
+    out = out.replaceFirst(
+      RegExp(r'^\s*(human|user|assistant)\s*:\s*', caseSensitive: false),
+      '',
+    );
+
+    // Drop known special tokens without truncating the rest of the answer.
+    out = out
+        .replaceAll('<|im_start|>', ' ')
+        .replaceAll('<|im_end|>', ' ')
+        .replaceAll('<|endoftext|>', ' ');
 
     out = out.replaceAll(RegExp(r'\s+'), ' ').trim();
-
-    // Keep answers concise and stable across long turns.
-    final sentenceEnd = RegExp(r'[.!?]');
-    var seenEnd = 0;
-    for (var i = 0; i < out.length; i++) {
-      if (sentenceEnd.hasMatch(out[i])) {
-        seenEnd++;
-        if (seenEnd >= 2) {
-          out = out.substring(0, i + 1).trim();
-          break;
-        }
-      }
-    }
-
-    if (out.length > _maxAssistantChars) {
-      out = out.substring(0, _maxAssistantChars).trimRight();
-      final lastSpace = out.lastIndexOf(' ');
-      if (lastSpace > 120) {
-        out = out.substring(0, lastSpace);
-      }
-      out = '$out...';
-    }
 
     return out;
   }
 
-  void _revealAssistantText(_ChatSession session) {
-    if (!_canStartReveal()) return;
-    if (_revealLoopRunning) return;
-    _revealLoopRunning = true;
+  String _sanitizeStreamingChunk(String text) {
+    if (text.isEmpty) return text;
 
-    Future<void>(() async {
-      while (mounted && !_aiCancelled) {
-        final currentLen = _revealingText.length;
-        final targetLen = _assistantTargetText.length;
+    return text
+        .replaceAll('<|im_start|>', '')
+        .replaceAll('<|im_end|>', '')
+        .replaceAll('<|endoftext|>', '');
+  }
 
-        if (currentLen >= targetLen) {
-          if (_sending) {
-            await Future.delayed(const Duration(milliseconds: 10));
-            continue;
-          }
-          break;
-        }
+  void _startTypingPump(_ChatSession session) {
+    if (_typingTimer != null) return;
 
-        if (_sending &&
-            (targetLen - currentLen) <= _typingLeadCharsWhileStreaming) {
-          await Future.delayed(const Duration(milliseconds: 10));
-          continue;
-        }
-
-        final nextLen = min(targetLen, currentLen + 1);
-
-        if (!mounted) break;
-        setState(() {
-          _revealingText = _assistantTargetText.substring(0, nextLen);
-          for (int i = session.messages.length - 1; i >= 0; --i) {
-            if (session.messages[i].role == _Role.assistant) {
-              session.messages[i] = _ChatMessage(
-                role: _Role.assistant,
-                text: _revealingText,
-              );
-              break;
-            }
-          }
-        });
-        _scrollToBottom();
-
-        await Future.delayed(_typingFrameDelay);
-      }
-
-      _revealLoopRunning = false;
-
-      if (mounted &&
-          !_aiCancelled &&
-          _revealingText.length < _assistantTargetText.length) {
-        _revealAssistantText(session);
+    _typingTimer = Timer.periodic(const Duration(milliseconds: 12), (_) {
+      if (!_canUpdateUi || _aiCancelled) {
+        _typingTimer?.cancel();
+        _typingTimer = null;
         return;
       }
 
-      if (mounted && !_sending) {
-        setState(() {
-          _revealingText = '';
-          _assistantTargetText = '';
-          _thinkingTokenEstimate = 0;
-        });
+      if (_typingQueue.isEmpty) {
+        _typingTimer?.cancel();
+        _typingTimer = null;
+
+        if (_streamFinished) {
+          _assistantRenderedText = _sanitizeAssistantText(_assistantRenderedText);
+          setState(() {
+            _setLastAssistantMessage(session, _assistantRenderedText);
+          });
+          _finalizeSendState();
+          _persistState();
+          _scrollToBottom();
+        }
+        return;
+      }
+
+      final currentChunk = _typingQueue.first;
+      if (_typingCharIndex >= currentChunk.length) {
+        _typingQueue.removeFirst();
+        _typingCharIndex = 0;
+        _schedulePersistState();
+        return;
+      }
+
+      final nextChar = currentChunk[_typingCharIndex];
+      _typingCharIndex += 1;
+
+      setState(() {
+        _assistantRenderedText += nextChar;
+        _setLastAssistantMessage(session, _assistantRenderedText);
+      });
+
+      if (_typingCharIndex % 3 == 0) {
+        _scrollToBottom();
       }
     });
+  }
+
+  void _setLastAssistantMessage(_ChatSession session, String text) {
+    for (int i = session.messages.length - 1; i >= 0; --i) {
+      if (session.messages[i].role == _Role.assistant) {
+        session.messages[i] = _ChatMessage(role: _Role.assistant, text: text);
+        break;
+      }
+    }
+  }
+
+  void _finalizeSendState() {
+    _stopThinkingPulse();
+    _thinkingGateTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _typingIndicator = false;
+      _sending = false;
+      _assistantTargetText = '';
+      _typingCharIndex = 0;
+      _streamFinished = false;
+    });
+    _aiStreamSub = null;
   }
 
   void _stopAiGeneration() {
     _aiCancelled = true;
     _aiStreamSub?.cancel();
     _aiStreamSub = null;
+    _typingTimer?.cancel();
+    _typingTimer = null;
+    _typingQueue.clear();
     _stopThinkingPulse();
 
     setState(() {
       _typingIndicator = false;
       _sending = false;
       _assistantTargetText = '';
-      _revealLoopRunning = false;
-      _thinkingTokenEstimate = 0;
+      _typingCharIndex = 0;
+      _streamFinished = false;
     });
     _thinkingGateTimer?.cancel();
   }
@@ -473,6 +475,7 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final compact = _settings.compactMode;
 
     if (!_aiEnabled) {
@@ -764,8 +767,7 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
         final user = msg.role == _Role.user;
 
         final isLastAssistant = !user && i == messages.length - 1;
-        final showThinking =
-            isLastAssistant && _typingIndicator && _revealingText.isEmpty;
+        final showThinking = isLastAssistant && _typingIndicator;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -782,43 +784,36 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
                   if (!user) _assistantAvatar(),
                   if (!user) const SizedBox(width: 8),
                   Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (showThinking)
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: 6,
-                              top: 2,
-                              bottom: 8,
-                            ),
-                            child: _thinkingShimmerLabel(),
+                    child: Align(
+                      alignment: user
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        constraints: BoxConstraints(maxWidth: bubbleMax),
+                        decoration: BoxDecoration(
+                          color: user
+                              ? EaColor.fore.withValues(alpha: 0.18)
+                              : EaAdaptiveColor.field(context),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: EaAdaptiveColor.border(context),
                           ),
-                        if (!showThinking)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            constraints: BoxConstraints(maxWidth: bubbleMax),
-                            decoration: BoxDecoration(
-                              color: user
-                                  ? EaColor.fore.withValues(alpha: 0.18)
-                                  : EaAdaptiveColor.field(context),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: EaAdaptiveColor.border(context),
+                        ),
+                        child: showThinking
+                            ? _thinkingShimmerLabel()
+                            : Text(
+                                msg.text,
+                                style: EaText.small.copyWith(
+                                  color: EaAdaptiveColor.bodyText(context),
+                                  height: 1.35,
+                                ),
                               ),
-                            ),
-                            child: Text(
-                              msg.text,
-                              style: EaText.small.copyWith(
-                                color: EaAdaptiveColor.bodyText(context),
-                              ),
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
                   ),
                   if (user) const SizedBox(width: 8),
@@ -899,19 +894,38 @@ class AgentState extends State<Agent> with TickerProviderStateMixin {
 
   Widget _userAvatar() {
     final photo = (_profilePhoto ?? '').trim();
-    final provider = photo.isEmpty
-        ? null
-        : (photo.startsWith('http')
-              ? NetworkImage(photo)
-              : FileImage(File(photo)) as ImageProvider);
+    Widget fallbackIcon() =>
+        const Icon(Icons.person, size: 13, color: EaColor.fore);
 
-    return CircleAvatar(
-      radius: 13,
-      backgroundColor: EaColor.fore.withValues(alpha: 0.16),
-      backgroundImage: provider,
-      child: provider == null
-          ? const Icon(Icons.person, size: 13, color: EaColor.fore)
-          : null,
+    if (photo.isEmpty) {
+      return CircleAvatar(
+        radius: 13,
+        backgroundColor: EaColor.fore.withValues(alpha: 0.16),
+        child: fallbackIcon(),
+      );
+    }
+
+    final image = photo.startsWith('http')
+        ? Image.network(
+            photo,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallbackIcon(),
+          )
+        : Image.file(
+            File(photo),
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => fallbackIcon(),
+          );
+
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        color: EaColor.fore.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: image,
     );
   }
 

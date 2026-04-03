@@ -29,16 +29,34 @@ class Account extends StatefulWidget {
 }
 
 class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
+  static String _normalizeLanguageValue(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v == 'portuguese' ||
+        v == 'português' ||
+        v == 'portugues' ||
+        v == 'pt' ||
+        v == 'pt-br') {
+      return 'Português (Brasil)';
+    }
+    return 'English';
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (mounted) _loadAccountState();
+  }
+
   static const String _kOutsideTempCache = 'assistant.outside_temp_cache';
   static const String _kOutsideTempUpdatedAt =
       'assistant.outside_temp_updated_at';
   static const String _kAuthName = 'account.auth.name';
+  static const String _kAuthUid = 'account.auth.uid';
   static const String _kAuthEmail = 'account.auth.email';
   static const String _kAuthPhoto = 'account.auth.photo';
   static const String _kAuthProvider = 'account.auth.provider';
   static const String _kFingerprintEnabled = 'account.security.fingerprint';
   static const String _kLanguage = 'profile.language';
-  static const String _kRegion = 'profile.region';
   static const String _kAddressStreet = 'profile.address.street';
   static const String _kAddressCity = 'profile.address.city';
   static const String _kAddressPostal = 'profile.address.postal';
@@ -59,9 +77,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   double _outsideTemp = 0.0;
   DateTime? _outsideUpdatedAt;
   bool _outsideTempRefreshing = false;
-  String _language = 'Português';
-  String _region = 'Brasil';
-  String _fullLocation = 'Localização desconhecida';
+  String _language = 'English';
+  String _fullLocation = 'Unknown location';
   bool _locationRefreshing = false;
 
   @override
@@ -113,12 +130,19 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       _authEmail = prefs.getString(_kAuthEmail);
       _authPhoto = prefs.getString(_kAuthPhoto);
       _authProvider = prefs.getString(_kAuthProvider);
-      _isAuthenticated = _authEmail?.trim().isNotEmpty ?? false;
+      final uid = (prefs.getString(_kAuthUid) ?? '').trim();
+      final name = (_authName ?? '').trim();
+      final email = (_authEmail ?? '').trim();
+      final provider = (_authProvider ?? '').trim();
+      _isAuthenticated =
+          uid.isNotEmpty ||
+          name.isNotEmpty ||
+          email.isNotEmpty ||
+          provider.isNotEmpty;
     }
 
     _fingerprintEnabled = prefs.getBool(_kFingerprintEnabled) ?? false;
-    _language = prefs.getString(_kLanguage) ?? _language;
-    _region = prefs.getString(_kRegion) ?? _region;
+    _language = _normalizeLanguageValue(prefs.getString(_kLanguage) ?? '');
 
     final fallbackProfileLocation = (prefs.getString(_kProfileLocation) ?? '')
         .trim();
@@ -137,7 +161,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               ? parts.join(', ')
               : (fallbackProfileLocation.isNotEmpty
                     ? fallbackProfileLocation
-                    : 'Localização desconhecida'));
+                    : 'Unknown location'));
 
     if (!mounted) return;
     setState(() {});
@@ -206,7 +230,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   String _buildWeatherQueryFromPrefs(SharedPreferences prefs) {
     final addressFull = (prefs.getString(_kAddressFull) ?? '').trim();
-    if (addressFull.isNotEmpty && addressFull != 'Localização desconhecida') {
+    final unknownLocation = EaI18n.t(context, 'Unknown location');
+    if (addressFull.isNotEmpty && addressFull != unknownLocation) {
       return addressFull;
     }
     final profileLocation = (prefs.getString(_kProfileLocation) ?? '').trim();
@@ -216,7 +241,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     if (city.isNotEmpty && country.isNotEmpty) return '$city, $country';
     if (city.isNotEmpty) return city;
     final current = _fullLocation.trim();
-    if (current.isNotEmpty && current != 'Localização desconhecida') {
+    if (current.isNotEmpty && current != unknownLocation) {
       return current;
     }
     return '';
@@ -481,7 +506,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
       final safe = full.isEmpty
           ? (fallbackProfileLocation.isEmpty
-                ? 'Localização desconhecida'
+                ? EaI18n.t(context, 'Unknown location')
                 : fallbackProfileLocation)
           : full;
       await prefs.setString(_kAddressFull, safe);
@@ -563,9 +588,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            EaI18n.t(context, 'Não foi possível escolher a imagem: {error}', {
-              'error': '$e',
-            }),
+            EaI18n.t(context, 'Could not pick image: {error}', {'error': '$e'}),
           ),
         ),
       );
@@ -891,11 +914,14 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   Widget _profileAvatar() {
     final photo = (_authPhoto ?? '').trim();
-    final provider = photo.isEmpty
-        ? null
-        : (photo.startsWith('http')
-              ? NetworkImage(photo)
-              : FileImage(File(photo)) as ImageProvider);
+    ImageProvider? provider;
+    if (photo.isNotEmpty) {
+      if (photo.startsWith('http')) {
+        provider = NetworkImage(photo);
+      } else {
+        provider = FileImage(File(photo));
+      }
+    }
 
     return GestureDetector(
       onTap: _pickProfileImage,
@@ -906,7 +932,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             radius: 20,
             backgroundColor: EaColor.fore.withValues(alpha: 0.18),
             backgroundImage: provider,
-            child: provider == null
+            onBackgroundImageError: provider == null ? null : (_, _) {},
+            child: (provider == null)
                 ? const Icon(
                     Icons.person_outline_rounded,
                     size: 20,
@@ -1028,7 +1055,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     ),
                   ),
                 ),
-                if (trailing != null) trailing,
+                ?trailing,
               ],
             ),
             const SizedBox(height: 8),
@@ -1072,6 +1099,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     label,
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1147,7 +1175,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               ),
             ),
           ),
-          if (trailing != null) trailing,
+          ?trailing,
         ],
       ),
     );
@@ -1503,6 +1531,7 @@ class _AccountTile extends StatelessWidget {
       ),
       child: ListTile(
         enableFeedback: false,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Icon(icon, color: danger ? Colors.redAccent : EaColor.fore),
         title: Text(
           title,
@@ -1510,6 +1539,7 @@ class _AccountTile extends StatelessWidget {
             color: danger
                 ? Colors.redAccent
                 : EaAdaptiveColor.bodyText(context),
+            fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
@@ -1535,40 +1565,277 @@ class PersonalInfoPage extends StatefulWidget {
 class _PersonalInfoPageState extends State<PersonalInfoPage> {
   static const _kFullName = 'profile.full_name';
   static const _kLocation = 'profile.location';
+  static const _kAuthName = 'account.auth.name';
 
   static const List<String> _locationSeed = [
+    // Brasil
     'Pelotas, Rio Grande do Sul, Brasil',
     'Porto Alegre, Rio Grande do Sul, Brasil',
     'Rio Grande, Rio Grande do Sul, Brasil',
     'Caxias do Sul, Rio Grande do Sul, Brasil',
+    'Santa Maria, Rio Grande do Sul, Brasil',
+    'Passo Fundo, Rio Grande do Sul, Brasil',
     'Florianópolis, Santa Catarina, Brasil',
+    'Joinville, Santa Catarina, Brasil',
+    'Blumenau, Santa Catarina, Brasil',
     'Curitiba, Paraná, Brasil',
+    'Londrina, Paraná, Brasil',
+    'Maringá, Paraná, Brasil',
     'São Paulo, São Paulo, Brasil',
     'Campinas, São Paulo, Brasil',
+    'Santos, São Paulo, Brasil',
+    'Ribeirão Preto, São Paulo, Brasil',
     'Rio de Janeiro, Rio de Janeiro, Brasil',
+    'Niterói, Rio de Janeiro, Brasil',
     'Belo Horizonte, Minas Gerais, Brasil',
+    'Uberlândia, Minas Gerais, Brasil',
     'Brasília, Distrito Federal, Brasil',
     'Salvador, Bahia, Brasil',
+    'Feira de Santana, Bahia, Brasil',
     'Recife, Pernambuco, Brasil',
     'Fortaleza, Ceará, Brasil',
+    'Manaus, Amazonas, Brasil',
+    'Belém, Pará, Brasil',
+    'Goiânia, Goiás, Brasil',
+    'Campo Grande, Mato Grosso do Sul, Brasil',
+    'Cuiabá, Mato Grosso, Brasil',
+    'Palmas, Tocantins, Brasil',
+
+    // América do Sul
     'Montevideo, Uruguay',
+    'Punta del Este, Uruguay',
     'Buenos Aires, Argentina',
+    'Córdoba, Argentina',
+    'Rosario, Argentina',
+    'Mendoza, Argentina',
+    'La Plata, Argentina',
     'Santiago, Chile',
+    'Valparaíso, Chile',
+    'Concepción, Chile',
+    'Lima, Peru',
+    'Arequipa, Peru',
+    'Bogotá, Colombia',
+    'Medellín, Colombia',
+    'Cali, Colombia',
+    'Cartagena, Colombia',
+    'Caracas, Venezuela',
+    'Maracaibo, Venezuela',
+    'Quito, Ecuador',
+    'Guayaquil, Ecuador',
+    'La Paz, Bolivia',
+    'Santa Cruz, Bolivia',
+    'Asunción, Paraguay',
+
+    // América do Norte
+    'New York, United States',
+    'Los Angeles, United States',
+    'Chicago, United States',
+    'Houston, United States',
+    'Phoenix, United States',
+    'Philadelphia, United States',
+    'San Antonio, United States',
+    'San Diego, United States',
+    'Dallas, United States',
+    'San Jose, United States',
+    'Austin, United States',
+    'Jacksonville, United States',
+    'San Francisco, United States',
+    'Columbus, United States',
+    'Indianapolis, United States',
+    'Seattle, United States',
+    'Denver, United States',
+    'Washington, United States',
+    'Boston, United States',
+    'Miami, United States',
+    'Atlanta, United States',
+    'Detroit, United States',
+    'Minneapolis, United States',
+    'Las Vegas, United States',
+    'Toronto, Canada',
+    'Vancouver, Canada',
+    'Montreal, Canada',
+    'Ottawa, Canada',
+    'Calgary, Canada',
+    'Edmonton, Canada',
+    'Quebec City, Canada',
+    'Mexico City, Mexico',
+    'Guadalajara, Mexico',
+    'Monterrey, Mexico',
+    'Tijuana, Mexico',
+    'Cancún, Mexico',
+
+    // Europa
     'Lisboa, Portugal',
     'Porto, Portugal',
+    'Braga, Portugal',
     'Madrid, Spain',
+    'Barcelona, Spain',
+    'Valencia, Spain',
+    'Seville, Spain',
+    'Bilbao, Spain',
     'Paris, France',
+    'Marseille, France',
+    'Lyon, France',
+    'Nice, France',
     'Berlin, Germany',
+    'Hamburg, Germany',
+    'Munich, Germany',
+    'Frankfurt, Germany',
+    'Cologne, Germany',
     'Rome, Italy',
+    'Milan, Italy',
+    'Naples, Italy',
+    'Turin, Italy',
+    'Florence, Italy',
     'London, United Kingdom',
-    'New York, United States',
-    'San Francisco, United States',
-    'Toronto, Canada',
+    'Manchester, United Kingdom',
+    'Birmingham, United Kingdom',
+    'Liverpool, United Kingdom',
+    'Leeds, United Kingdom',
+    'Glasgow, United Kingdom',
+    'Edinburgh, United Kingdom',
+    'Amsterdam, Netherlands',
+    'Rotterdam, Netherlands',
+    'The Hague, Netherlands',
+    'Brussels, Belgium',
+    'Antwerp, Belgium',
+    'Vienna, Austria',
+    'Salzburg, Austria',
+    'Zurich, Switzerland',
+    'Geneva, Switzerland',
+    'Basel, Switzerland',
+    'Stockholm, Sweden',
+    'Gothenburg, Sweden',
+    'Oslo, Norway',
+    'Copenhagen, Denmark',
+    'Helsinki, Finland',
+    'Dublin, Ireland',
+    'Prague, Czech Republic',
+    'Warsaw, Poland',
+    'Krakow, Poland',
+    'Budapest, Hungary',
+    'Athens, Greece',
+    'Thessaloniki, Greece',
+    'Istanbul, Turkey',
+    'Ankara, Turkey',
+    'Moscow, Russia',
+    'Saint Petersburg, Russia',
+    'Kyiv, Ukraine',
+
+    // Ásia
+    'Tokyo, Japan',
+    'Osaka, Japan',
+    'Kyoto, Japan',
+    'Nagoya, Japan',
+    'Seoul, South Korea',
+    'Busan, South Korea',
+    'Incheon, South Korea',
+    'Beijing, China',
+    'Shanghai, China',
+    'Shenzhen, China',
+    'Guangzhou, China',
+    'Chengdu, China',
+    'Hong Kong, China',
+    'Taipei, Taiwan',
+    'Bangkok, Thailand',
+    'Chiang Mai, Thailand',
+    'Singapore, Singapore',
+    'Kuala Lumpur, Malaysia',
+    'Penang, Malaysia',
+    'Jakarta, Indonesia',
+    'Bali, Indonesia',
+    'Manila, Philippines',
+    'Cebu, Philippines',
+    'Hanoi, Vietnam',
+    'Ho Chi Minh City, Vietnam',
+    'New Delhi, India',
+    'Mumbai, India',
+    'Bangalore, India',
+    'Hyderabad, India',
+    'Chennai, India',
+    'Kolkata, India',
+    'Pune, India',
+    'Karachi, Pakistan',
+    'Lahore, Pakistan',
+    'Islamabad, Pakistan',
+    'Dhaka, Bangladesh',
+    'Colombo, Sri Lanka',
+    'Kathmandu, Nepal',
+    'Dubai, United Arab Emirates',
+    'Abu Dhabi, United Arab Emirates',
+    'Sharjah, United Arab Emirates',
+    'Doha, Qatar',
+    'Riyadh, Saudi Arabia',
+    'Jeddah, Saudi Arabia',
+    'Mecca, Saudi Arabia',
+    'Tehran, Iran',
+    'Baghdad, Iraq',
+    'Tel Aviv, Israel',
+    'Jerusalem, Israel',
+
+    // África
+    'Cairo, Egypt',
+    'Alexandria, Egypt',
+    'Lagos, Nigeria',
+    'Abuja, Nigeria',
+    'Nairobi, Kenya',
+    'Mombasa, Kenya',
+    'Johannesburg, South Africa',
+    'Cape Town, South Africa',
+    'Durban, South Africa',
+    'Pretoria, South Africa',
+    'Casablanca, Morocco',
+    'Rabat, Morocco',
+    'Marrakesh, Morocco',
+    'Algiers, Algeria',
+    'Tunis, Tunisia',
+    'Accra, Ghana',
+    'Addis Ababa, Ethiopia',
+    'Dakar, Senegal',
+
+    // Oceania
+    'Sydney, Australia',
+    'Melbourne, Australia',
+    'Brisbane, Australia',
+    'Perth, Australia',
+    'Adelaide, Australia',
+    'Gold Coast, Australia',
+    'Auckland, New Zealand',
+    'Wellington, New Zealand',
+    'Christchurch, New Zealand',
   ];
 
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _locationFocusNode = FocusNode();
+
+  static String _normalizeSearch(String input) {
+    return input
+        .toLowerCase()
+        .replaceAll('á', 'a')
+        .replaceAll('à', 'a')
+        .replaceAll('ã', 'a')
+        .replaceAll('â', 'a')
+        .replaceAll('ä', 'a')
+        .replaceAll('é', 'e')
+        .replaceAll('è', 'e')
+        .replaceAll('ê', 'e')
+        .replaceAll('ë', 'e')
+        .replaceAll('í', 'i')
+        .replaceAll('ì', 'i')
+        .replaceAll('î', 'i')
+        .replaceAll('ï', 'i')
+        .replaceAll('ó', 'o')
+        .replaceAll('ò', 'o')
+        .replaceAll('õ', 'o')
+        .replaceAll('ô', 'o')
+        .replaceAll('ö', 'o')
+        .replaceAll('ú', 'u')
+        .replaceAll('ù', 'u')
+        .replaceAll('û', 'u')
+        .replaceAll('ü', 'u')
+        .replaceAll('ç', 'c');
+  }
 
   @override
   void initState() {
@@ -1586,7 +1853,9 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    _nameController.text = prefs.getString(_kFullName) ?? '';
+    final savedName = (prefs.getString(_kFullName) ?? '').trim();
+    final authName = (prefs.getString(_kAuthName) ?? '').trim();
+    _nameController.text = savedName.isNotEmpty ? savedName : authName;
     _locationController.text = prefs.getString(_kLocation) ?? '';
     if (mounted) setState(() {});
   }
@@ -1606,25 +1875,25 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   }
 
   Iterable<String> _locationSuggestions(TextEditingValue value) {
-    final query = value.text.trim().toLowerCase();
-    if (query.isEmpty) return _locationSeed.take(8);
+    final query = _normalizeSearch(value.text.trim());
+    if (query.isEmpty) return _locationSeed.take(30);
     final startsWith = <String>[];
     final contains = <String>[];
     for (final option in _locationSeed) {
-      final n = option.toLowerCase();
+      final n = _normalizeSearch(option);
       if (n.startsWith(query)) {
         startsWith.add(option);
       } else if (n.contains(query)) {
         contains.add(option);
       }
     }
-    return [...startsWith, ...contains].take(8);
+    return [...startsWith, ...contains].take(30);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Informações pessoais'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Personal information'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1638,7 +1907,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               ),
               child: Column(
                 children: [
-                  _field(_nameController, 'Full name'),
+                  _field(_nameController, EaI18n.t(context, 'Full name')),
                   _locationAutocompleteField(),
                 ],
               ),
@@ -1655,7 +1924,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: Text(EaI18n.t(context, 'Salvar alterações')),
+              label: Text(EaI18n.t(context, 'Save changes')),
             ),
           ),
         ],
@@ -1678,9 +1947,9 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
             style: EaText.secondary.copyWith(
               color: EaAdaptiveColor.bodyText(context),
             ),
-            decoration: _fieldDecoration(EaI18n.t(context, 'Localização'))
+            decoration: _fieldDecoration(EaI18n.t(context, 'Location'))
                 .copyWith(
-                  hintText: EaI18n.t(context, 'Digite cidade, estado ou país'),
+                  hintText: EaI18n.t(context, 'Type city, state or country'),
                   hintStyle: EaText.small.copyWith(
                     color: EaAdaptiveColor.secondaryText(context),
                   ),
@@ -1697,7 +1966,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               borderRadius: BorderRadius.circular(12),
               child: Container(
                 width: MediaQuery.of(context).size.width - 64,
-                constraints: const BoxConstraints(maxHeight: 220),
+                constraints: const BoxConstraints(maxHeight: 360),
                 decoration: BoxDecoration(
                   color: EaAdaptiveColor.surface(context),
                   borderRadius: BorderRadius.circular(12),
@@ -1786,9 +2055,30 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
   static const _kRegion = 'profile.region';
   static const _kTimeFormat24h = 'profile.time_24h';
 
-  String _language = 'Português';
-  String _region = 'Brasil';
+  String _language = 'English';
+  String _region = 'United States';
   bool _time24h = true;
+
+  static String _normalizeLanguageValue(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v == 'portuguese' ||
+        v == 'português' ||
+        v == 'portugues' ||
+        v == 'pt' ||
+        v == 'pt-br') {
+      return 'Portuguese';
+    }
+    return 'English';
+  }
+
+  static String _normalizeRegionValue(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v == 'brazil' || v == 'brasil') return 'Brazil';
+    if (v == 'united states' || v == 'estados unidos' || v == 'usa') {
+      return 'United States';
+    }
+    return 'United States';
+  }
 
   @override
   void initState() {
@@ -1798,8 +2088,8 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    _language = prefs.getString(_kLanguage) ?? _language;
-    _region = prefs.getString(_kRegion) ?? _region;
+    _language = _normalizeLanguageValue(prefs.getString(_kLanguage) ?? '');
+    _region = _normalizeRegionValue(prefs.getString(_kRegion) ?? _region);
     _time24h = prefs.getBool(_kTimeFormat24h) ?? true;
     if (mounted) setState(() {});
   }
@@ -1813,7 +2103,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(EaI18n.t(context, 'Idioma e região atualizados.')),
+        content: Text(EaI18n.t(context, 'Language and region updated.')),
       ),
     );
   }
@@ -1821,7 +2111,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Idioma e região'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Language and region'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1835,21 +2125,17 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
               child: Column(
                 children: [
                   ListTile(
-                    title: Text(EaI18n.t(context, 'Idioma')),
+                    title: Text(EaI18n.t(context, 'Language')),
                     trailing: DropdownButton<String>(
                       value: _language,
                       items: [
                         DropdownMenuItem(
-                          value: 'Português',
-                          child: Text(EaI18n.t(context, 'Português')),
-                        ),
-                        DropdownMenuItem(
                           value: 'English',
-                          child: Text(EaI18n.t(context, 'Inglês')),
+                          child: Text(EaI18n.t(context, 'English')),
                         ),
                         DropdownMenuItem(
-                          value: 'Español',
-                          child: Text(EaI18n.t(context, 'Español')),
+                          value: 'Portuguese',
+                          child: Text(EaI18n.t(context, 'Portuguese')),
                         ),
                       ],
                       onChanged: (v) {
@@ -1859,21 +2145,17 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                     ),
                   ),
                   ListTile(
-                    title: Text(EaI18n.t(context, 'Região')),
+                    title: Text(EaI18n.t(context, 'Region')),
                     trailing: DropdownButton<String>(
                       value: _region,
                       items: [
                         DropdownMenuItem(
-                          value: 'Brasil',
-                          child: Text(EaI18n.t(context, 'Brasil')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Portugal',
-                          child: Text(EaI18n.t(context, 'Portugal')),
-                        ),
-                        DropdownMenuItem(
                           value: 'United States',
-                          child: Text(EaI18n.t(context, 'Estados Unidos')),
+                          child: Text(EaI18n.t(context, 'United States')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Brazil',
+                          child: Text(EaI18n.t(context, 'Brazil')),
                         ),
                       ],
                       onChanged: (v) {
@@ -1884,7 +2166,16 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                   ),
                   SwitchListTile.adaptive(
                     value: _time24h,
-                    title: Text(EaI18n.t(context, 'Formato 24 horas')),
+                    activeThumbColor: EaColor.fore,
+                    inactiveThumbColor: EaAdaptiveColor.border(context),
+                    inactiveTrackColor: EaAdaptiveColor.field(context),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    title: Text(
+                      EaI18n.t(context, '24-hour format'),
+                      style: EaText.small.copyWith(
+                        color: EaAdaptiveColor.bodyText(context),
+                      ),
+                    ),
                     onChanged: (v) => setState(() => _time24h = v),
                   ),
                 ],
@@ -1902,7 +2193,7 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_rounded),
-              label: Text(EaI18n.t(context, 'Salvar preferências')),
+              label: Text(EaI18n.t(context, 'Save preferences')),
             ),
           ),
         ],
@@ -1947,37 +2238,68 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Senha e passkeys'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Password and passkeys'))),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          SwitchListTile.adaptive(
-            value: _fingerprintEnabled,
-            title: Text(EaI18n.t(context, 'Ativar desbloqueio por digital')),
-            subtitle: Text(
-              EaI18n.t(
-                context,
-                'Barreira biométrica no dispositivo (sem local_auth).',
+          EaFadeSlideIn(
+            child: Container(
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile.adaptive(
+                    value: _fingerprintEnabled,
+                    title: Text(
+                      EaI18n.t(context, 'Enable fingerprint unlock'),
+                      style: EaText.secondary.copyWith(
+                        color: EaAdaptiveColor.bodyText(context),
+                      ),
+                    ),
+                    subtitle: Text(
+                      EaI18n.t(
+                        context,
+                        'Biometric barrier on the device (without local_auth).',
+                      ),
+                      style: EaText.small.copyWith(
+                        color: EaAdaptiveColor.secondaryText(context),
+                      ),
+                    ),
+                    onChanged: _setFingerprint,
+                  ),
+                  Divider(height: 1, color: EaAdaptiveColor.border(context)),
+                  ListTile(
+                    leading: const Icon(Icons.password_rounded),
+                    title: Text(
+                      _hasPassword
+                          ? EaI18n.t(context, 'Change login password')
+                          : EaI18n.t(context, 'Create login password'),
+                      style: EaText.secondary.copyWith(
+                        color: EaAdaptiveColor.bodyText(context),
+                      ),
+                    ),
+                    subtitle: Text(
+                      EaI18n.t(context, 'Configure your local login password'),
+                      style: EaText.small.copyWith(
+                        color: EaAdaptiveColor.secondaryText(context),
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PasswordSetupPage(),
+                        ),
+                      ).then((_) => _load());
+                    },
+                  ),
+                ],
               ),
             ),
-            onChanged: _setFingerprint,
-          ),
-          ListTile(
-            leading: const Icon(Icons.password_rounded),
-            title: Text(
-              _hasPassword
-                  ? EaI18n.t(context, 'Alterar senha de login')
-                  : EaI18n.t(context, 'Criar senha de login'),
-            ),
-            subtitle: Text(
-              EaI18n.t(context, 'Configurar sua senha local de login'),
-            ),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PasswordSetupPage()),
-              ).then((_) => _load());
-            },
           ),
         ],
       ),
@@ -2011,7 +2333,7 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            EaI18n.t(context, 'A senha precisa ter ao menos 4 caracteres.'),
+            EaI18n.t(context, 'Password must have at least 4 characters.'),
           ),
         ),
       );
@@ -2019,38 +2341,88 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
     }
     if (a != b) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(EaI18n.t(context, 'As senhas não coincidem.'))),
+        SnackBar(content: Text(EaI18n.t(context, 'Passwords do not match.'))),
       );
       return;
     }
     await _secure.write(key: 'account.password', value: a);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(EaI18n.t(context, 'Senha salva com sucesso.'))),
+      SnackBar(
+        content: Text(EaI18n.t(context, 'Password saved successfully.')),
+      ),
     );
     Navigator.pop(context);
+  }
+
+  InputDecoration _inputDecoration(BuildContext context, String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: EaText.small.copyWith(
+        color: EaAdaptiveColor.secondaryText(context),
+      ),
+      filled: true,
+      fillColor: EaAdaptiveColor.field(context),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: EaAdaptiveColor.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: EaColor.fore.withValues(alpha: 0.85),
+          width: 1.2,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Senha de login'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Login password'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          TextField(
-            controller: _pwd,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: EaI18n.t(context, 'Nova senha'),
-            ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _confirm,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: EaI18n.t(context, 'Confirmar senha'),
+          EaFadeSlideIn(
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _pwd,
+                    obscureText: true,
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                    decoration: _inputDecoration(
+                      context,
+                      EaI18n.t(context, 'New password'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _confirm,
+                    obscureText: true,
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                    decoration: _inputDecoration(
+                      context,
+                      EaI18n.t(context, 'Confirm password'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -2063,7 +2435,7 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
                 shadowColor: Colors.transparent,
               ),
               onPressed: _savePassword,
-              child: Text(EaI18n.t(context, 'Salvar senha')),
+              child: Text(EaI18n.t(context, 'Save password')),
             ),
           ),
         ],
@@ -2117,7 +2489,7 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Verificação em 2 etapas'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, '2-step verification'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2132,17 +2504,17 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
                 children: [
                   SwitchListTile.adaptive(
                     value: _app,
-                    title: Text(EaI18n.t(context, 'Aplicativo autenticador')),
+                    title: Text(EaI18n.t(context, 'Authenticator app')),
                     onChanged: (v) => setState(() => _app = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _sms,
-                    title: Text(EaI18n.t(context, 'Verificação por SMS')),
+                    title: Text(EaI18n.t(context, 'SMS verification')),
                     onChanged: (v) => setState(() => _sms = v),
                   ),
                   SwitchListTile.adaptive(
                     value: _email,
-                    title: Text(EaI18n.t(context, 'Verificação por email')),
+                    title: Text(EaI18n.t(context, 'Email verification')),
                     onChanged: (v) => setState(() => _email = v),
                   ),
                 ],
@@ -2160,7 +2532,7 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
               ),
               onPressed: _save,
               icon: const Icon(Icons.shield_outlined),
-              label: Text(EaI18n.t(context, 'Salvar configurações de 2FA')),
+              label: Text(EaI18n.t(context, 'Save 2FA settings')),
             ),
           ),
         ],
@@ -2190,7 +2562,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     final prefs = await SharedPreferences.getInstance();
     _devices =
         prefs.getStringList(_kTrustedDevices) ??
-        ['${Platform.operatingSystem.toUpperCase()} • Este dispositivo'];
+        ['${Platform.operatingSystem.toUpperCase()} • This device'];
     if (mounted) setState(() {});
   }
 
@@ -2208,7 +2580,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Dispositivos confiáveis'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Trusted devices'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: List.generate(_devices.length, (i) {
@@ -2222,8 +2594,8 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
                 title: Text(_devices[i]),
                 subtitle: Text(
                   i == 0
-                      ? EaI18n.t(context, 'Sessão atual')
-                      : EaI18n.t(context, 'Sessão confiável'),
+                      ? EaI18n.t(context, 'Current session')
+                      : EaI18n.t(context, 'Trusted session'),
                 ),
                 trailing: i == 0
                     ? const Icon(Icons.verified_rounded, color: EaColor.fore)
@@ -2232,7 +2604,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
                           Icons.logout_rounded,
                           color: Colors.redAccent,
                         ),
-                        tooltip: EaI18n.t(context, 'Remover dispositivo'),
+                        tooltip: EaI18n.t(context, 'Remove device'),
                         onPressed: () => _removeAt(i),
                       ),
                 onTap: i == 0 ? null : () => _removeAt(i),
@@ -2306,7 +2678,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    EaI18n.t(context, 'Plano atual: {plan}', {'plan': _plan}),
+                    EaI18n.t(context, 'Current plan: {plan}', {'plan': _plan}),
                     style: EaText.primary.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
                     ),
@@ -2315,7 +2687,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                   Text(
                     EaI18n.t(
                       context,
-                      'Automações, análises e controles avançados do assistente.',
+                      'Advanced automations, analytics, and assistant controls.',
                     ),
                     style: EaText.small.copyWith(
                       color: EaAdaptiveColor.secondaryText(context),
@@ -2328,11 +2700,11 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           const SizedBox(height: 12),
           _planTile(
             'Free',
-            EaI18n.t(context, 'Controles básicos de dispositivos e assistente'),
+            EaI18n.t(context, 'Basic device and assistant controls'),
           ),
           _planTile(
             'Pro',
-            EaI18n.t(context, 'Automações avançadas e modos completos de IA'),
+            EaI18n.t(context, 'Advanced automations and full AI modes'),
           ),
         ],
       ),
@@ -2379,23 +2751,44 @@ class _BillingPageState extends State<BillingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Histórico de cobranças'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Billing history'))),
       body: _items.isEmpty
-          ? Center(
-              child: Text(
-                EaI18n.t(context, 'Nenhuma cobrança registrada ainda.'),
-                style: EaText.secondary.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
+          ? Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: EaAdaptiveColor.surface(context),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: EaAdaptiveColor.border(context)),
+                ),
+                padding: const EdgeInsets.all(18),
+                child: Text(
+                  EaI18n.t(context, 'No billing entries yet.'),
+                  textAlign: TextAlign.center,
+                  style: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                  ),
                 ),
               ),
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _items.length,
-              itemBuilder: (_, i) => Card(
+              itemBuilder: (_, i) => Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  color: EaAdaptiveColor.surface(context),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: EaAdaptiveColor.border(context)),
+                ),
                 child: ListTile(
                   leading: const Icon(Icons.receipt_long_outlined),
-                  title: Text(_items[i]),
+                  title: Text(
+                    _items[i],
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -2438,37 +2831,64 @@ class _DataExportPageState extends State<DataExportPage> {
     await Clipboard.setData(ClipboardData(text: jsonText));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          EaI18n.t(context, 'Export copiado para a área de transferência.'),
-        ),
-      ),
+      SnackBar(content: Text(EaI18n.t(context, 'Export copied to clipboard.'))),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Exportar dados da conta'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Export account data'))),
       body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          CheckboxListTile(
-            value: _includeProfile,
-            onChanged: (v) => setState(() => _includeProfile = v ?? false),
-            title: Text(EaI18n.t(context, 'Dados de perfil')),
-          ),
-          CheckboxListTile(
-            value: _includeUsage,
-            onChanged: (v) => setState(() => _includeUsage = v ?? false),
-            title: Text(EaI18n.t(context, 'Dados de uso')),
-          ),
-          CheckboxListTile(
-            value: _includeSecurity,
-            onChanged: (v) => setState(() => _includeSecurity = v ?? false),
-            title: Text(EaI18n.t(context, 'Configurações de segurança')),
+          Container(
+            decoration: BoxDecoration(
+              color: EaAdaptiveColor.surface(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: EaAdaptiveColor.border(context)),
+            ),
+            child: Column(
+              children: [
+                CheckboxListTile(
+                  value: _includeProfile,
+                  onChanged: (v) =>
+                      setState(() => _includeProfile = v ?? false),
+                  title: Text(
+                    EaI18n.t(context, 'Profile data'),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
+                ),
+                Divider(height: 1, color: EaAdaptiveColor.border(context)),
+                CheckboxListTile(
+                  value: _includeUsage,
+                  onChanged: (v) => setState(() => _includeUsage = v ?? false),
+                  title: Text(
+                    EaI18n.t(context, 'Usage data'),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
+                ),
+                Divider(height: 1, color: EaAdaptiveColor.border(context)),
+                CheckboxListTile(
+                  value: _includeSecurity,
+                  onChanged: (v) =>
+                      setState(() => _includeSecurity = v ?? false),
+                  title: Text(
+                    EaI18n.t(context, 'Security settings'),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: 16),
             child: EaGradientButtonFrame(
               borderRadius: BorderRadius.circular(12),
               child: FilledButton.icon(
@@ -2479,7 +2899,7 @@ class _DataExportPageState extends State<DataExportPage> {
                 ),
                 onPressed: _export,
                 icon: const Icon(Icons.file_download_outlined),
-                label: Text(EaI18n.t(context, 'Gerar exportação')),
+                label: Text(EaI18n.t(context, 'Generate export')),
               ),
             ),
           ),
@@ -2512,7 +2932,10 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            EaI18n.t(context, 'Confirme digitando DELETE e marque a opção.'),
+            EaI18n.t(
+              context,
+              'Confirm by typing DELETE and checking the option.',
+            ),
           ),
         ),
       );
@@ -2525,9 +2948,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(EaI18n.t(context, 'Dados locais da conta removidos.')),
-      ),
+      SnackBar(content: Text(EaI18n.t(context, 'Local account data removed.'))),
     );
     Navigator.pop(context);
   }
@@ -2535,7 +2956,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Excluir conta'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Delete account'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2551,7 +2972,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
             child: Text(
               EaI18n.t(
                 context,
-                'Esta ação remove seus dados locais e não pode ser desfeita.',
+                'This action removes your local data and cannot be undone.',
               ),
             ),
           ),
@@ -2559,14 +2980,14 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
           TextField(
             controller: _confirmController,
             decoration: InputDecoration(
-              labelText: EaI18n.t(context, 'Digite DELETE para confirmar'),
+              labelText: EaI18n.t(context, 'Type DELETE to confirm'),
             ),
           ),
           CheckboxListTile(
             value: _understand,
             onChanged: (v) => setState(() => _understand = v ?? false),
             title: Text(
-              EaI18n.t(context, 'Entendo que esta operação é irreversível'),
+              EaI18n.t(context, 'I understand this operation is irreversible'),
             ),
           ),
           const SizedBox(height: 8),
@@ -2574,7 +2995,7 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: _delete,
             icon: const Icon(Icons.delete_forever_rounded),
-            label: Text(EaI18n.t(context, 'Excluir dados locais da conta')),
+            label: Text(EaI18n.t(context, 'Delete local account data')),
           ),
         ],
       ),

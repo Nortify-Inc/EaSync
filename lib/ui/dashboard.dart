@@ -45,6 +45,9 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   StreamSubscription<String>? _stateSub;
   StreamSubscription<CoreEventData>? _eventSub;
+  Timer? _recommendationTimer;
+  String? _lastRecommendationSignature;
+  DateTime? _lastRecommendationShownAt;
   final PageStorageBucket _bucket = PageStorageBucket();
 
   double _snapStep(double value, double step) {
@@ -421,13 +424,68 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDevices());
+    _startRecommendationLoop();
   }
 
   @override
   void dispose() {
     _stateSub?.cancel();
     _eventSub?.cancel();
+    _recommendationTimer?.cancel();
     super.dispose();
+  }
+
+  void _startRecommendationLoop() {
+    _recommendationTimer?.cancel();
+    _recommendationTimer = Timer.periodic(const Duration(seconds: 45), (_) {
+      _checkBackendRecommendation();
+    });
+
+    Future.delayed(const Duration(seconds: 2), _checkBackendRecommendation);
+  }
+
+  void _checkBackendRecommendation() {
+    if (!mounted || loading || error != null) return;
+
+    try {
+      final recommendation = Bridge.usageRecommendation();
+      if (recommendation == null) return;
+
+      final now = DateTime.now();
+      final alreadyShownRecently =
+          _lastRecommendationShownAt != null &&
+          now.difference(_lastRecommendationShownAt!) <
+              const Duration(minutes: 30);
+      if (alreadyShownRecently && recommendation.signature == _lastRecommendationSignature) {
+        return;
+      }
+
+      _lastRecommendationSignature = recommendation.signature;
+      _lastRecommendationShownAt = now;
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              '${recommendation.title}: ${recommendation.message}',
+              style: EaText.secondary.copyWith(
+                color: EaColor.textPrimary,
+                fontSize: 12,
+              ),
+            ),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            backgroundColor: EaColor.back,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: EaColor.fore),
+            ),
+          ),
+        );
+    } catch (_) {}
   }
 
   Future<void> _ensureTemplateAssetsLoaded() async {
@@ -573,6 +631,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         }
 
         if (mounted) setState(() {});
+        _checkBackendRecommendation();
       });
 
       _eventSub ??= Bridge.onEvents.listen((event) {

@@ -10,7 +10,7 @@ extern "C" {
 /**
  * @brief Core public API version.
  */
-#define CORE_API_VERSION "0.0.1"
+#define CORE_API_VERSION "0.0.5"
 
 
 /**
@@ -90,6 +90,8 @@ typedef struct CoreContext CoreContext;
 #define CORE_MAX_UUID  64
 #define CORE_MAX_BRAND 16
 #define CORE_MAX_MODEL 32
+#define CORE_MAX_USAGE_TITLE 96
+#define CORE_MAX_USAGE_MESSAGE 192
 
 
 /**
@@ -174,6 +176,35 @@ typedef struct {
     bool allowAutoRoutines;
     uint32_t temperament;
 } CoreAiPermissions;
+
+
+/**
+ * @brief Aggregated usage stats learned by the core utility.
+ */
+typedef struct {
+    uint32_t sampleCount;
+    uint32_t distinctDevices;
+    int32_t predictedArrivalHour;
+    float preferredTemperature;
+    uint32_t preferredBrightness;
+    float preferredPosition;
+    char mostActiveUuid[CORE_MAX_UUID];
+    float confidence;
+} CoreUsageStats;
+
+
+/**
+ * @brief Runtime recommendation produced by usage utility.
+ */
+typedef struct {
+    bool available;
+    char title[CORE_MAX_USAGE_TITLE];
+    char message[CORE_MAX_USAGE_MESSAGE];
+    char uuid[CORE_MAX_UUID];
+    int32_t recommendedHour;
+    float confidence;
+    uint64_t generatedAtMs;
+} CoreUsageRecommendation;
 
 
 /**
@@ -469,6 +500,35 @@ CoreResult core_provision_wifi(
  * STATE_CHANGED events so consumers can observe UI updates.
  */
 CoreResult core_simulate(CoreContext* core);
+
+
+/**
+ * @brief Return learned usage stats from core utility.
+ */
+CoreResult core_usage_get_stats(
+    CoreContext* core,
+    CoreUsageStats* outStats
+);
+
+
+/**
+ * @brief Return a recommendation generated from learned usage patterns.
+ */
+CoreResult core_usage_get_recommendation(
+    CoreContext* core,
+    CoreUsageRecommendation* outRecommendation
+);
+
+
+/**
+ * @brief Export normalized observation vectors as CSV for ML pipelines.
+ */
+CoreResult core_usage_export_samples_csv(
+    CoreContext* core,
+    char* outBuffer,
+    uint32_t bufferSize,
+    uint32_t* outWritten
+);
 
 
 

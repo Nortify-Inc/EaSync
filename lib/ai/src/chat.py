@@ -20,12 +20,12 @@ CFG: Dict[str, Any] = {
 	"model_dir": str(default_model_dir()),
 	"device": "cpu",
 	"dtype": "float32",
-	"max_new_tokens": 96,
-	"temperature": 0.45,
-	"top_k": 40,
-	"top_p": 0.9,
-	"repetition_penalty": 1.24,
-	"no_repeat_ngram_size": 3,
+	"max_new_tokens": 1024,
+	"temperature": 0.72,
+	"top_k": 60,
+	"top_p": 0.94,
+	"repetition_penalty": 1.14,
+	"no_repeat_ngram_size": 0,
 	"max_history_turns": 5,
 	"max_chars": 0,
 	"prefer_tokenizer_chat_template": False,
@@ -39,10 +39,11 @@ CFG: Dict[str, Any] = {
 }
 
 SYSTEM_PROMPT = (
-	"Your name is Agent"
-	"An helpful AI created by Nortify Inc."
-	"Be quick, direct, natural, and concise."
-	"Answer with factual content when possible and avoid making things up."
+	"Your name is Agent."
+	"You are a helpful AI created by Nortify Inc."
+	"Be natural, conversational, and thoughtful."
+	"You may answer with useful detail, practical examples, and clear reasoning."
+	"If uncertain, state assumptions briefly and continue helping."
 )
 
 
@@ -73,7 +74,7 @@ def _looks_like_garbage(text: str) -> bool:
 		return True
 	if re.search(r"(.)\1{7,}", text):
 		return True
-	if len(text.split()) > 60:
+	if len(text.split()) > 180:
 		return True
 	return False
 
@@ -117,12 +118,14 @@ def _score_candidate(user_text: str, candidate: str) -> float:
 	word_count = len(words)
 	if word_count < 3:
 		score -= 2.0
-	elif word_count <= 28:
-		score += 2.2
-	elif word_count <= 60:
-		score += 0.8
+	elif word_count <= 40:
+		score += 1.8
+	elif word_count <= 120:
+		score += 2.6
+	elif word_count <= 220:
+		score += 1.2
 	else:
-		score -= 2.5
+		score -= 1.0
 
 	user_keys = set(_keywords(user_text))
 	if user_keys:
@@ -337,15 +340,15 @@ def generate_reply(
 		},
 		{
 			"temperature": max(0.15, temperature * 0.7),
-			"top_k": max(20, min(50, top_k)),
+			"top_k": max(20, min(70, top_k)),
 			"top_p": min(0.92, max(0.82, top_p)),
-			"repetition_penalty": max(1.18, repetition_penalty),
+			"repetition_penalty": max(1.1, repetition_penalty),
 		},
 		{
-			"temperature": min(0.75, max(0.35, temperature * 1.35)),
+			"temperature": min(0.95, max(0.45, temperature * 1.35)),
 			"top_k": max(30, top_k),
-			"top_p": min(0.95, max(0.88, top_p)),
-			"repetition_penalty": max(1.15, repetition_penalty - 0.03),
+			"top_p": min(0.97, max(0.9, top_p)),
+			"repetition_penalty": max(1.08, repetition_penalty - 0.02),
 		},
 	]
 

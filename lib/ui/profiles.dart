@@ -6,10 +6,6 @@
  * @author Erick Radmann
  */
 
-import 'dart:convert';
-
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'handler.dart';
 
 class DeviceAction {
@@ -60,26 +56,13 @@ class Profiles extends StatefulWidget {
 
 class _ProfilesState extends State<Profiles>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
-  static const _kPowerOnByHour = 'assistant.power_on_by_hour';
-  static const _kDeviceActivityById = 'assistant.device_activity_by_id';
-  static const _kTempSetSum = 'assistant.temp_set_sum';
-  static const _kTempSetCount = 'assistant.temp_set_count';
-  static const _kBrightnessSetSum = 'assistant.brightness_set_sum';
-  static const _kBrightnessSetCount = 'assistant.brightness_set_count';
-  static const _kPositionSetSum = 'assistant.position_set_sum';
-  static const _kPositionSetCount = 'assistant.position_set_count';
-
   final List<Profile> profiles = [];
   List<DeviceInfo> devices = [];
   StreamSubscription<CoreEventData>? _eventSub;
   late final AnimationController _profileApplyPulse;
   Timer? _profileApplyPulseTimer;
   String? _highlightedProfileName;
-  final Map<String, int> _assistantPowerOnByHour = {};
-  final Map<String, int> _assistantDeviceActivityById = {};
-  double? _assistantPreferredTemp;
-  int? _assistantPreferredBrightness;
-  int? _assistantPreferredPosition;
+  UsageStats? _usageStats;
 
   @override
   bool get wantKeepAlive => true;
@@ -92,11 +75,12 @@ class _ProfilesState extends State<Profiles>
       duration: const Duration(milliseconds: 980),
     );
     _loadDevices();
-    _loadAssistantPatterns();
+    _refreshUsageStats();
     _eventSub = Bridge.onEvents.listen((event) {
       if (event.type == CoreEventType.CORE_EVENT_DEVICE_ADDED ||
           event.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
         _loadDevices();
+        _refreshUsageStats();
       }
     });
   }
@@ -201,57 +185,11 @@ class _ProfilesState extends State<Profiles>
     } catch (_) {}
   }
 
-  Map<String, int> _decodeStringIntMap(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return {};
+  void _refreshUsageStats() {
     try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) return {};
-      final out = <String, int>{};
-      for (final e in decoded.entries) {
-        final k = e.key.toString();
-        final v = int.tryParse(e.value.toString());
-        if (k.isEmpty || v == null) continue;
-        out[k] = v;
-      }
-      return out;
-    } catch (_) {
-      return {};
-    }
-  }
-
-  Future<void> _loadAssistantPatterns() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final powerByHour = _decodeStringIntMap(prefs.getString(_kPowerOnByHour));
-      final activityById = _decodeStringIntMap(
-        prefs.getString(_kDeviceActivityById),
-      );
-
-      final tempSum = prefs.getDouble(_kTempSetSum) ?? 0;
-      final tempCount = prefs.getInt(_kTempSetCount) ?? 0;
-      final brightSum = prefs.getDouble(_kBrightnessSetSum) ?? 0;
-      final brightCount = prefs.getInt(_kBrightnessSetCount) ?? 0;
-      final posSum = prefs.getDouble(_kPositionSetSum) ?? 0;
-      final posCount = prefs.getInt(_kPositionSetCount) ?? 0;
-
+      final stats = Bridge.usageStats();
       if (!mounted) return;
-      setState(() {
-        _assistantPowerOnByHour
-          ..clear()
-          ..addAll(powerByHour);
-        _assistantDeviceActivityById
-          ..clear()
-          ..addAll(activityById);
-        _assistantPreferredTemp = tempCount > 0
-            ? (tempSum / tempCount).clamp(16, 30)
-            : null;
-        _assistantPreferredBrightness = brightCount > 0
-            ? (brightSum / brightCount).round().clamp(0, 100)
-            : null;
-        _assistantPreferredPosition = posCount > 0
-            ? (posSum / posCount).round().clamp(0, 100)
-            : null;
-      });
+      setState(() => _usageStats = stats);
     } catch (_) {}
   }
 
@@ -369,26 +307,26 @@ class _ProfilesState extends State<Profiles>
   }
 
   int _topPowerHour() {
-    if (_assistantPowerOnByHour.isEmpty) return 18;
-    var bestHour = 18;
-    var bestCount = -1;
-    for (final e in _assistantPowerOnByHour.entries) {
-      final hour = int.tryParse(e.key);
-      if (hour == null) continue;
-      if (e.value > bestCount) {
-        bestCount = e.value;
-        bestHour = hour.clamp(0, 23);
-      }
-    }
-    return bestHour;
+    final hour = _usageStats?.predictedArrivalHour ?? -1;
+    if (hour < 0) return 18;
+    return hour.clamp(0, 23);
   }
 
   DeviceInfo? _mostUsedWithCapability(int capability) {
+    final preferredUuid = _usageStats?.mostActiveUuid ?? '';
+    if (preferredUuid.isNotEmpty) {
+      for (final d in devices) {
+        if (d.uuid == preferredUuid && d.capabilities.contains(capability)) {
+          return d;
+        }
+      }
+    }
+
     DeviceInfo? best;
     var bestScore = -1;
     for (final d in devices) {
       if (!d.capabilities.contains(capability)) continue;
-      final score = _assistantDeviceActivityById[d.uuid] ?? 0;
+      final score = d.uuid == preferredUuid ? 2 : 1;
       if (score > bestScore) {
         best = d;
         bestScore = score;
@@ -400,8 +338,8 @@ class _ProfilesState extends State<Profiles>
   String _assistantRecommendationReasonLine1() {
     final hour = _topPowerHour();
     final hh = hour.toString().padLeft(2, '0');
-    final temp = (_assistantPreferredTemp ?? 23).toStringAsFixed(0);
-    final bright = (_assistantPreferredBrightness ?? 45);
+    final temp = (_usageStats?.preferredTemperature ?? 23).toStringAsFixed(0);
+    final bright = (_usageStats?.preferredBrightness ?? 45);
     return '$hh:00 • $temp°C • $bright%';
   }
 
@@ -418,7 +356,7 @@ class _ProfilesState extends State<Profiles>
           power: climate.capabilities.contains(CoreCapability.CORE_CAP_POWER)
               ? true
               : null,
-          temperature: _assistantPreferredTemp ?? 23,
+          temperature: _usageStats?.preferredTemperature ?? 23,
         ),
       );
     }
@@ -435,7 +373,7 @@ class _ProfilesState extends State<Profiles>
               : null,
           brightness:
               light.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
-              ? (_assistantPreferredBrightness ?? 38)
+              ? ((_usageStats?.preferredBrightness ?? 38).clamp(0, 100).toInt())
               : null,
         ),
       );
@@ -446,7 +384,7 @@ class _ProfilesState extends State<Profiles>
       actions.add(
         DeviceAction(
           deviceId: curtain.uuid,
-          position: (_assistantPreferredPosition ?? 28).toDouble(),
+          position: (_usageStats?.preferredPosition ?? 28).toDouble(),
         ),
       );
     }

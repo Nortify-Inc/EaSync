@@ -44,7 +44,11 @@ class OAuthService {
   Future<OAuthUserProfile> _webOAuthFlow(OAuthProvider provider) async {
     final meta = _metaFor(provider);
 
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 8888);
+    final server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      8888,
+      shared: true,
+    );
     final redirectUri = Uri.parse('http://localhost:8888');
 
     final verifier = _makeVerifier();
@@ -74,9 +78,26 @@ class OAuthService {
       );
     }
 
-    late HttpRequest req;
+    HttpRequest? oauthReq;
     try {
-      req = await server.first.timeout(const Duration(minutes: 5));
+      await for (final req in server.timeout(const Duration(minutes: 5))) {
+        final qp = req.uri.queryParameters;
+        final isOAuthCallback =
+            qp.containsKey('code') ||
+            qp.containsKey('error') ||
+            qp.containsKey('state');
+
+        if (isOAuthCallback) {
+          oauthReq = req;
+          break;
+        }
+
+        req.response
+          ..statusCode = 200
+          ..headers.contentType = ContentType.html
+          ..write('<!doctype html><html><body>OK</body></html>')
+          ..close().ignore();
+      }
     } on TimeoutException {
       await server.close(force: true);
       throw OAuthException('Login expirou (5 min). Tente novamente.');
@@ -85,22 +106,27 @@ class OAuthService {
       rethrow;
     }
 
-    req.response
+    if (oauthReq == null) {
+      await server.close(force: true);
+      throw OAuthException('Login não concluído: callback OAuth não recebido.');
+    }
+
+    oauthReq.response
       ..statusCode = 200
       ..headers.contentType = ContentType.html
       ..write(_callbackHtml)
       ..close().ignore();
     await server.close();
 
-    if (req.uri.queryParameters['state'] != stateToken) {
+    if (oauthReq.uri.queryParameters['state'] != stateToken) {
       throw OAuthException('Resposta inválida do provedor (state mismatch).');
     }
 
-    final code = req.uri.queryParameters['code'];
+    final code = oauthReq.uri.queryParameters['code'];
     if (code == null) {
       final desc =
-          req.uri.queryParameters['error_description'] ??
-          req.uri.queryParameters['error'] ??
+          oauthReq.uri.queryParameters['error_description'] ??
+          oauthReq.uri.queryParameters['error'] ??
           'cancelado';
       throw OAuthException('Login não concluído: $desc');
     }
@@ -293,7 +319,13 @@ class OAuthService {
     final d = jsonDecode(response.body) as Map<String, dynamic>;
     final id = (d['sub'] ?? d['oid'] ?? '').toString();
     final name = (d['name'] ?? d['displayName'] ?? '').toString();
-    final email = (d['email'] ?? d['userPrincipalName'] ?? d['mail'] ?? '')
+    final email =
+      (d['email'] ??
+          d['userPrincipalName'] ??
+          d['preferred_username'] ??
+          d['upn'] ??
+          d['mail'] ??
+          '')
         .toString();
     final photo = d['picture']?.toString();
 
@@ -304,9 +336,16 @@ class OAuthService {
         ? 'Microsoft'
         : 'OAuth';
 
+    final resolvedName =
+        name.isNotEmpty
+        ? name
+        : (email.isNotEmpty
+              ? email.split('@').first
+              : (id.isNotEmpty ? 'user_$id' : 'Authenticated account'));
+
     return OAuthUserProfile(
       id: id,
-      name: name.isEmpty ? email.split('@').first : name,
+      name: resolvedName,
       email: email,
       avatarUrl: photo,
       provider: label,
@@ -328,14 +367,21 @@ class OAuthService {
 
   Future<OAuthUserProfile?> getSavedProfile() async {
     final prefs = await SharedPreferences.getInstance();
+    final id = (prefs.getString(_kUid) ?? '').trim();
+    final name = (prefs.getString(_kName) ?? '').trim();
     final email = prefs.getString(_kEmail) ?? '';
-    if (email.isEmpty) return null;
+    final provider = (prefs.getString(_kProvider) ?? '').trim();
+
+    final hasAuthIdentity =
+        id.isNotEmpty || name.isNotEmpty || email.trim().isNotEmpty;
+    if (!hasAuthIdentity) return null;
+
     return OAuthUserProfile(
-      id: prefs.getString(_kUid) ?? '',
-      name: prefs.getString(_kName) ?? '',
+      id: id,
+      name: name,
       email: email,
       avatarUrl: prefs.getString(_kPhoto),
-      provider: prefs.getString(_kProvider) ?? '',
+      provider: provider,
     );
   }
 

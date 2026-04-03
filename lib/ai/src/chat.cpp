@@ -12,7 +12,7 @@ namespace {
 
 struct Args {
     std::string data_dir;
-    int decode_every = 4;
+    int decode_every = 6;
     bool sync_mode = false;
 };
 

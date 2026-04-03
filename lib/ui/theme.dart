@@ -58,7 +58,11 @@ class EaAppSettings extends ChangeNotifier {
     final v = raw.trim().toLowerCase();
     if (v.isEmpty) return null;
 
-    if (v == 'português' || v == 'portugues' || v == 'pt' || v == 'pt-br') {
+    if (v == 'portuguese' ||
+        v == 'português' ||
+        v == 'portugues' ||
+        v == 'pt' ||
+        v == 'pt-br') {
       return const Locale('pt', 'BR');
     }
 

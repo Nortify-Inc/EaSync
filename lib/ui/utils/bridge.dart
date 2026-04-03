@@ -139,7 +139,7 @@ final _aiQuery = aiLib.lookupFunction<_aiQueryC, _aiQueryDart>('ai_query');
 String aiQuery(String prompt) {
   final input = prompt;
   final inPtr = input.toNativeUtf8();
-  const outLen = 8192;
+  const outLen = 65536;
   final outBuf = malloc.allocate<Int8>(outLen);
   try {
     print(
@@ -212,6 +212,9 @@ final aiSetDataDir = (() {
 typedef _aiSetDecodeEveryC = Int32 Function(Pointer<Void>, Int32);
 typedef _aiSetDecodeEveryDart = int Function(Pointer<Void>, int);
 
+typedef _aiSetSystemPromptC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _aiSetSystemPromptDart = int Function(Pointer<Void>, Pointer<Utf8>);
+
 final aiSetDecodeEvery = (() {
   try {
     return aiLib.lookupFunction<_aiSetDecodeEveryC, _aiSetDecodeEveryDart>(
@@ -221,6 +224,35 @@ final aiSetDecodeEvery = (() {
     return null;
   }
 })();
+
+final aiSetSystemPrompt = (() {
+  try {
+    return aiLib.lookupFunction<_aiSetSystemPromptC, _aiSetSystemPromptDart>(
+      'ai_set_system_prompt',
+    );
+  } catch (_) {
+    return null;
+  }
+})();
+
+const String _kAiSystemPrompt =
+    'You are Agent, a practical assistant for home automation. '
+    'Be direct and decisive. '
+    'When information is incomplete, provide a best-effort answer with short assumptions and one clarifying question. '
+    'Do not fabricate concrete facts that are unknown.';
+
+void _configureAiSystemPrompt() {
+  if (aiSetSystemPrompt == null) return;
+  final ptr = _kAiSystemPrompt.toNativeUtf8();
+  try {
+    final rc = aiSetSystemPrompt!(nullptr, ptr);
+    print('[Bridge] ai_set_system_prompt rc=$rc');
+  } catch (e) {
+    print('[Bridge] ai_set_system_prompt failed: $e');
+  } finally {
+    malloc.free(ptr);
+  }
+}
 
 bool _aiRuntimeReady = false;
 Future<void>? _aiRuntimeInitFuture;
@@ -282,17 +314,14 @@ Future<String> _prepareAiRuntime() async {
       }
     }
 
+    _configureAiSystemPrompt();
+
     if (aiInitialize != null) {
       final rc = aiInitialize!(nullptr);
       print('[Bridge] ai_initialize rc=$rc');
       if (rc != 0) {
         throw Exception('ai_initialize failed rc=$rc');
       }
-    }
-
-    if (aiSetDecodeEvery != null) {
-      // Balance chunk frequency and bridge overhead for smoother UI streaming.
-      aiSetDecodeEvery!(nullptr, 4);
     }
 
     _aiRuntimeReady = true;
@@ -339,6 +368,16 @@ String _findLocalAiDataDir({required bool requireSidecar}) {
 Future<String> _ensureAiAssetsCopied({required bool requireSidecar}) async {
   List<String> entries = const <String>[];
 
+  final support = await getApplicationSupportDirectory();
+  final outDir = Directory('${support.path}/ai_data');
+
+  if (!outDir.existsSync()) outDir.createSync(recursive: true);
+
+  // Downloader may have already saved the model in this directory.
+  if (_aiDataDirLooksReady(outDir.path, requireSidecar: requireSidecar)) {
+    return outDir.path;
+  }
+
   try {
     final manifest = await rootBundle.loadString('AssetManifest.json');
     final Map<String, dynamic> map = manifest.isNotEmpty
@@ -349,15 +388,7 @@ Future<String> _ensureAiAssetsCopied({required bool requireSidecar}) async {
     print('[Bridge] AssetManifest.json unavailable: $e');
   }
 
-  if (entries.isEmpty) {
-    // Fallback when AssetManifest is missing: probe expected assets directly.
-    entries = <String>['lib/ai/data/model.gguf'];
-  }
-
-  final support = await getApplicationSupportDirectory();
-  final outDir = Directory('${support.path}/ai_data');
-
-  if (!outDir.existsSync()) outDir.createSync(recursive: true);
+  if (entries.isEmpty) return '';
 
   var copiedAny = false;
   for (final assetPath in entries) {
@@ -408,7 +439,7 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
 
     print('[Bridge] aiQueryAsync: handle=$handle');
 
-    final outLen = 8192;
+    final outLen = 65536;
     final outBuf = malloc.allocate<Int8>(outLen);
     final finishedFlag = malloc.allocate<Uint8>(1);
 
@@ -510,7 +541,7 @@ Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 12}) {
       }
 
       final handle = handlePtr.value;
-      final outLen = 8192;
+      final outLen = 65536;
       final outBuf = malloc.allocate<Int8>(outLen);
       final finishedFlag = malloc.allocate<Uint8>(1);
 
@@ -620,6 +651,15 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
           >('ai_initialize');
     } catch (_) {}
 
+    int Function(Pointer<Void>, Pointer<Utf8>)? _aiSetSystemPromptLocal;
+    try {
+      _aiSetSystemPromptLocal = lib
+          .lookupFunction<
+            Int32 Function(Pointer<Void>, Pointer<Utf8>),
+            int Function(Pointer<Void>, Pointer<Utf8>)
+          >('ai_set_system_prompt');
+    } catch (_) {}
+
     if (dataDir.isNotEmpty && _aiSetDataDirLocal != null) {
       final dirPtr = dataDir.toNativeUtf8();
       try {
@@ -630,6 +670,14 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
     }
 
     if (_aiInitializeLocal != null) {
+      if (_aiSetSystemPromptLocal != null) {
+        final sp = _kAiSystemPrompt.toNativeUtf8();
+        try {
+          _aiSetSystemPromptLocal(nullptr, sp);
+        } finally {
+          malloc.free(sp);
+        }
+      }
       _aiInitializeLocal(nullptr);
     }
 
@@ -643,7 +691,7 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
         return;
       }
       final handle = handlePtr.value;
-      final outLen = 8192;
+      final outLen = 65536;
       final outBuf = malloc.allocate<Int8>(outLen);
       final finishedFlag = malloc.allocate<Uint8>(1);
       var hasFirstChunk = false;
@@ -708,6 +756,8 @@ const int CORE_MAX_NAME = 64;
 const int CORE_MAX_UUID = 64;
 const int CORE_MAX_BRAND = 16;
 const int CORE_MAX_MODEL = 32;
+const int CORE_MAX_USAGE_TITLE = 96;
+const int CORE_MAX_USAGE_MESSAGE = 192;
 
 class CoreResult {
   static const int CORE_OK = 0;
@@ -838,6 +888,55 @@ base class CoreAiPermissionsNative extends Struct {
 
   @Uint32()
   external int temperament;
+}
+
+base class CoreUsageStatsNative extends Struct {
+  @Uint32()
+  external int sampleCount;
+
+  @Uint32()
+  external int distinctDevices;
+
+  @Int32()
+  external int predictedArrivalHour;
+
+  @Float()
+  external double preferredTemperature;
+
+  @Uint32()
+  external int preferredBrightness;
+
+  @Float()
+  external double preferredPosition;
+
+  @Array(CORE_MAX_UUID)
+  external Array<Int8> mostActiveUuid;
+
+  @Float()
+  external double confidence;
+}
+
+base class CoreUsageRecommendationNative extends Struct {
+  @Bool()
+  external bool available;
+
+  @Array(CORE_MAX_USAGE_TITLE)
+  external Array<Int8> title;
+
+  @Array(CORE_MAX_USAGE_MESSAGE)
+  external Array<Int8> message;
+
+  @Array(CORE_MAX_UUID)
+  external Array<Int8> uuid;
+
+  @Int32()
+  external int recommendedHour;
+
+  @Float()
+  external double confidence;
+
+  @Uint64()
+  external int generatedAtMs;
 }
 
 typedef _coreCreateC = Pointer<Void> Function();
@@ -973,6 +1072,16 @@ typedef _coreProvisionWifiDart =
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
+typedef _coreUsageGetStatsC =
+    Int32 Function(Pointer<Void>, Pointer<CoreUsageStatsNative>);
+typedef _coreUsageGetStatsDart =
+    int Function(Pointer<Void>, Pointer<CoreUsageStatsNative>);
+
+typedef _coreUsageGetRecommendationC =
+    Int32 Function(Pointer<Void>, Pointer<CoreUsageRecommendationNative>);
+typedef _coreUsageGetRecommendationDart =
+    int Function(Pointer<Void>, Pointer<CoreUsageRecommendationNative>);
+
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
 
@@ -1106,6 +1215,27 @@ final _coreSetEventCallbackDart _coreSetEventCallback = coreLib
 final _coreSimulateDart _coreSimulate = coreLib
     .lookupFunction<_coreSimulateC, _coreSimulateDart>('core_simulate');
 
+final _coreUsageGetStatsDart? _coreUsageGetStats = (() {
+  try {
+    return coreLib.lookupFunction<_coreUsageGetStatsC, _coreUsageGetStatsDart>(
+      'core_usage_get_stats',
+    );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreUsageGetRecommendationDart? _coreUsageGetRecommendation = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreUsageGetRecommendationC,
+      _coreUsageGetRecommendationDart
+    >('core_usage_get_recommendation');
+  } catch (_) {
+    return null;
+  }
+})();
+
 class DeviceInfo {
   final String uuid;
   final String name;
@@ -1152,6 +1282,49 @@ class CoreEventData {
     required this.state,
     required this.errorCode,
   });
+}
+
+class UsageStats {
+  final int sampleCount;
+  final int distinctDevices;
+  final int predictedArrivalHour;
+  final double preferredTemperature;
+  final int preferredBrightness;
+  final double preferredPosition;
+  final String mostActiveUuid;
+  final double confidence;
+
+  const UsageStats({
+    required this.sampleCount,
+    required this.distinctDevices,
+    required this.predictedArrivalHour,
+    required this.preferredTemperature,
+    required this.preferredBrightness,
+    required this.preferredPosition,
+    required this.mostActiveUuid,
+    required this.confidence,
+  });
+}
+
+class UsageRecommendation {
+  final String title;
+  final String message;
+  final String uuid;
+  final int recommendedHour;
+  final double confidence;
+  final DateTime generatedAt;
+
+  const UsageRecommendation({
+    required this.title,
+    required this.message,
+    required this.uuid,
+    required this.recommendedHour,
+    required this.confidence,
+    required this.generatedAt,
+  });
+
+  String get signature =>
+      '$title|$message|$uuid|$recommendedHour|${confidence.toStringAsFixed(2)}';
 }
 
 class DiscoveredDevice {
@@ -2676,6 +2849,60 @@ class Bridge {
     final res = _coreSimulate(_ctx!);
     if (res != 0) {
       _throwLastError(res);
+    }
+  }
+
+  static UsageStats? usageStats() {
+    _ensureReady();
+    if (_coreUsageGetStats == null) return null;
+
+    final out = calloc<CoreUsageStatsNative>();
+    try {
+      final rc = _coreUsageGetStats!(_ctx!, out);
+      if (rc != 0) {
+        _throwLastError(rc);
+      }
+
+      final raw = out.ref;
+      return UsageStats(
+        sampleCount: raw.sampleCount,
+        distinctDevices: raw.distinctDevices,
+        predictedArrivalHour: raw.predictedArrivalHour,
+        preferredTemperature: raw.preferredTemperature,
+        preferredBrightness: raw.preferredBrightness,
+        preferredPosition: raw.preferredPosition,
+        mostActiveUuid: _readFixedString(raw.mostActiveUuid, CORE_MAX_UUID),
+        confidence: raw.confidence,
+      );
+    } finally {
+      calloc.free(out);
+    }
+  }
+
+  static UsageRecommendation? usageRecommendation() {
+    _ensureReady();
+    if (_coreUsageGetRecommendation == null) return null;
+
+    final out = calloc<CoreUsageRecommendationNative>();
+    try {
+      final rc = _coreUsageGetRecommendation!(_ctx!, out);
+      if (rc != 0) {
+        _throwLastError(rc);
+      }
+
+      final raw = out.ref;
+      if (!raw.available) return null;
+
+      return UsageRecommendation(
+        title: _readFixedString(raw.title, CORE_MAX_USAGE_TITLE),
+        message: _readFixedString(raw.message, CORE_MAX_USAGE_MESSAGE),
+        uuid: _readFixedString(raw.uuid, CORE_MAX_UUID),
+        recommendedHour: raw.recommendedHour,
+        confidence: raw.confidence,
+        generatedAt: DateTime.fromMillisecondsSinceEpoch(raw.generatedAtMs),
+      );
+    } finally {
+      calloc.free(out);
     }
   }
 

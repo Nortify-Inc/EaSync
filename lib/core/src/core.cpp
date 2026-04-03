@@ -37,6 +37,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <deque>
 #include <string>
 #include <vector>
 #include <mutex>
@@ -52,6 +53,8 @@
 #include <chrono>
 #include <atomic>
 #include <thread>
+#include <ctime>
+#include <cstdio>
 
 extern "C" {
 
@@ -98,7 +101,193 @@ struct CoreContext {
     uint64_t aiAsyncToken = 0;
     std::string aiAsyncResponse;
     std::string lastReferencedDeviceUuid;
+
+    struct UsageSample {
+        std::string uuid;
+        uint64_t tsMs = 0;
+        CoreDeviceState state{};
+    };
+
+    std::deque<UsageSample> usageSamples;
+    std::unordered_map<std::string, int> usageDeviceActivity;
+    std::unordered_map<int, int> usageArrivalHour;
+    std::unordered_map<std::string, CoreDeviceState> usageLastState;
+    std::unordered_map<std::string, bool> usagePowerByDevice;
+    double usageTempSum = 0.0;
+    uint64_t usageTempCount = 0;
+    double usageBrightnessSum = 0.0;
+    uint64_t usageBrightnessCount = 0;
+    double usagePositionSum = 0.0;
+    uint64_t usagePositionCount = 0;
+    bool usageAnyPowered = false;
+    uint64_t usageLastPowerOffTsMs = 0;
+    uint64_t usageLastRecommendationTsMs = 0;
 };
+
+static constexpr size_t kMaxUsageSamples = 4096;
+static constexpr uint64_t kArrivalGapMs = 45ULL * 60ULL * 1000ULL;
+static constexpr uint64_t kRecommendationCooldownMs = 40ULL * 60ULL * 1000ULL;
+
+static uint64_t nowMs() {
+    return static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count());
+}
+
+static int hourOfDay(uint64_t tsMs) {
+    std::time_t sec = static_cast<std::time_t>(tsMs / 1000ULL);
+    std::tm localTm{};
+#ifdef _WIN32
+    localtime_s(&localTm, &sec);
+#else
+    localtime_r(&sec, &localTm);
+#endif
+    return localTm.tm_hour;
+}
+
+static bool stateEquals(const CoreDeviceState& a, const CoreDeviceState& b) {
+    return a.power == b.power &&
+           a.brightness == b.brightness &&
+           a.color == b.color &&
+           std::fabs(a.temperature - b.temperature) < 0.0001f &&
+           std::fabs(a.temperatureFridge - b.temperatureFridge) < 0.0001f &&
+           std::fabs(a.temperatureFreezer - b.temperatureFreezer) < 0.0001f &&
+           a.timestamp == b.timestamp &&
+           a.colorTemperature == b.colorTemperature &&
+           a.lock == b.lock &&
+           a.mode == b.mode &&
+           std::fabs(a.position - b.position) < 0.0001f;
+}
+
+static void recordUsageSampleLocked(CoreContext* core,
+                                    const std::string& uuid,
+                                    const CoreDeviceState& state,
+                                    bool forceCapture = false)
+{
+    if (!core)
+        return;
+
+    const uint64_t ts = nowMs();
+
+    auto lastIt = core->usageLastState.find(uuid);
+    if (!forceCapture && lastIt != core->usageLastState.end() && stateEquals(lastIt->second, state)) {
+        return;
+    }
+
+    core->usageLastState[uuid] = state;
+    core->usageDeviceActivity[uuid]++;
+
+    CoreContext::UsageSample sample;
+    sample.uuid = uuid;
+    sample.tsMs = ts;
+    sample.state = state;
+    core->usageSamples.push_back(std::move(sample));
+    while (core->usageSamples.size() > kMaxUsageSamples) {
+        core->usageSamples.pop_front();
+    }
+
+    if (state.temperature >= -30.0f && state.temperature <= 50.0f) {
+        core->usageTempSum += state.temperature;
+        core->usageTempCount++;
+    }
+
+    if (state.brightness <= 100U) {
+        core->usageBrightnessSum += static_cast<double>(state.brightness);
+        core->usageBrightnessCount++;
+    }
+
+    if (state.position >= 0.0f && state.position <= 100.0f) {
+        core->usagePositionSum += state.position;
+        core->usagePositionCount++;
+    }
+
+    const bool wasAnyPowered = core->usageAnyPowered;
+    core->usagePowerByDevice[uuid] = state.power;
+
+    bool anyPoweredNow = false;
+    for (const auto& pair : core->usagePowerByDevice) {
+        if (pair.second) {
+            anyPoweredNow = true;
+            break;
+        }
+    }
+
+    if (!wasAnyPowered && anyPoweredNow) {
+        if (core->usageLastPowerOffTsMs > 0 && (ts - core->usageLastPowerOffTsMs) >= kArrivalGapMs) {
+            const int h = hourOfDay(ts);
+            core->usageArrivalHour[h]++;
+        }
+    }
+
+    if (wasAnyPowered && !anyPoweredNow) {
+        core->usageLastPowerOffTsMs = ts;
+    }
+
+    core->usageAnyPowered = anyPoweredNow;
+}
+
+static void gatherUsageStatsLocked(CoreContext* core, CoreUsageStats* outStats) {
+    if (!core || !outStats)
+        return;
+
+    std::memset(outStats, 0, sizeof(CoreUsageStats));
+    outStats->sampleCount = static_cast<uint32_t>(core->usageSamples.size());
+    outStats->distinctDevices = static_cast<uint32_t>(core->usageDeviceActivity.size());
+    outStats->predictedArrivalHour = -1;
+
+    int bestHour = -1;
+    int bestHourCount = -1;
+    int totalArrivalSignals = 0;
+    for (const auto& pair : core->usageArrivalHour) {
+        totalArrivalSignals += pair.second;
+        if (pair.second > bestHourCount) {
+            bestHourCount = pair.second;
+            bestHour = pair.first;
+        }
+    }
+    outStats->predictedArrivalHour = bestHour;
+
+    if (core->usageTempCount > 0) {
+        outStats->preferredTemperature = static_cast<float>(core->usageTempSum / static_cast<double>(core->usageTempCount));
+    }
+
+    if (core->usageBrightnessCount > 0) {
+        outStats->preferredBrightness = static_cast<uint32_t>(
+            std::llround(core->usageBrightnessSum / static_cast<double>(core->usageBrightnessCount)));
+    }
+
+    if (core->usagePositionCount > 0) {
+        outStats->preferredPosition = static_cast<float>(core->usagePositionSum / static_cast<double>(core->usagePositionCount));
+    }
+
+    std::string bestUuid;
+    int bestActivity = -1;
+    int totalActivity = 0;
+    for (const auto& pair : core->usageDeviceActivity) {
+        totalActivity += pair.second;
+        if (pair.second > bestActivity) {
+            bestActivity = pair.second;
+            bestUuid = pair.first;
+        }
+    }
+
+    if (!bestUuid.empty()) {
+        std::strncpy(outStats->mostActiveUuid, bestUuid.c_str(), CORE_MAX_UUID - 1);
+        outStats->mostActiveUuid[CORE_MAX_UUID - 1] = '\0';
+    }
+
+    const float baseBySamples = std::min(1.0f, static_cast<float>(outStats->sampleCount) / 120.0f);
+    float arrivalWeight = 0.0f;
+    if (totalArrivalSignals > 0 && bestHourCount > 0) {
+        arrivalWeight = static_cast<float>(bestHourCount) / static_cast<float>(totalArrivalSignals);
+    }
+    float activityWeight = 0.0f;
+    if (totalActivity > 0 && bestActivity > 0) {
+        activityWeight = static_cast<float>(bestActivity) / static_cast<float>(totalActivity);
+    }
+
+    outStats->confidence = std::clamp((baseBySamples * 0.55f) + (arrivalWeight * 0.30f) + (activityWeight * 0.15f), 0.0f, 1.0f);
+}
 
 
 
@@ -242,13 +431,10 @@ static void driverEventForwarder(const std::string& uuid,
             return;
 
         if (std::memcmp(&it->second.state, &newState, sizeof(CoreDeviceState)) != 0) {
-            const CoreDeviceState previous = it->second.state;
             it->second.state = newState;
             changed = true;
 
-            const uint64_t nowTs = static_cast<uint64_t>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch()).count());
+            recordUsageSampleLocked(core, uuid, newState);
 
             ev.type = CORE_EVENT_STATE_CHANGED;
             std::strncpy(ev.uuid, uuid.c_str(), CORE_MAX_UUID - 1);
@@ -262,6 +448,26 @@ static void driverEventForwarder(const std::string& uuid,
 
     if (changed && cb)
         cb(&ev, cbUserdata);
+}
+
+static void captureUsageAfterWrite(CoreContext* core,
+                                   const char* uuid,
+                                   const std::shared_ptr<drivers::Driver>& driver)
+{
+    if (!core || !uuid || !driver)
+        return;
+
+    CoreDeviceState refreshed{};
+    if (!driver->getState(uuid, refreshed))
+        return;
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+    auto it = core->devices.find(uuid);
+    if (it == core->devices.end())
+        return;
+
+    it->second.state = refreshed;
+    recordUsageSampleLocked(core, uuid, refreshed);
 }
 
 /**
@@ -797,6 +1003,8 @@ CoreResult core_set_power(CoreContext* core, const char* uuid, bool value){
     if (!driver->setPower(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -839,6 +1047,8 @@ CoreResult core_set_brightness(CoreContext* core, const char* uuid, uint32_t val
     if (!driver->setBrightness(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -876,6 +1086,8 @@ CoreResult core_set_color(CoreContext* core, const char* uuid, uint32_t value){
 
     if (!driver->setColor(uuid, value))
         return CORE_ERROR;
+
+    captureUsageAfterWrite(core, uuid, driver);
 
     return CORE_OK;
 }
@@ -922,6 +1134,8 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
     if (!driver->setTemperature(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -965,6 +1179,8 @@ CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, floa
 
     if (!driver->setTemperatureFridge(uuid, value))
         return CORE_ERROR;
+
+    captureUsageAfterWrite(core, uuid, driver);
 
     return CORE_OK;
 }
@@ -1011,6 +1227,8 @@ CoreResult core_set_temperature_freezer(CoreContext* core, const char* uuid, flo
     if (!driver->setTemperatureFreezer(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -1047,6 +1265,8 @@ CoreResult core_set_time(CoreContext* core, const char* uuid, uint64_t value){
 
     if (!driver->setTime(uuid, value))
         return CORE_ERROR;
+
+    captureUsageAfterWrite(core, uuid, driver);
 
     return CORE_OK;
 }
@@ -1086,6 +1306,8 @@ CoreResult core_set_color_temperature(CoreContext* core, const char* uuid, uint3
     if (!driver->setColorTemperature(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -1123,6 +1345,8 @@ CoreResult core_set_lock(CoreContext* core, const char* uuid, bool value){
 
     if (!driver->setLock(uuid, value))
         return CORE_ERROR;
+
+    captureUsageAfterWrite(core, uuid, driver);
 
     return CORE_OK;
 }
@@ -1162,6 +1386,8 @@ CoreResult core_set_mode(CoreContext* core, const char* uuid, uint32_t value){
     if (!driver->setMode(uuid, value))
         return CORE_ERROR;
 
+    captureUsageAfterWrite(core, uuid, driver);
+
     return CORE_OK;
 }
 
@@ -1199,6 +1425,8 @@ CoreResult core_set_position(CoreContext* core, const char* uuid, float value){
 
     if (!driver->setPosition(uuid, value))
         return CORE_ERROR;
+
+    captureUsageAfterWrite(core, uuid, driver);
 
     return CORE_OK;
 }
@@ -1463,6 +1691,152 @@ CoreResult core_simulate(CoreContext* core)
         driverEventForwarder(t.uuid, refreshed, core);
     }
 
+    return CORE_OK;
+}
+
+CoreResult core_usage_get_stats(CoreContext* core, CoreUsageStats* outStats)
+{
+    if (!core || !outStats) {
+        setError(core, "Invalid parameters to core_usage_get_stats");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    if (!core->initialized)
+        return CORE_NOT_INITIALIZED;
+
+    gatherUsageStatsLocked(core, outStats);
+    return CORE_OK;
+}
+
+CoreResult core_usage_get_recommendation(CoreContext* core,
+                                         CoreUsageRecommendation* outRecommendation)
+{
+    if (!core || !outRecommendation) {
+        setError(core, "Invalid parameters to core_usage_get_recommendation");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::memset(outRecommendation, 0, sizeof(CoreUsageRecommendation));
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    if (!core->initialized)
+        return CORE_NOT_INITIALIZED;
+
+    CoreUsageStats stats{};
+    gatherUsageStatsLocked(core, &stats);
+
+    if (stats.sampleCount < 20 || stats.confidence < 0.35f || stats.predictedArrivalHour < 0) {
+        outRecommendation->available = false;
+        return CORE_OK;
+    }
+
+    const uint64_t ts = nowMs();
+    if (core->usageLastRecommendationTsMs > 0 &&
+        (ts - core->usageLastRecommendationTsMs) < kRecommendationCooldownMs) {
+        outRecommendation->available = false;
+        return CORE_OK;
+    }
+
+    const int hourNow = hourOfDay(ts);
+    const int h = stats.predictedArrivalHour;
+    int hourDelta = std::abs(hourNow - h);
+    hourDelta = std::min(hourDelta, 24 - hourDelta);
+
+    // Suggest only around the predicted window to avoid noisy nudges.
+    if (hourDelta > 1) {
+        outRecommendation->available = false;
+        return CORE_OK;
+    }
+
+    const int preferredTemp = static_cast<int>(std::llround(stats.preferredTemperature > 0.1f ? stats.preferredTemperature : 23.0f));
+    const int preferredBright = static_cast<int>(stats.preferredBrightness > 0 ? stats.preferredBrightness : 45);
+
+    std::string targetUuid = stats.mostActiveUuid;
+    if (!targetUuid.empty()) {
+        std::strncpy(outRecommendation->uuid, targetUuid.c_str(), CORE_MAX_UUID - 1);
+        outRecommendation->uuid[CORE_MAX_UUID - 1] = '\0';
+    }
+
+    const int shownHour = std::clamp(h, 0, 23);
+    std::snprintf(outRecommendation->title,
+                  CORE_MAX_USAGE_TITLE,
+                  "Routine detectada perto de %02dh",
+                  shownHour);
+
+    std::snprintf(outRecommendation->message,
+                  CORE_MAX_USAGE_MESSAGE,
+                  "Voce costuma chegar nesse horario. Recomendacao: manter conforto em %dC e brilho em %d%%.",
+                  preferredTemp,
+                  std::clamp(preferredBright, 0, 100));
+
+    outRecommendation->recommendedHour = shownHour;
+    outRecommendation->confidence = stats.confidence;
+    outRecommendation->generatedAtMs = ts;
+    outRecommendation->available = true;
+
+    core->usageLastRecommendationTsMs = ts;
+    return CORE_OK;
+}
+
+CoreResult core_usage_export_samples_csv(CoreContext* core,
+                                         char* outBuffer,
+                                         uint32_t bufferSize,
+                                         uint32_t* outWritten)
+{
+    if (!core || !outBuffer || bufferSize == 0 || !outWritten) {
+        setError(core, "Invalid parameters to core_usage_export_samples_csv");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    if (!core->initialized)
+        return CORE_NOT_INITIALIZED;
+
+    std::ostringstream oss;
+    oss << "ts_ms,uuid,hour_sin,hour_cos,power,brightness_norm,temp_norm,temp_fridge_norm,temp_freezer_norm,color_temp_norm,lock,mode_norm,position_norm\n";
+    constexpr double kTwoPi = 6.28318530717958647692;
+
+    for (const auto& sample : core->usageSamples) {
+        const double hour = static_cast<double>(hourOfDay(sample.tsMs));
+        const double angle = (kTwoPi * hour) / 24.0;
+        const double hourSin = std::sin(angle);
+        const double hourCos = std::cos(angle);
+        const double brightnessNorm = std::clamp(static_cast<double>(sample.state.brightness) / 100.0, 0.0, 1.0);
+        const double tempNorm = std::clamp((static_cast<double>(sample.state.temperature) - 16.0) / 14.0, 0.0, 1.0);
+        const double tempFridgeNorm = std::clamp((static_cast<double>(sample.state.temperatureFridge) - 1.0) / 7.0, 0.0, 1.0);
+        const double tempFreezerNorm = std::clamp((static_cast<double>(sample.state.temperatureFreezer) + 24.0) / 10.0, 0.0, 1.0);
+        const double colorTempNorm = std::clamp((static_cast<double>(sample.state.colorTemperature) - 1500.0) / 7500.0, 0.0, 1.0);
+        const double modeNorm = std::clamp(static_cast<double>(sample.state.mode) / 10.0, 0.0, 1.0);
+        const double positionNorm = std::clamp(static_cast<double>(sample.state.position) / 100.0, 0.0, 1.0);
+
+        oss << sample.tsMs << ","
+            << sample.uuid << ","
+            << hourSin << ","
+            << hourCos << ","
+            << (sample.state.power ? 1 : 0) << ","
+            << brightnessNorm << ","
+            << tempNorm << ","
+            << tempFridgeNorm << ","
+            << tempFreezerNorm << ","
+            << colorTempNorm << ","
+            << (sample.state.lock ? 1 : 0) << ","
+            << modeNorm << ","
+            << positionNorm << "\n";
+    }
+
+    const std::string csv = oss.str();
+    if (csv.size() + 1 > bufferSize) {
+        setError(core, "Output buffer too small for core_usage_export_samples_csv");
+        return CORE_ERROR;
+    }
+
+    std::memcpy(outBuffer, csv.data(), csv.size());
+    outBuffer[csv.size()] = '\0';
+    *outWritten = static_cast<uint32_t>(csv.size());
     return CORE_OK;
 }
 
