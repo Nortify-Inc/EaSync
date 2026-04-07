@@ -31,10 +31,10 @@ static std::string g_system_prompt =
 
 static std::mutex g_mutex;
 static std::atomic<int> g_decode_every{6};
-static std::atomic<int> g_max_new_tokens{512};
+static std::atomic<int> g_max_new_tokens{2048};
 static std::atomic<float> g_temperature{0.8f};
-static std::atomic<int> g_top_k{30};
-static std::atomic<float> g_top_p{0.98f};
+static std::atomic<int> g_top_k{40};
+static std::atomic<float> g_top_p{0.95f};
 
 static std::atomic<bool> g_backend_inited{false};
 
