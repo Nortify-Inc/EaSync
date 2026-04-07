@@ -26,7 +26,7 @@ namespace {
 
 static std::string g_data_dir_override;
 static std::string g_system_prompt =
-    "You are Agent, a practical AI assistant created by Nortify Inc. "
+    "You are Agent, an AI assistant created by Nortify Inc. "
     "Be quick and concise. Don't invent info.";
 
 static std::mutex g_mutex;
