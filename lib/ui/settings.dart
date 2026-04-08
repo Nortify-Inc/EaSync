@@ -83,19 +83,7 @@ class _SettingsState extends State<Settings> {
                     await _persistAll();
                   },
                 ),
-                _switchTile(
-                  icon: Icons.compress_outlined,
-                  title: EaI18n.t(context, 'Compact mode'),
-                  subtitle: EaI18n.t(
-                    context,
-                    'Reduced paddings and denser tiles',
-                  ),
-                  value: _settings.compactMode,
-                  onChanged: (v) async {
-                    setState(() => _settings.compactMode = v);
-                    await _persistAll();
-                  },
-                ),
+
                 _switchTile(
                   icon: Icons.vibration_outlined,
                   title: EaI18n.t(context, 'Haptic feedback'),
@@ -174,42 +162,6 @@ class _SettingsState extends State<Settings> {
                     await _persistAll();
                   },
                 ),
-                ListTile(
-                  leading: const Icon(Icons.tune_rounded, color: EaColor.fore),
-                  title: Text(
-                    EaI18n.t(context, 'AI temperament'),
-                    style: EaText.secondary,
-                  ),
-                  subtitle: Align(
-                    alignment: Alignment.centerLeft,
-                    child: SizedBox(
-                      width: 220,
-                      child: Slider(
-                        value: _settings.aiTemperament.toDouble(),
-                        min: 0,
-                        max: 2,
-                        divisions: 2,
-                        label: switch (_settings.aiTemperament) {
-                          0 => EaI18n.t(context, 'Balanced'),
-                          1 => EaI18n.t(context, 'Fast'),
-                          _ => EaI18n.t(context, 'Conservative'),
-                        },
-                        onChanged: (v) async {
-                          setState(() => _settings.aiTemperament = v.round());
-                          await _persistAll();
-                        },
-                      ),
-                    ),
-                  ),
-                  trailing: Text(
-                    switch (_settings.aiTemperament) {
-                      0 => EaI18n.t(context, 'Balanced'),
-                      1 => EaI18n.t(context, 'Fast'),
-                      _ => EaI18n.t(context, 'Conservative'),
-                    },
-                    style: EaText.small.copyWith(color: EaColor.textSecondary),
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 14),
@@ -241,56 +193,6 @@ class _SettingsState extends State<Settings> {
                     setState(() => _settings.offlineCache = v);
                     await _persistAll();
                   },
-                ),
-                _switchTile(
-                  icon: Icons.data_saver_off_outlined,
-                  title: EaI18n.t(context, 'Low data mode'),
-                  subtitle: EaI18n.t(
-                    context,
-                    'Reduce background refresh and sync frequency',
-                  ),
-                  value: _settings.lowDataMode,
-                  onChanged: (v) async {
-                    setState(() => _settings.lowDataMode = v);
-                    await _persistAll();
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.route_outlined,
-                    color: EaColor.fore,
-                  ),
-                  title: Text(
-                    EaI18n.t(context, 'Usage profile'),
-                    style: EaText.secondary,
-                  ),
-                  trailing: DropdownButton<String>(
-                    value: _settings.usagePattern,
-                    dropdownColor: EaAdaptiveColor.surface(context),
-                    style: EaText.small.copyWith(
-                      color: EaAdaptiveColor.bodyText(context),
-                    ),
-                    underline: const SizedBox.shrink(),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'balanced',
-                        child: Text(EaI18n.t(context, 'Balanced')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'automation',
-                        child: Text(EaI18n.t(context, 'Automation')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'economy',
-                        child: Text(EaI18n.t(context, 'Economy')),
-                      ),
-                    ],
-                    onChanged: (v) async {
-                      if (v == null) return;
-                      setState(() => _settings.usagePattern = v);
-                      await _persistAll();
-                    },
-                  ),
                 ),
               ],
             ),
