@@ -131,8 +131,18 @@ class EaI18n {
     'Stop': 'Parar',
     'Rec': 'Gravar',
     'Retry': 'Tentar novamente',
+    'Accept': 'Aceitar',
     'Assistant Data': 'Dados do assistente',
     'Outside temperature': 'Temperatura externa',
+    'Weather': 'Clima',
+    'Clear sky': 'Céu limpo',
+    'Cloudy sky': 'Nublado',
+    'Foggy': 'Neblina',
+    'Light rain': 'Chuva leve',
+    'Rainy': 'Chuva',
+    'Snowy': 'Neve',
+    'Stormy': 'Tempestade',
+    'Sunny': 'Ensolarado',
     'Set location': 'Definir localização',
     'Annotations': 'Anotações',
     'View details': 'Ver detalhes',
@@ -184,6 +194,8 @@ class EaI18n {
         'Crie perfis alinhados com seu humor.',
     'New profile': 'Novo perfil',
     'Assistant recommendation': 'Recomendação do assistente',
+    'Profile recommendation is Pro only.':
+        'A recomendação de perfil está disponível apenas no Pro.',
     'Add': 'Adicionar',
     'New Profile': 'Novo perfil',
     'Edit Profile': 'Editar perfil',
@@ -201,6 +213,16 @@ class EaI18n {
     'Remove': 'Remover',
     'Remove device': 'Remover dispositivo',
     'Do you want to remove "{name}"?': 'Você quer remover "{name}"?',
+    'Device limit reached for your plan.':
+        'Limite de dispositivos do seu plano foi atingido.',
+    'Profile limit reached for your plan.':
+        'Limite de perfis do seu plano foi atingido.',
+    'Temperature control is available from Plus plan.':
+        'Controle de temperatura está disponível a partir do plano Plus.',
+    'Assistant is available from Plus plan.':
+        'O assistente está disponível a partir do plano Plus.',
+    'Open plan options': 'Ver opções de plano',
+    'Go to plan': 'Ir para plano',
     'Retry connection': 'Tentar conexão novamente',
     'Diagnostics': 'Diagnóstico',
     'Retry provisioning': 'Tentar provisionamento novamente',
@@ -212,6 +234,7 @@ class EaI18n {
     'Profile and environment': 'Perfil e ambiente',
     'Security': 'Segurança',
     'Subscription': 'Assinatura',
+    'Experience': 'Experiência',
     'Data control': 'Controle de dados',
     'Personal information': 'Informações pessoais',
     'Name and location': 'Nome e localização',
@@ -353,6 +376,9 @@ class EaI18n {
     'Authenticated account': 'Conta autenticada',
     'You are not authenticated yet.': 'Você ainda não está autenticado.',
     'Sign in': 'Entrar',
+    'Enabled': 'Ativado',
+    'Disabled': 'Desativado',
+    'Authenticated via {provider}': 'Autenticado via {provider}',
     'Create your account': 'Crie sua conta',
     'Welcome back': 'Bem-vindo de volta',
     'Choose a provider to get started': 'Escolha um provedor para começar',
@@ -361,6 +387,7 @@ class EaI18n {
         'Ao continuar você concorda com nossos Termos de Serviço.',
     'Create account': 'Criar conta',
     'Authenticated': 'Autenticado',
+    'Not authenticated': 'Não autenticado',
     'Guest': 'Convidado',
     'Password set': 'Senha definida',
     'No password': 'Sem senha',
@@ -414,8 +441,13 @@ class EaI18n {
         'Automações, análises e controles avançados do assistente.',
     'Basic device and assistant controls':
         'Controles básicos de dispositivos e assistente',
+    'Up to 3 devices and 1 profile': 'Até 3 dispositivos e 1 perfil',
+    'Up to 3 profiles, temperature control, and basic assistant.':
+        'Até 3 perfis, controle de temperatura e assistente básico.',
     'Advanced automations and full AI modes':
         'Automações avançadas e modos completos de IA',
+    'Unlimited resources and full assistant modes':
+        'Recursos ilimitados e modos completos do assistente',
     'No billing entries yet.': 'Nenhuma cobrança registrada ainda.',
     'Export copied to clipboard.':
         'Export copiado para a área de transferência.',

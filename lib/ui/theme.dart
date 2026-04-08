@@ -358,6 +358,7 @@ class EaButtonStyle {
       foregroundColor: EaColor.back,
       shadowColor: Colors.transparent,
       padding: padding,
+      alignment: Alignment.centerLeft,
       shape: RoundedRectangleBorder(borderRadius: borderRadius),
     );
   }

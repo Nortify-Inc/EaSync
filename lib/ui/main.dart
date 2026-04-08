@@ -63,6 +63,10 @@ class EaSync extends StatelessWidget {
           themeMode: EaAppSettings.instance.themeMode,
           theme: EaTheme.light(),
           darkTheme: EaTheme.dark(),
+          builder: (context, child) {
+            if (child == null) return const SizedBox.shrink();
+            return RecommendationToastHost(child: child);
+          },
           home: const Splash(),
         );
       },

@@ -1080,6 +1080,11 @@ typedef _coreUsageGetRecommendationC =
 typedef _coreUsageGetRecommendationDart =
     int Function(Pointer<Void>, Pointer<CoreUsageRecommendationNative>);
 
+typedef _coreUsageObserveFrontendJsonC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreUsageObserveFrontendJsonDart =
+  int Function(Pointer<Void>, Pointer<Utf8>);
+
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
 
@@ -1229,6 +1234,17 @@ final _coreUsageGetRecommendationDart? _coreUsageGetRecommendation = (() {
       _coreUsageGetRecommendationC,
       _coreUsageGetRecommendationDart
     >('core_usage_get_recommendation');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreUsageObserveFrontendJsonDart? _coreUsageObserveFrontendJson = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreUsageObserveFrontendJsonC,
+      _coreUsageObserveFrontendJsonDart
+    >('core_usage_observe_frontend_json');
   } catch (_) {
     return null;
   }
@@ -1754,6 +1770,15 @@ class Bridge {
       refreshDeviceConnection(uuid);
     }
 
+    _observeFrontendLearningEvent(
+      'device_registered',
+      uuid: uuid,
+      payload: {
+        'protocol': protocol,
+        'capabilityCount': capabilities.length,
+      },
+    );
+
     _log('device', 'Device registered', uuid: uuid);
   }
 
@@ -1781,6 +1806,7 @@ class Bridge {
     _protocolByDevice.remove(uuid);
     _endpointByDevice.remove(uuid);
     _healthByDevice.remove(uuid);
+    _observeFrontendLearningEvent('device_removed', uuid: uuid);
     _log('device', 'Device removed', uuid: uuid);
   }
 
@@ -2055,6 +2081,11 @@ class Bridge {
 
     markWifiOnline(uuid);
     _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connected;
+    _observeFrontendLearningEvent(
+      'wifi_provisioned',
+      uuid: uuid,
+      payload: {'ssid': ssidTrimmed},
+    );
     _log('wifi', 'Provision succeeded and device is online', uuid: uuid);
   }
 
@@ -2680,6 +2711,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'power', 'value': value},
+    );
   }
 
   static void setBrightness(String uuid, int value) {
@@ -2696,6 +2732,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'brightness', 'value': value},
+    );
   }
 
   static void setColor(String uuid, int value) {
@@ -2712,6 +2753,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'color', 'value': value},
+    );
   }
 
   static void setTemperature(String uuid, double value) {
@@ -2728,6 +2774,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'temperature', 'value': value},
+    );
   }
 
   static void setTemperatureFridge(String uuid, double value) {
@@ -2744,6 +2795,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'temperature_fridge', 'value': value},
+    );
   }
 
   static void setTemperatureFreezer(String uuid, double value) {
@@ -2760,6 +2816,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'temperature_freezer', 'value': value},
+    );
   }
 
   static void setTime(String uuid, int value) {
@@ -2776,6 +2837,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'timestamp', 'value': value},
+    );
   }
 
   static void setColorTemperature(String uuid, int value) {
@@ -2792,6 +2858,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'color_temperature', 'value': value},
+    );
   }
 
   static void setLock(String uuid, bool value) {
@@ -2808,6 +2879,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'lock', 'value': value},
+    );
   }
 
   static void setMode(String uuid, int value) {
@@ -2824,6 +2900,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'mode', 'value': value},
+    );
   }
 
   static void setPosition(String uuid, double value) {
@@ -2840,6 +2921,11 @@ class Bridge {
     }
     _invalidateState(uuid);
     _stateController.add(uuid);
+    _observeFrontendLearningEvent(
+      'device_control',
+      uuid: uuid,
+      payload: {'capability': 'position', 'value': value},
+    );
   }
 
   static void simulateOnce() {
@@ -2902,6 +2988,39 @@ class Bridge {
     } finally {
       calloc.free(out);
     }
+  }
+
+  static bool sendFrontendLearningEvent(Map<String, dynamic> event) {
+    _ensureReady();
+    if (_coreUsageObserveFrontendJson == null) return false;
+
+    final payload = jsonEncode(event);
+    final payloadPtr = payload.toNativeUtf8();
+    try {
+      final rc = _coreUsageObserveFrontendJson!(_ctx!, payloadPtr);
+      if (rc != 0) {
+        _throwLastError(rc);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    } finally {
+      calloc.free(payloadPtr);
+    }
+  }
+
+  static void _observeFrontendLearningEvent(
+    String type, {
+    String? uuid,
+    Map<String, dynamic>? payload,
+  }) {
+    final event = <String, dynamic>{
+      'type': type,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+      if (uuid != null && uuid.trim().isNotEmpty) 'uuid': uuid,
+      if (payload != null && payload.isNotEmpty) 'payload': payload,
+    };
+    sendFrontendLearningEvent(event);
   }
 
   static void _onCoreEvent(

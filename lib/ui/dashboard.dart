@@ -29,6 +29,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   bool loading = true;
   String? error;
+  EaPlanTier _planTier = EaPlanTier.free;
 
   List<DeviceInfo> devices = [];
 
@@ -45,9 +46,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   StreamSubscription<String>? _stateSub;
   StreamSubscription<CoreEventData>? _eventSub;
-  Timer? _recommendationTimer;
-  String? _lastRecommendationSignature;
-  DateTime? _lastRecommendationShownAt;
   final PageStorageBucket _bucket = PageStorageBucket();
 
   double _snapStep(double value, double step) {
@@ -423,69 +421,31 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _loadPlanTier();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadDevices());
-    _startRecommendationLoop();
   }
 
   @override
   void dispose() {
     _stateSub?.cancel();
     _eventSub?.cancel();
-    _recommendationTimer?.cancel();
     super.dispose();
   }
 
-  void _startRecommendationLoop() {
-    _recommendationTimer?.cancel();
-    _recommendationTimer = Timer.periodic(const Duration(seconds: 45), (_) {
-      _checkBackendRecommendation();
-    });
-
-    Future.delayed(const Duration(seconds: 2), _checkBackendRecommendation);
+  Future<void> _loadPlanTier() async {
+    final next = await EaPlanService.instance.readTier();
+    if (!mounted) return;
+    setState(() => _planTier = next);
   }
 
-  void _checkBackendRecommendation() {
-    if (!mounted || loading || error != null) return;
+  bool get _allowsTemperatureControl =>
+      EaPlanService.instance.allowsTemperature(_planTier);
 
-    try {
-      final recommendation = Bridge.usageRecommendation();
-      if (recommendation == null) return;
-
-      final now = DateTime.now();
-      final alreadyShownRecently =
-          _lastRecommendationShownAt != null &&
-          now.difference(_lastRecommendationShownAt!) <
-              const Duration(minutes: 30);
-      if (alreadyShownRecently && recommendation.signature == _lastRecommendationSignature) {
-        return;
-      }
-
-      _lastRecommendationSignature = recommendation.signature;
-      _lastRecommendationShownAt = now;
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              '${recommendation.title}: ${recommendation.message}',
-              style: EaText.secondary.copyWith(
-                color: EaColor.textPrimary,
-                fontSize: 12,
-              ),
-            ),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-            backgroundColor: EaColor.back,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: EaColor.fore),
-            ),
-          ),
-        );
-    } catch (_) {}
+  void _openPlanOptions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+    ).then((_) => _loadPlanTier());
   }
 
   Future<void> _ensureTemplateAssetsLoaded() async {
@@ -631,7 +591,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         }
 
         if (mounted) setState(() {});
-        _checkBackendRecommendation();
       });
 
       _eventSub ??= Bridge.onEvents.listen((event) {
@@ -978,6 +937,30 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Future<void> _openDeviceControl(DeviceInfo device) async {
+    if (!_allowsTemperatureControl &&
+        (device.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE) ||
+            device.capabilities.contains(
+              CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+            ) ||
+            device.capabilities.contains(
+              CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+            ))) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              EaI18n.t(context, 'Temperature control is available from Plus plan.'),
+            ),
+            action: SnackBarAction(
+              label: EaI18n.t(context, 'Go to plan'),
+              onPressed: _openPlanOptions,
+            ),
+          ),
+        );
+    }
+
     final state = Bridge.getState(device.uuid);
 
     final brightMin = Bridge.constraintMin(device.uuid, 'brightness', 0.0);
@@ -1314,7 +1297,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             const SizedBox(width: 10),
                           ],
                         ),
-                      if (device.capabilities.contains(
+                      if (_allowsTemperatureControl &&
+                          device.capabilities.contains(
                         CoreCapability.CORE_CAP_TEMPERATURE,
                       ))
                         Column(
@@ -1371,7 +1355,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                      if (device.capabilities.contains(
+                      if (_allowsTemperatureControl &&
+                          device.capabilities.contains(
                         CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
                       ))
                         Column(
@@ -1439,7 +1424,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             ),
                           ],
                         ),
-                      if (device.capabilities.contains(
+                      if (_allowsTemperatureControl &&
+                          device.capabilities.contains(
                         CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
                       ))
                         Column(

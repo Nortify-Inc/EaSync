@@ -289,6 +289,34 @@ static void gatherUsageStatsLocked(CoreContext* core, CoreUsageStats* outStats) 
     outStats->confidence = std::clamp((baseBySamples * 0.55f) + (arrivalWeight * 0.30f) + (activityWeight * 0.15f), 0.0f, 1.0f);
 }
 
+static bool extractJsonStringField(const std::string& json,
+                                   const std::string& key,
+                                   std::string* outValue)
+{
+    if (!outValue)
+        return false;
+
+    const std::string token = "\"" + key + "\"";
+    const size_t keyPos = json.find(token);
+    if (keyPos == std::string::npos)
+        return false;
+
+    const size_t colonPos = json.find(':', keyPos + token.size());
+    if (colonPos == std::string::npos)
+        return false;
+
+    const size_t firstQuote = json.find('"', colonPos + 1);
+    if (firstQuote == std::string::npos)
+        return false;
+
+    const size_t secondQuote = json.find('"', firstQuote + 1);
+    if (secondQuote == std::string::npos || secondQuote <= firstQuote)
+        return false;
+
+    *outValue = json.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+    return true;
+}
+
 
 
 /**
@@ -1850,6 +1878,46 @@ CoreResult core_usage_export_samples_csv(CoreContext* core,
  * @return Null-terminated string describing last error.
  *         Returns "Invalid core" if core pointer is null.
  */
+CoreResult core_usage_observe_frontend_json(CoreContext* core,
+                                            const char* eventJson)
+{
+    if (!core || !eventJson) {
+        setError(core, "Invalid parameters to core_usage_observe_frontend_json");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::lock_guard<std::mutex> lock(core->mutex);
+
+    if (!core->initialized)
+        return CORE_NOT_INITIALIZED;
+
+    const std::string json(eventJson);
+    std::string eventType;
+    std::string uuid;
+
+    if (!extractJsonStringField(json, "type", &eventType)) {
+        // Tolerate malformed events so ingestion stays non-blocking.
+        return CORE_OK;
+    }
+
+    (void)extractJsonStringField(json, "uuid", &uuid);
+
+    if (!uuid.empty()) {
+        auto it = core->devices.find(uuid);
+        if (it != core->devices.end()) {
+            // Capture snapshot to reinforce learning from frontend-observed actions.
+            recordUsageSampleLocked(core, uuid, it->second.state, true);
+        }
+    }
+
+    if (eventType == "recommendation_accepted" ||
+        eventType == "recommendation_shown") {
+        core->usageLastRecommendationTsMs = nowMs();
+    }
+
+    return CORE_OK;
+}
+
 const char* core_last_error(CoreContext* core)
 {
     if (!core)

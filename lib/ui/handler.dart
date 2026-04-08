@@ -22,6 +22,8 @@ export 'dart:convert';
 
 export 'utils/bridge.dart';
 export 'utils/downloader.dart';
+export 'utils/plan.dart';
+export 'utils/recommendationToastHost.dart';
 export 'utils/skeleton.dart';
 export 'theme.dart';
 export 'i18n.dart';

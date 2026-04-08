@@ -146,6 +146,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       EaAppSettings.instance.aiEnabled = true;
     }
 
+    _markStepRunning('finalize', detail: 'Final startup checks');
     _markStepDone('finalize', detail: 'Opening home');
     await Future.delayed(_finalCharmDelay);
 

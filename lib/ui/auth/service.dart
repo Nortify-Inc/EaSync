@@ -43,6 +43,7 @@ class OAuthService {
 
   Future<OAuthUserProfile> _webOAuthFlow(OAuthProvider provider) async {
     final meta = _metaFor(provider);
+    _validateProviderConfig(provider, meta);
 
     final server = await HttpServer.bind(
       InternetAddress.loopbackIPv4,
@@ -431,6 +432,23 @@ class OAuthService {
         );
       case OAuthProvider.apple:
         throw OAuthException('Apple usa _appleNativeFlow(), não _metaFor().');
+    }
+  }
+
+  void _validateProviderConfig(OAuthProvider provider, OAuthProviderMeta meta) {
+    if (meta.clientId.trim().isNotEmpty) return;
+
+    switch (provider) {
+      case OAuthProvider.google:
+        throw OAuthException(
+          'Configuração OAuth inválida: GOOGLE_CLIENT_ID não definido no arquivo .env.',
+        );
+      case OAuthProvider.microsoft:
+        throw OAuthException(
+          'Configuração OAuth inválida: MICROSOFT_CLIENT_ID não definido no arquivo .env.',
+        );
+      case OAuthProvider.apple:
+        throw OAuthException('Configuração inválida para Apple Sign In.');
     }
   }
 

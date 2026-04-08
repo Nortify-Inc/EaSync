@@ -107,9 +107,11 @@ class Manage extends StatefulWidget {
 }
 
 class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
+  static const double _kBottomActionButtonHeight = 50;
   List<DeviceInfo> devices = [];
   List<DeviceInfo> filteredDevices = [];
   List<DiscoveredDevice> discoveredDevices = [];
+  EaPlanTier _planTier = EaPlanTier.free;
   bool loading = true;
   bool discovering = false;
   late final TextEditingController deviceSearchController;
@@ -131,6 +133,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         _loadDevices();
       }
     });
+    _loadPlanTier();
     _loadDevices();
   }
 
@@ -160,6 +163,32 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     } catch (_) {
       setState(() => loading = false);
     }
+  }
+
+  Future<void> _loadPlanTier() async {
+    final next = await EaPlanService.instance.readTier();
+    if (!mounted) return;
+    setState(() => _planTier = next);
+  }
+
+  void _openPlanOptions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+    ).then((_) {
+      _loadPlanTier();
+      _loadDevices();
+    });
+  }
+
+  bool _ensureCanAddDevice() {
+    if (EaPlanService.instance.canAddDevice(_planTier, devices.length)) {
+      return true;
+    }
+
+    _showTopErrorSnack(EaI18n.t(context, 'Device limit reached for your plan.'));
+    _openPlanOptions();
+    return false;
   }
 
   void _showTopErrorSnack(String message) {
@@ -258,6 +287,8 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       builder: (_) {
         return _DeviceEditor(
           device: device,
+          planTier: _planTier,
+          currentDeviceCount: devices.length,
           onSaved: () {
             _loadDevices();
             Navigator.pop(context);
@@ -420,6 +451,8 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _registerDiscovered(DiscoveredDevice d) async {
+    if (!_ensureCanAddDevice()) return;
+
     final uuid = 'disc-${DateTime.now().millisecondsSinceEpoch}';
 
     try {
@@ -984,7 +1017,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         children: [
           Expanded(
             child: SizedBox(
-              height: 48,
+              height: _kBottomActionButtonHeight,
               child: Stack(
                 children: [
                   if (discovering)
@@ -1025,7 +1058,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                                 ),
                               ),
                         style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
+                          minimumSize: const Size.fromHeight(
+                            _kBottomActionButtonHeight,
+                          ),
                           alignment: Alignment.center,
                           side: BorderSide(
                             color: discovering
@@ -1051,11 +1086,14 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               beginBlur: 4,
               duration: const Duration(milliseconds: 220),
               child: SizedBox(
-                height: 48,
+                height: _kBottomActionButtonHeight,
                 child: EaGradientButtonFrame(
                   borderRadius: BorderRadius.circular(12),
                   child: ElevatedButton.icon(
-                    onPressed: () => _openEditor(),
+                    onPressed: () {
+                      if (!_ensureCanAddDevice()) return;
+                      _openEditor();
+                    },
                     icon: const Icon(Icons.add),
                     label: Text(
                       EaI18n.t(context, 'Add device'),
@@ -1068,7 +1106,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                           padding: const EdgeInsets.symmetric(vertical: 0),
                         ).copyWith(
                           minimumSize: WidgetStateProperty.all(
-                            const Size.fromHeight(48),
+                            const Size.fromHeight(
+                              _kBottomActionButtonHeight,
+                            ),
                           ),
                           padding: WidgetStateProperty.all(
                             const EdgeInsets.symmetric(horizontal: 12),
@@ -1310,8 +1350,15 @@ class _DiscoverBorderPainter extends CustomPainter {
 class _DeviceEditor extends StatefulWidget {
   final DeviceInfo? device;
   final VoidCallback onSaved;
+  final EaPlanTier planTier;
+  final int currentDeviceCount;
 
-  const _DeviceEditor({this.device, required this.onSaved});
+  const _DeviceEditor({
+    this.device,
+    required this.onSaved,
+    required this.planTier,
+    required this.currentDeviceCount,
+  });
 
   @override
   State<_DeviceEditor> createState() => _DeviceEditorState();
@@ -1435,6 +1482,19 @@ class _DeviceEditorState extends State<_DeviceEditor> {
   }
 
   Future<void> _save() async {
+    if (widget.device == null &&
+        !EaPlanService.instance.canAddDevice(
+          widget.planTier,
+          widget.currentDeviceCount,
+        )) {
+      _showError(EaI18n.t(context, 'Device limit reached for your plan.'));
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+      );
+      return;
+    }
+
     if (selectedTemplate == null) {
       _showError(EaI18n.t(context, 'Select a model'));
       return;

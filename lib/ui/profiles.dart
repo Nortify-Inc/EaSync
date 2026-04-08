@@ -58,6 +58,7 @@ class _ProfilesState extends State<Profiles>
     with AutomaticKeepAliveClientMixin, SingleTickerProviderStateMixin {
   final List<Profile> profiles = [];
   List<DeviceInfo> devices = [];
+  EaPlanTier _planTier = EaPlanTier.free;
   StreamSubscription<CoreEventData>? _eventSub;
   late final AnimationController _profileApplyPulse;
   Timer? _profileApplyPulseTimer;
@@ -75,6 +76,7 @@ class _ProfilesState extends State<Profiles>
       duration: const Duration(milliseconds: 980),
     );
     _loadDevices();
+    _loadPlanTier();
     _refreshUsageStats();
     _eventSub = Bridge.onEvents.listen((event) {
       if (event.type == CoreEventType.CORE_EVENT_DEVICE_ADDED ||
@@ -83,6 +85,12 @@ class _ProfilesState extends State<Profiles>
         _refreshUsageStats();
       }
     });
+  }
+
+  Future<void> _loadPlanTier() async {
+    final next = await EaPlanService.instance.readTier();
+    if (!mounted) return;
+    setState(() => _planTier = next);
   }
 
   @override
@@ -194,6 +202,14 @@ class _ProfilesState extends State<Profiles>
   }
 
   void _openEditor({Profile? profile}) {
+    final creating = profile == null;
+    if (creating &&
+        !EaPlanService.instance.canCreateProfile(_planTier, profiles.length)) {
+      _showTopErrorSnack(EaI18n.t(context, 'Profile limit reached for your plan.'));
+      _openPlanOptions();
+      return;
+    }
+
     _loadDevices();
     showModalBottomSheet(
       context: context,
@@ -203,6 +219,9 @@ class _ProfilesState extends State<Profiles>
         return _ProfileEditor(
           devices: devices,
           profile: profile,
+          allowTemperatureControl: EaPlanService.instance.allowsTemperature(
+            _planTier,
+          ),
           onSaved: (p) {
             setState(() {
               if (profile != null) {
@@ -229,12 +248,23 @@ class _ProfilesState extends State<Profiles>
     );
   }
 
+  void _openPlanOptions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+    ).then((_) => _loadPlanTier());
+  }
+
   void _applyProfile(Profile profile) {
     try {
       if (profile.actions.isEmpty) {
         _showBottomSnack('Profile ${profile.name} has no actions.');
         return;
       }
+
+      final allowsTemperature = EaPlanService.instance.allowsTemperature(
+        _planTier,
+      );
 
       final byId = {for (final d in devices) d.uuid: d};
 
@@ -252,16 +282,20 @@ class _ProfilesState extends State<Profiles>
           Bridge.setBrightness(a.deviceId, a.brightness!);
         }
 
-        if (a.temperature != null && has(CoreCapability.CORE_CAP_TEMPERATURE)) {
+        if (allowsTemperature &&
+            a.temperature != null &&
+            has(CoreCapability.CORE_CAP_TEMPERATURE)) {
           Bridge.setTemperature(a.deviceId, a.temperature!);
         }
 
-        if (a.temperatureFridge != null &&
+        if (allowsTemperature &&
+            a.temperatureFridge != null &&
             has(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE)) {
           Bridge.setTemperatureFridge(a.deviceId, a.temperatureFridge!);
         }
 
-        if (a.temperatureFreezer != null &&
+        if (allowsTemperature &&
+            a.temperatureFreezer != null &&
             has(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER)) {
           Bridge.setTemperatureFreezer(a.deviceId, a.temperatureFreezer!);
         }
@@ -290,6 +324,12 @@ class _ProfilesState extends State<Profiles>
         if (a.position != null && has(CoreCapability.CORE_CAP_POSITION)) {
           Bridge.setPosition(a.deviceId, a.position!);
         }
+      }
+
+      if (!allowsTemperature) {
+        _showBottomSnack(
+          EaI18n.t(context, 'Temperature control is available from Plus plan.'),
+        );
       }
 
       _showBottomSnack('Profile ${profile.name} was applied.');
@@ -399,6 +439,18 @@ class _ProfilesState extends State<Profiles>
   }
 
   void _addAssistantRecommendedProfile(Profile recommended) {
+    if (_planTier != EaPlanTier.pro) {
+      _showBottomSnack(EaI18n.t(context, 'Profile recommendation is Pro only.'));
+      _openPlanOptions();
+      return;
+    }
+
+    if (!EaPlanService.instance.canCreateProfile(_planTier, profiles.length)) {
+      _showBottomSnack(EaI18n.t(context, 'Profile limit reached for your plan.'));
+      _openPlanOptions();
+      return;
+    }
+
     var name = recommended.name;
     var index = 2;
     while (profiles.any((p) => p.name.toLowerCase() == name.toLowerCase())) {
@@ -419,6 +471,8 @@ class _ProfilesState extends State<Profiles>
   }
 
   Widget _assistantRecommendedCard() {
+    if (_planTier != EaPlanTier.pro) return const SizedBox.shrink();
+
     final recommended = _assistantRecommendedProfile();
     if (recommended == null) return const SizedBox.shrink();
 
@@ -736,12 +790,14 @@ class _OrbitBorderPainter extends CustomPainter {
 class _ProfileEditor extends StatefulWidget {
   final List<DeviceInfo> devices;
   final Profile? profile;
+  final bool allowTemperatureControl;
   final Function(Profile) onSaved;
   final VoidCallback? onDelete;
 
   const _ProfileEditor({
     required this.devices,
     this.profile,
+    required this.allowTemperatureControl,
     required this.onSaved,
     this.onDelete,
   });
@@ -1064,13 +1120,19 @@ class _ProfileEditorState extends State<_ProfileEditor> {
       CoreCapability.CORE_CAP_BRIGHTNESS,
     );
     final hasColor = d.capabilities.contains(CoreCapability.CORE_CAP_COLOR);
-    final hasTemperature = d.capabilities.contains(
+    final hasTemperature =
+        widget.allowTemperatureControl &&
+        d.capabilities.contains(
       CoreCapability.CORE_CAP_TEMPERATURE,
     );
-    final hasTemperatureFridge = d.capabilities.contains(
+    final hasTemperatureFridge =
+        widget.allowTemperatureControl &&
+        d.capabilities.contains(
       CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
     );
-    final hasTemperatureFreezer = d.capabilities.contains(
+    final hasTemperatureFreezer =
+        widget.allowTemperatureControl &&
+        d.capabilities.contains(
       CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
     );
     final hasTime = d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP);

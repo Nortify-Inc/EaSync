@@ -531,6 +531,18 @@ CoreResult core_usage_export_samples_csv(
 );
 
 
+/**
+ * @brief Observe frontend-generated learning events encoded as JSON.
+ *
+ * The payload is intentionally lightweight and tolerant; unsupported event
+ * formats are ignored and return CORE_OK to keep ingestion non-blocking.
+ */
+CoreResult core_usage_observe_frontend_json(
+    CoreContext* core,
+    const char* eventJson
+);
+
+
 
 /**
  * @brief Get last error message.

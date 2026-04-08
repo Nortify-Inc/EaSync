@@ -63,6 +63,9 @@ dependencies:
   crypto: ^3.0.7
   flutter_dotenv: ^6.0.0
   url_launcher: ^6.3.2
+  local_auth: ^2.3.0
+  otp: ^3.1.4
+  barcode_widget: ^2.0.4
 
 
 dev_dependencies:

@@ -11,11 +11,13 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:barcode_widget/barcode_widget.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'auth/provider.dart';
+import 'auth/security.dart';
 import 'auth/service.dart';
 import 'handler.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -48,6 +50,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   }
 
   static const String _kOutsideTempCache = 'assistant.outside_temp_cache';
+    static const String _kOutsideConditionCache =
+      'assistant.outside_condition_cache';
   static const String _kOutsideTempUpdatedAt =
       'assistant.outside_temp_updated_at';
   static const String _kAuthName = 'account.auth.name';
@@ -75,6 +79,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   String? _authProvider;
   bool _fingerprintEnabled = false;
   double _outsideTemp = 0.0;
+  String _outsideCondition = '';
   DateTime? _outsideUpdatedAt;
   bool _outsideTempRefreshing = false;
   String _language = 'English';
@@ -101,13 +106,18 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     final prefs = await SharedPreferences.getInstance();
 
     final cachedTemp = prefs.getDouble(_kOutsideTempCache);
+    final cachedCondition = (prefs.getString(_kOutsideConditionCache) ?? '')
+      .trim();
     final updatedAtMs = prefs.getInt(_kOutsideTempUpdatedAt);
 
     if (cachedTemp != null) {
       _outsideTemp = cachedTemp;
+      _outsideCondition = cachedCondition;
     } else {
       _outsideTemp = _inferOutsideTemperature();
+      _outsideCondition = '';
       await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
+      await prefs.setString(_kOutsideConditionCache, _outsideCondition);
       await prefs.setInt(
         _kOutsideTempUpdatedAt,
         DateTime.now().millisecondsSinceEpoch,
@@ -247,7 +257,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     return '';
   }
 
-  Future<double?> _fetchOutsideTempFromQuery(String query) async {
+  Future<_OutsideWeatherSnapshot?> _fetchOutsideTempFromQuery(String query) async {
     if (query.trim().isEmpty) return null;
     HttpClient? client;
     try {
@@ -268,7 +278,22 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       final first = current.first;
       if (first is! Map) return null;
       final tempRaw = first['temp_C']?.toString() ?? '';
-      return double.tryParse(tempRaw);
+      final temp = double.tryParse(tempRaw);
+      if (temp == null) return null;
+
+      String condition = '';
+      final weatherDesc = first['weatherDesc'];
+      if (weatherDesc is List && weatherDesc.isNotEmpty) {
+        final firstDesc = weatherDesc.first;
+        if (firstDesc is Map) {
+          condition = (firstDesc['value']?.toString() ?? '').trim();
+        }
+      }
+
+      return _OutsideWeatherSnapshot(
+        temp: temp,
+        condition: _normalizeWeatherCondition(condition),
+      );
     } catch (_) {
       return null;
     } finally {
@@ -276,7 +301,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     }
   }
 
-  Future<double?> _fetchOutsideTempFromCoordinates(
+  Future<_OutsideWeatherSnapshot?> _fetchOutsideTempFromCoordinates(
     double lat,
     double lon,
   ) async {
@@ -286,7 +311,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         'https://api.open-meteo.com/v1/forecast'
         '?latitude=${lat.toStringAsFixed(5)}'
         '&longitude=${lon.toStringAsFixed(5)}'
-        '&current=temperature_2m&timezone=auto',
+        '&current=temperature_2m,weather_code&timezone=auto',
       );
       client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
       final req = await client.getUrl(uri);
@@ -301,11 +326,116 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       final current = decoded['current'];
       if (current is! Map) return null;
       final tempRaw = current['temperature_2m']?.toString() ?? '';
-      return double.tryParse(tempRaw);
+      final temp = double.tryParse(tempRaw);
+      if (temp == null) return null;
+
+      final weatherCodeRaw = current['weather_code']?.toString() ?? '';
+      final weatherCode = int.tryParse(weatherCodeRaw);
+      final condition = weatherCode == null
+          ? ''
+          : _openMeteoWeatherLabel(weatherCode);
+
+      return _OutsideWeatherSnapshot(temp: temp, condition: condition);
     } catch (_) {
       return null;
     } finally {
       client?.close(force: true);
+    }
+  }
+
+  String _openMeteoWeatherLabel(int code) {
+    switch (code) {
+      case 0:
+        return 'Clear sky';
+      case 1:
+      case 2:
+      case 3:
+        return 'Cloudy sky';
+      case 45:
+      case 48:
+        return 'Foggy';
+      case 51:
+      case 53:
+      case 55:
+      case 56:
+      case 57:
+        return 'Light drizzle';
+      case 61:
+      case 63:
+      case 65:
+      case 66:
+      case 67:
+      case 80:
+      case 81:
+      case 82:
+        return 'Rainy';
+      case 71:
+      case 73:
+      case 75:
+      case 77:
+      case 85:
+      case 86:
+        return 'Snowy';
+      case 95:
+      case 96:
+      case 99:
+        return 'Stormy';
+      default:
+        return 'Weather';
+    }
+  }
+
+  String _normalizeWeatherCondition(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+
+    final lower = value.toLowerCase();
+
+    if (lower.contains('storm') ||
+        lower.contains('thunder') ||
+        lower.contains('trov')) {
+      return 'Stormy';
+    }
+    if (lower.contains('snow') || lower.contains('neve') || lower.contains('sleet')) {
+      return 'Snowy';
+    }
+    if (lower.contains('drizzle') || lower.contains('garoa')) {
+      return 'Light drizzle';
+    }
+    if (lower.contains('rain') || lower.contains('chuva') || lower.contains('shower')) {
+      return 'Rainy';
+    }
+    if (lower.contains('fog') || lower.contains('mist') || lower.contains('nebl')) {
+      return 'Foggy';
+    }
+    if (lower.contains('cloud')) {
+      return 'Cloudy sky';
+    }
+    if (lower.contains('clear') || lower.contains('sun') || lower.contains('limpo')) {
+      return 'Clear sky';
+    }
+
+    return 'Weather';
+  }
+
+  Future<_GpsCoordinates?> _readGeolocatorCoordinatesForWeather() async {
+    try {
+      final enabled = await Geolocator.isLocationServiceEnabled();
+      if (!enabled) return null;
+
+      final permission = await Geolocator.checkPermission();
+      if (permission != LocationPermission.always &&
+          permission != LocationPermission.whileInUse) {
+        return null;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+      ).timeout(const Duration(seconds: 4));
+
+      return _GpsCoordinates(position.latitude, position.longitude);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -336,10 +466,18 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       final prefs = await SharedPreferences.getInstance();
       final query = _buildWeatherQueryFromPrefs(prefs);
 
-      double? parsed;
+      var lat = gpsLat;
+      var lon = gpsLon;
+      if (lat == null || lon == null) {
+        final gps = await _readGeolocatorCoordinatesForWeather();
+        lat = gps?.lat;
+        lon = gps?.lon;
+      }
 
-      if (gpsLat != null && gpsLon != null) {
-        parsed = await _fetchOutsideTempFromCoordinates(gpsLat, gpsLon);
+      _OutsideWeatherSnapshot? parsed;
+
+      if (lat != null && lon != null) {
+        parsed = await _fetchOutsideTempFromCoordinates(lat, lon);
       }
 
       parsed ??= await _fetchOutsideTempFromQuery(query);
@@ -356,20 +494,28 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             parsed ??= await _fetchOutsideTempFromQuery(
               '${l.latitude.toStringAsFixed(4)},${l.longitude.toStringAsFixed(4)}',
             );
-            parsed ??= _estimateTemperatureFromCoordinates(
-              l.latitude,
-              l.longitude,
+            parsed ??= _OutsideWeatherSnapshot(
+              temp: _estimateTemperatureFromCoordinates(
+                l.latitude,
+                l.longitude,
+              ),
+              condition: '',
             );
           }
         } catch (_) {}
       }
 
-      parsed ??= _inferOutsideTemperature();
+      parsed ??= _OutsideWeatherSnapshot(
+        temp: _inferOutsideTemperature(),
+        condition: '',
+      );
 
-      _outsideTemp = parsed;
+      _outsideTemp = parsed.temp;
+      _outsideCondition = parsed.condition;
       _outsideUpdatedAt = DateTime.now();
       final updatedAt = _outsideUpdatedAt;
       await prefs.setDouble(_kOutsideTempCache, _outsideTemp);
+      await prefs.setString(_kOutsideConditionCache, _outsideCondition);
       if (updatedAt != null) {
         await prefs.setInt(
           _kOutsideTempUpdatedAt,
@@ -721,11 +867,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                 children: [
                   _AccountTile(
                     icon: Icons.workspace_premium_outlined,
-                    title: 'EaSync Pro',
-                    subtitle: EaI18n.t(
-                      context,
-                      'Detalhes do plano e benefícios',
-                    ),
+                    title: EaI18n.t(context, 'Experience'),
+                    subtitle: EaI18n.t(context, 'Plan details and benefits'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -861,6 +1004,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                             backgroundColor: Colors.transparent,
                             foregroundColor: EaColor.back,
                             shadowColor: Colors.transparent,
+                            alignment: Alignment.centerLeft,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
                           ),
                           onPressed: () => _openAuthSheet(signUp: false),
                           icon: const Icon(Icons.login_rounded),
@@ -869,21 +1014,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                       ),
                     ),
                     const SizedBox(width: 10),
-                    // Sign up
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: EaColor.textPrimary,
-                          side: BorderSide(
-                            color: EaAdaptiveColor.border(context),
-                          ),
-                          backgroundColor: EaColor.back,
-                        ),
-                        onPressed: () => _openAuthSheet(signUp: true),
-                        icon: const Icon(Icons.person_add_alt_1_rounded),
-                        label: Text(EaI18n.t(context, 'Sign up')),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -896,7 +1026,9 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               _chip(
                 Icons.verified_user_outlined,
                 _isAuthenticated
-                    ? EaI18n.t(context, '${_authProvider!} Authenticated ')
+                    ? EaI18n.t(context, 'Authenticated via {provider}', {
+                        'provider': _authProvider ?? 'OAuth',
+                      })
                     : EaI18n.t(context, 'Not authenticated'),
               ),
               _chip(
@@ -993,27 +1125,19 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             child: _summaryTile(
               icon: Icons.thermostat,
               label: EaI18n.t(context, 'Outside'),
-              value: '${_outsideTemp.toStringAsFixed(1)} °C',
-              trailing: Icon(
-                Icons.refresh_rounded,
-                size: 14,
-                color: EaColor.fore,
-              ),
-              onTap: _refreshOutsideTemperature,
+              value: _outsideCondition.isEmpty
+                  ? '${_outsideTemp.toStringAsFixed(1)} °C'
+                  : '${_outsideTemp.toStringAsFixed(1)} °C • ${EaI18n.t(context, _outsideCondition)}',
+              onTap: _outsideTempRefreshing ? () {} : _refreshOutsideTemperature,
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: _summaryTile(
-              icon: Icons.place_outlined,
+              icon: Icons.place_rounded,
               label: EaI18n.t(context, 'Location'),
               value: _fullLocation,
-              trailing: Icon(
-                Icons.my_location_rounded,
-                size: 14,
-                color: EaColor.fore,
-              ),
-              onTap: _refreshCurrentLocation,
+              onTap: (){}
             ),
           ),
         ],
@@ -1126,7 +1250,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     final borderColor = EaColor.fore;
     final button = OutlinedButton.icon(
       onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
-      icon: Icon(Icons.my_location_rounded, size: 14, color: borderColor),
+      icon: Icon(Icons.air_outlined, size: 16, color: borderColor),
       label: Text(
         EaI18n.t(context, 'Update'),
         style: EaText.small.copyWith(color: EaAdaptiveColor.bodyText(context)),
@@ -1194,6 +1318,20 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       ),
     );
   }
+}
+
+class _OutsideWeatherSnapshot {
+  final double temp;
+  final String condition;
+
+  const _OutsideWeatherSnapshot({required this.temp, required this.condition});
+}
+
+class _GpsCoordinates {
+  final double lat;
+  final double lon;
+
+  const _GpsCoordinates(this.lat, this.lon);
 }
 
 class _AuthSheet extends StatelessWidget {
@@ -1921,10 +2059,17 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: EaColor.back,
                 shadowColor: Colors.transparent,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_outlined),
-              label: Text(EaI18n.t(context, 'Save changes')),
+              label: Text(
+                EaI18n.t(context, 'Save changes'),
+                style: EaText.small.copyWith(
+                  color: EaColor.back,
+                ),
+              )
             ),
           ),
         ],
@@ -2190,6 +2335,8 @@ class _LanguageRegionPageState extends State<LanguageRegionPage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: EaColor.back,
                 shadowColor: Colors.transparent,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
               ),
               onPressed: _save,
               icon: const Icon(Icons.save_rounded),
@@ -2433,6 +2580,8 @@ class _PasswordSetupPageState extends State<PasswordSetupPage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: EaColor.back,
                 shadowColor: Colors.transparent,
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
               ),
               onPressed: _savePassword,
               child: Text(EaI18n.t(context, 'Save password')),
@@ -2453,13 +2602,12 @@ class TwoStepVerificationPage extends StatefulWidget {
 }
 
 class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
-  static const _k2faApp = 'account.security.2fa.app';
-  static const _k2faSms = 'account.security.2fa.sms';
-  static const _k2faEmail = 'account.security.2fa.email';
-
-  bool _app = true;
-  bool _sms = false;
-  bool _email = true;
+  final _otpController = TextEditingController();
+  bool _app = false;
+  bool _verified = false;
+  String _manualKey = '';
+  String _otpauthUri = '';
+  bool _busy = false;
 
   @override
   void initState() {
@@ -2467,22 +2615,76 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _otpController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    _app = prefs.getBool(_k2faApp) ?? true;
-    _sms = prefs.getBool(_k2faSms) ?? false;
-    _email = prefs.getBool(_k2faEmail) ?? true;
+    final startup = await AppSecurityService.instance.readStartupSecurityState();
+    _app = startup.authenticatorEnabled;
+    _verified = startup.authenticatorVerified;
+    _manualKey = startup.manualEntryKey ?? '';
+    _otpauthUri = startup.otpauthUri?.toString() ?? '';
     if (mounted) setState(() {});
   }
 
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_k2faApp, _app);
-    await prefs.setBool(_k2faSms, _sms);
-    await prefs.setBool(_k2faEmail, _email);
+  Future<void> _toggleAuthenticator(bool enabled) async {
+    if (enabled) {
+      await _generateSecret();
+      return;
+    }
+
+    await AppSecurityService.instance.disableAuthenticator(removeSecret: true);
+    await _load();
+  }
+
+  Future<void> _generateSecret() async {
+    setState(() => _busy = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final email = (prefs.getString('account.auth.email') ?? '').trim();
+      final name = (prefs.getString('account.auth.name') ?? '').trim();
+      final accountLabel = email.isNotEmpty
+          ? email
+          : (name.isNotEmpty ? name : 'user@easync.local');
+
+      final setup = await AppSecurityService.instance.createOrRotateAuthenticator(
+        accountLabel: accountLabel,
+      );
+
+      _app = true;
+      _verified = false;
+      _manualKey = setup.manualEntryKey;
+      _otpauthUri = setup.otpauthUri.toString();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _verifyOtpCode() async {
+    final ok = await AppSecurityService.instance.verifyAuthenticatorCode(
+      _otpController.text,
+    );
+    if (!mounted) return;
+
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(EaI18n.t(context, 'Invalid code. Try again.'))),
+      );
+      return;
+    }
+
+    _otpController.clear();
+    await _load();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(EaI18n.t(context, '2FA atualizada com sucesso.'))),
+      SnackBar(
+        content: Text(
+          EaI18n.t(context, 'Authenticator app activated successfully.'),
+        ),
+      ),
     );
   }
 
@@ -2503,36 +2705,110 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
               child: Column(
                 children: [
                   SwitchListTile.adaptive(
+                    activeThumbColor: EaColor.fore,
                     value: _app,
                     title: Text(EaI18n.t(context, 'Authenticator app')),
-                    onChanged: (v) => setState(() => _app = v),
+                    subtitle: Text(
+                      _verified
+                          ? EaI18n.t(context, 'Enabled')
+                          : EaI18n.t(context, 'Disabled'),
+                    ),
+                    onChanged: _busy ? null : _toggleAuthenticator,
                   ),
-                  SwitchListTile.adaptive(
-                    value: _sms,
-                    title: Text(EaI18n.t(context, 'SMS verification')),
-                    onChanged: (v) => setState(() => _sms = v),
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _email,
-                    title: Text(EaI18n.t(context, 'Email verification')),
-                    onChanged: (v) => setState(() => _email = v),
-                  ),
+                  if (_app)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 250,
+                              height: 250,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: EaAdaptiveColor.border(context),
+                                ),
+                              ),
+                              child: BarcodeWidget(
+                                data: _otpauthUri,
+                                barcode: Barcode.qrCode(),
+                                color: Colors.black,
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          Text(
+                            EaI18n.t(context, 'Manual setup key'),
+                            style: EaText.small.copyWith(
+                              color: EaAdaptiveColor.secondaryText(context),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: EaAdaptiveColor.field(context),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: EaAdaptiveColor.border(context),
+                                    ),
+                                  ),
+                                  child: SelectableText(
+                                    _manualKey,
+                                    style: EaText.secondary.copyWith(
+                                      color: EaAdaptiveColor.bodyText(context),
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          TextField(
+                            controller: _otpController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: EaI18n.t(context, 'Enter 6 digit'),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: EaColor.fore,
+                                foregroundColor: EaColor.back,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                              ),
+                              onPressed: _verifyOtpCode,
+                              icon: const Icon(Icons.verified_user_outlined),
+                              label: Text(EaI18n.t(context, 'Verify')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          EaGradientButtonFrame(
-            borderRadius: BorderRadius.circular(12),
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: EaColor.back,
-                shadowColor: Colors.transparent,
-              ),
-              onPressed: _save,
-              icon: const Icon(Icons.shield_outlined),
-              label: Text(EaI18n.t(context, 'Save 2FA settings')),
             ),
           ),
         ],
@@ -2654,10 +2930,19 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     setState(() => _plan = plan);
   }
 
+  String _displayPlan(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    if (normalized == 'pro') return 'Pro';
+    if (normalized == 'plus') return 'Plus';
+    return 'Free';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final displayedPlan = _displayPlan(_plan);
+
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'EaSync Pro'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Experience'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -2678,7 +2963,9 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    EaI18n.t(context, 'Current plan: {plan}', {'plan': _plan}),
+                    EaI18n.t(context, 'Current plan: {plan}', {
+                      'plan': displayedPlan,
+                    }),
                     style: EaText.primary.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
                     ),
@@ -2700,21 +2987,29 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
           const SizedBox(height: 12),
           _planTile(
             'Free',
-            EaI18n.t(context, 'Basic device and assistant controls'),
+            EaI18n.t(context, 'Up to 3 devices and 1 profile'),
+          ),
+          _planTile(
+            'Plus',
+            EaI18n.t(
+              context,
+              'Up to 3 profiles, temperature control, and basic assistant.',
+            ),
           ),
           _planTile(
             'Pro',
-            EaI18n.t(context, 'Advanced automations and full AI modes'),
+            EaI18n.t(context, 'Unlimited resources and full assistant modes'),
+            displayName: EaI18n.t(context, 'Pro'),
           ),
         ],
       ),
     );
   }
 
-  Widget _planTile(String plan, String desc) {
+  Widget _planTile(String plan, String desc, {String? displayName}) {
     return Card(
       child: ListTile(
-        title: Text(plan),
+        title: Text(displayName ?? plan),
         subtitle: Text(desc),
         trailing: _plan == plan
             ? const Icon(Icons.check_circle, color: EaColor.fore)
@@ -2896,6 +3191,8 @@ class _DataExportPageState extends State<DataExportPage> {
                   backgroundColor: Colors.transparent,
                   foregroundColor: EaColor.back,
                   shadowColor: Colors.transparent,
+                  alignment: Alignment.centerLeft,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                 ),
                 onPressed: _export,
                 icon: const Icon(Icons.file_download_outlined),

@@ -53,6 +53,7 @@ class AgentState extends State<Agent>
   bool _sidebarOpen = false;
   String _profileName = '';
   String? _profilePhoto;
+  EaPlanTier _planTier = EaPlanTier.free;
 
   static const double _chatDrawerWidth = 252;
   static const Duration _thinkingMinDuration = Duration(milliseconds: 80);
@@ -92,7 +93,23 @@ class AgentState extends State<Agent>
   @override
   void initState() {
     super.initState();
+    _loadPlanTier();
     _loadState();
+  }
+
+  Future<void> _loadPlanTier() async {
+    final next = await EaPlanService.instance.readTier();
+    if (!mounted) return;
+    setState(() => _planTier = next);
+  }
+
+  bool get _assistantAllowed => EaPlanService.instance.allowsAssistant(_planTier);
+
+  void _openPlanOptions() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SubscriptionPage()),
+    ).then((_) => _loadPlanTier());
   }
 
   @override
@@ -204,6 +221,24 @@ class AgentState extends State<Agent>
   Future<void> _send() async {
     final raw = _commandController.text.trim();
     if (raw.isEmpty || _sending) return;
+    if (!_assistantAllowed) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              EaI18n.t(context, 'Assistant is available from Plus plan.'),
+            ),
+            action: SnackBarAction(
+              label: EaI18n.t(context, 'Go to plan'),
+              onPressed: _openPlanOptions,
+            ),
+          ),
+        );
+      return;
+    }
+
     final newChatText = EaI18n.t(context, 'New chat');
     final noResponseText = EaI18n.t(context, 'No response generated.');
 
@@ -488,6 +523,38 @@ class AgentState extends State<Agent>
               'The AI assistant is disabled on this device. Enable it on the home screen to use.',
               textAlign: TextAlign.center,
               style: EaText.secondary.copyWith(fontSize: 18),
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (!_assistantAllowed) {
+      return Scaffold(
+        appBar: AppBar(title: Text(EaI18n.t(context, 'Assistant'))),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.workspace_premium_outlined,
+                  size: 38,
+                  color: EaColor.fore,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  EaI18n.t(context, 'Assistant is available from Plus plan.'),
+                  textAlign: TextAlign.center,
+                  style: EaText.secondary.copyWith(fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: _openPlanOptions,
+                  child: Text(EaI18n.t(context, 'Open plan options')),
+                ),
+              ],
             ),
           ),
         ),
