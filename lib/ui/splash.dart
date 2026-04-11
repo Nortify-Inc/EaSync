@@ -7,6 +7,11 @@
  */
 
 import 'handler.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:flutter/services.dart';
+
+import 'auth/security.dart';
+import 'auth/service.dart';
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -17,6 +22,7 @@ class Splash extends StatefulWidget {
 
 class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   bool _aiAllowed = false;
+  final LocalAuthentication _localAuth = LocalAuthentication();
   late final AnimationController _fadeController;
   late final Animation<double> _fade;
   Timer? _tipTimer;
@@ -26,6 +32,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   final List<_BootStepItem> _bootSteps = [
     _BootStepItem(id: 'core', title: 'Checking modules'),
     _BootStepItem(id: 'drivers', title: 'Initializing drivers'),
+    _BootStepItem(id: 'identity', title: 'Validating identity'),
     _BootStepItem(id: 'aiRuntime', title: 'Loading AI runtime'),
     _BootStepItem(id: 'modelCache', title: 'Checking local model'),
     _BootStepItem(id: 'modelDownload', title: 'Downloading AI model'),
@@ -87,6 +94,8 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     if (!mounted) return;
 
     await _runStartupChecks();
+    await _runStartupIdentityCheck();
+    if (!mounted) return;
 
     if (Platform.isAndroid) {
       final allow = await showDialog<bool>(
@@ -274,6 +283,9 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       _markStepFailed('modelCache', detail: 'Cache check failed: $e');
     }
     await Future.delayed(_stepCharmDelay);
+
+    _markStepSkipped('identity', detail: 'Waiting for login/session checks');
+    await Future.delayed(_stepCharmDelay);
   }
 
   void _markStepRunning(String id, {String? detail}) {
@@ -304,6 +316,71 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         _bootSteps[index].detail = detail;
       }
     });
+  }
+
+  Future<void> _runStartupIdentityCheck() async {
+    _markStepRunning('identity', detail: 'Checking session state…');
+
+    // Reset cached session gate so splash always evaluates current security state.
+    await AppSecurityService.instance.clearSessionValidation();
+
+    final loggedIn = await OAuthService.instance.isLoggedIn;
+    if (!loggedIn) {
+      _markStepSkipped('identity', detail: 'No authenticated session');
+      return;
+    }
+
+    final security = await AppSecurityService.instance
+        .readStartupSecurityState();
+    if (!security.requiresBiometric) {
+      _markStepDone('identity', detail: 'Identity gate not required');
+      return;
+    }
+
+    final biometricOk = await _authenticateWithBiometrics();
+    if (!biometricOk) {
+      await OAuthService.instance.logout();
+      _markStepFailed('identity', detail: 'Biometric validation failed');
+      return;
+    }
+
+    _markStepDone('identity', detail: 'Identity validated');
+  }
+
+  Future<bool> _authenticateWithBiometrics() async {
+    try {
+      final supported = await _localAuth.isDeviceSupported();
+      final canCheck = await _localAuth.canCheckBiometrics;
+      if (!supported || !canCheck) {
+        if (!mounted) return false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              EaI18n.t(
+                context,
+                'Biometrics are enabled but unavailable on this device.',
+              ),
+            ),
+          ),
+        );
+        return false;
+      }
+
+      return await _localAuth.authenticate(
+        localizedReason: EaI18n.t(
+          context,
+          'Confirm your identity to unlock EaSync',
+        ),
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+          useErrorDialogs: true,
+        ),
+      );
+    } on PlatformException {
+      return false;
+    }
   }
 
   @override
@@ -347,15 +424,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       children: [
         Row(
           children: [
-            if (!isError)
-              SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: EaColor.fore,
-                ),
-              ),
             if (isError)
               Icon(Icons.error_outline, size: 14, color: Colors.redAccent),
             const SizedBox(width: 8),
@@ -381,19 +449,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: isDownloading ? _aiProgress : null,
-            minHeight: 3,
-            backgroundColor: EaAdaptiveColor.secondaryText(
-              context,
-            ).withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              isError ? Colors.redAccent : EaColor.fore,
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -541,7 +596,11 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       case _BootStepState.done:
         return const Icon(Icons.check_circle, size: 14, color: Colors.green);
       case _BootStepState.failed:
-        return const Icon(Icons.error_outline, size: 14, color: Colors.redAccent);
+        return const Icon(
+          Icons.error_outline,
+          size: 14,
+          color: Colors.redAccent,
+        );
       case _BootStepState.skipped:
         return Icon(
           Icons.remove_circle_outline,
@@ -652,8 +711,5 @@ class _BootStepItem {
   _BootStepState state = _BootStepState.pending;
   String detail = '';
 
-  _BootStepItem({
-    required this.id,
-    required this.title,
-  });
+  _BootStepItem({required this.id, required this.title});
 }

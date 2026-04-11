@@ -249,7 +249,8 @@ class EaI18n {
     'Full location': 'Localização completa',
     'Update': 'Atualizar',
     'Biometrics and passkeys': 'Biometria e chaves de acesso',
-    'Increase the security to access the app': 'Aumente a segurança para acessar o app',
+    'Increase the security to access the app':
+        'Aumente a segurança para acessar o app',
     'Sign out': 'Sair',
     'Continue': 'Continuar',
     'Display name': 'Nome de exibição',
@@ -337,42 +338,62 @@ class EaI18n {
     'Enable auto-arrival routine': 'Ativar rotina de chegada automática',
     'Auto run near {hour} when weather is warm.':
         'Executa automaticamente perto de {hour} quando o clima está quente.',
-    'Não foi possível atualizar a temperatura agora.':
-        'Could not update temperature right now.',
-    'Firebase ainda não está configurado nesta build.':
-        'Firebase is not configured in this build yet.',
-    'Não foi possível escolher a imagem: {error}':
-        'Could not pick image: {error}',
-    'GPS indisponível na Web. Usando o campo Localização como fallback.':
-        'GPS unavailable on Web. Using the Location field as fallback.',
-    'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.':
-        'GPS unavailable on this platform. Using the Location field as fallback.',
-    'Não foi possível atualizar localização: {error}':
-        'Could not update location: {error}',
-    'Localização atualizada com fallback do campo digitado.':
-        'Location updated using typed field fallback.',
-    'Detalhes do plano e benefícios': 'Plan details and benefits',
-    'Firebase ainda não está configurado para esta plataforma.':
-        'Firebase is not configured for this platform yet.',
-    'Falha ao entrar.': 'Sign-in failed.',
-    'Falha ao entrar: {error}': 'Sign-in failed: {error}',
-    'Código de verificação (demo): {code}': 'Verification code (demo): {code}',
-    'PIN de verificação inválido.': 'Invalid verification PIN.',
-    'Falha ao criar conta.': 'Failed to create account.',
-    'Falha ao criar conta: {error}': 'Failed to create account: {error}',
-    'Digite o PIN de 6 dígitos para concluir o cadastro':
-        'Enter the 6-digit PIN to complete sign up',
+    'Could not update temperature right now.':
+        'Não foi possível atualizar a temperatura agora.',
+    'Firebase is not configured in this build yet.':
+        'Firebase ainda não está configurado nesta build.',
+    'Could not pick image: {error}':
+        'Não foi possível escolher a imagem: {error}',
+    'GPS unavailable on Web. Using the Location field as fallback.':
+        'GPS indisponível na Web. Usando o campo Localização como fallback.',
+    'GPS unavailable on this platform. Using the Location field as fallback.':
+        'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.',
+    'Could not update location: {error}':
+        'Não foi possível atualizar localização: {error}',
+    'Location updated using typed field fallback.':
+        'Localização atualizada com fallback do campo digitado.',
+    'Enable location service (GPS) to update address.':
+        'Ative o serviço de localização (GPS) para atualizar o endereço.',
+    'Open settings': 'Abrir ajustes',
+    'Location permission denied. Allow access to update.':
+        'Permissão de localização negada. Permita o acesso para atualizar.',
+    'Location permission permanently denied. Allow it in app settings.':
+        'Permissão de localização bloqueada permanentemente. Libere nas configurações do app.',
+    'Open app': 'Abrir app',
+    'Firebase is not configured for this platform yet.':
+        'Firebase ainda não está configurado para esta plataforma.',
+    'Sign-in failed.': 'Falha ao entrar.',
+    'Sign-in failed: {error}': 'Falha ao entrar: {error}',
+    'Verification code (demo): {code}': 'Código de verificação (demo): {code}',
+    'Invalid verification PIN.': 'PIN de verificação inválido.',
+    'Failed to create account.': 'Falha ao criar conta.',
+    'Failed to create account: {error}': 'Falha ao criar conta: {error}',
+    'Enter the 6-digit PIN to complete sign up':
+        'Digite o PIN de 6 dígitos para concluir o cadastro',
     '2-step verification': 'Verificação em 2 etapas',
-    'Additional access protection to your account': 'Proteção adicional de acesso à sua conta',
+    'Additional access protection to your account':
+        'Proteção adicional de acesso à sua conta',
     'Trusted devices': 'Dispositivos confiáveis',
     'Current and recent sessions': 'Sessões atuais e recentes',
+    'Host': 'Host',
+    'Can control devices': 'Pode controlar dispositivos',
+    'Can modify configuration': 'Pode modificar configurações',
+    'Host policy: control {control}, modify {modify}':
+        'Política do host: controle {control}, modificação {modify}',
+    'Take host role on this device': 'Assumir papel de host neste dispositivo',
+    'Host applies permissions to other instances':
+        'O host aplica permissões para outras instâncias',
+    'Local policy active: control {control}, modify {modify}':
+        'Política local ativa: controle {control}, modificação {modify}',
+    'No trusted peers found on local network.':
+        'Nenhum dispositivo confiável encontrado na rede local.',
     'Plan details and benefits': 'Detalhes do plano e benefícios',
-    'Billing history': 'Histórico de cobranças',
+    'Billing': 'Cobranças',
     'Invoices and payment methods': 'Faturas e meios de pagamento',
     'Export account data': 'Exportar dados da conta',
     'Portable backup package': 'Pacote de backup portátil',
-    'Delete account': 'Excluir conta',
-    'Permanent removal flow': 'Fluxo de remoção permanente',
+    'Delete application data': 'Excluir dados do aplicativo',
+    'Permanent local data deletion': 'Exclusão permanente de dados locais',
     'Authenticated account': 'Conta autenticada',
     'You are not authenticated yet.': 'Você ainda não está autenticado.',
     'Sign in': 'Entrar',
@@ -383,6 +404,11 @@ class EaI18n {
     'Welcome back': 'Bem-vindo de volta',
     'Choose a provider to get started': 'Escolha um provedor para começar',
     'Choose a provider to continue': 'Escolha um provedor para continuar',
+    'By continuing you agree to our ':
+        'Ao continuar você está aceitando nossos ',
+    'Terms of Use': 'Termos de Uso',
+    'Privacy Policy': 'Política de Privacidade',
+    ' and ': ' e ',
     'By continuing you agree to our Terms of Service.':
         'Ao continuar você concorda com nossos Termos de Serviço.',
     'Create account': 'Criar conta',
@@ -413,10 +439,17 @@ class EaI18n {
     'Spanish': 'Español',
     'Portugal': 'Portugal',
     '24-hour format': 'Formato 24 horas',
+    'Use 24-hour time across schedules and labels':
+        'Usar formato 24h em agendas e horários',
     'Save preferences': 'Salvar preferências',
     'Enable fingerprint unlock': 'Ativar desbloqueio por digital',
+    'Enable device biometrics unlock':
+        'Ativar desbloqueio biométrico do dispositivo',
+    'Use fingerprint or face recognition to unlock the app faster.':
+        'Use digital ou reconhecimento facial para desbloquear o app mais rápido.',
     'Biometric barrier on the device (without local_auth).':
         'Barreira biométrica no dispositivo (sem local_auth).',
+    '24h format': 'Formato 24h',
     'Change login password': 'Alterar senha de login',
     'Create login password': 'Criar senha de login',
     'Configure your local login password':
@@ -431,6 +464,42 @@ class EaI18n {
     'Save password': 'Salvar senha',
     '2FA updated successfully.': '2FA atualizada com sucesso.',
     'Authenticator app': 'Aplicativo autenticador',
+    'Manual setup key': 'Chave de configuração manual',
+    'Enter 6 digit': 'Digite 6 dígitos',
+    'Invalid code. Try again.': 'Código inválido. Tente novamente.',
+    'Invalid code.': 'Código inválido.',
+    'Enter your 6-digit verification code to continue.':
+        'Digite seu código de verificação de 6 dígitos para continuar.',
+    'Biometrics are enabled but unavailable on this device.':
+        'A biometria está ativada, mas indisponível neste dispositivo.',
+    'Confirm your identity to unlock EaSync':
+        'Confirme sua identidade para desbloquear o EaSync',
+    'Authenticator app activated successfully.':
+        'Aplicativo autenticador ativado com sucesso.',
+    'Verify': 'Verificar',
+    '2FA is active. Disable and enable again to generate a new setup key.':
+        'O 2FA está ativo. Desative e ative novamente para gerar uma nova chave de configuração.',
+    'How to configure 2FA': 'Como configurar o 2FA',
+    '1. Enable Authenticator app.': '1. Ative o aplicativo autenticador.',
+    '2. Choose QR-Code or Setup Key.': '2. Escolha entre QR-Code e Setup Key.',
+    '2. Scan the QR code or copy the setup key in your authenticator app.':
+        '2. Escaneie o QR code ou copie a chave de configuração no seu app autenticador.',
+    '3. Enter the 6-digit code shown in the app to confirm activation.':
+        '3. Digite o código de 6 dígitos exibido no app para confirmar a ativação.',
+    '3. Setup Key mode requires the 6-digit code. QR-Code mode does not require code on this screen.':
+        '3. O modo Setup Key exige o código de 6 dígitos. No modo QR-Code, não é necessário código nesta tela.',
+    'Status': 'Status',
+    'Inactive': 'Inativo',
+    'Pending setup': 'Configuração pendente',
+    'Active and protected': 'Ativo e protegido',
+    'QR-Code': 'QR-Code',
+    'Setup Key': 'Setup Key',
+    'I scanned the QR code and want to continue':
+        'Escaneei o QR code e quero continuar',
+    'Could not confirm QR setup. Try Setup key mode.':
+        'Não foi possível confirmar o setup via QR. Tente o modo Setup Key.',
+    'QR setup confirmed. 2FA is now active.':
+        'Setup via QR confirmado. O 2FA está ativo.',
     'SMS verification': 'Verificação por SMS',
     'Email verification': 'Verificação por email',
     'Save 2FA settings': 'Salvar configurações de 2FA',

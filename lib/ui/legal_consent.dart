@@ -6,9 +6,11 @@
  */
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 
 import 'handler.dart';
 import 'auth/provider.dart';
+import 'auth/security.dart';
 import 'auth/service.dart';
 
 class LegalConsentPayload {
@@ -58,6 +60,51 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
     setState(() => _authBusy = true);
     try {
       final profile = await OAuthService.instance.login(provider);
+
+      final security = await AppSecurityService.instance
+          .readStartupSecurityState();
+      if (security.requiresAuthenticatorCode) {
+        var unlocked = false;
+        var attempts = 0;
+        while (mounted && attempts < 5) {
+          attempts++;
+          final normalized = await _askAuthenticatorCodeForLogin();
+          if (!mounted || normalized == null) break;
+
+          final ok = await AppSecurityService.instance.verifyAuthenticatorCode(
+            normalized,
+          );
+          if (ok) {
+            unlocked = true;
+            break;
+          }
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                content: Text(EaI18n.t(context, 'Invalid code. Try again.')),
+              ),
+            );
+        }
+
+        if (!unlocked) {
+          await OAuthService.instance.logout();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                content: Text(EaI18n.t(context, 'Sign-in failed.')),
+              ),
+            );
+          return;
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _authenticated = true;
@@ -92,12 +139,119 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
     }
   }
 
+  Future<String?> _askAuthenticatorCodeForLogin() async {
+    final controller = TextEditingController();
+    var invalid = false;
+
+    try {
+      return await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setLocalState) {
+              return SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.of(ctx).viewInsets.bottom,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: EaAdaptiveColor.surface(context),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: EaAdaptiveColor.border(context),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            EaI18n.t(
+                              context,
+                              'Enter your 6-digit verification code to continue.',
+                            ),
+                            style: EaText.small.copyWith(
+                              color: EaAdaptiveColor.secondaryText(context),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextField(
+                            controller: controller,
+                            autofocus: true,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(6),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: '123456',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          if (invalid) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              EaI18n.t(context, 'Invalid code.'),
+                              style: EaText.small.copyWith(
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: EaColor.fore,
+                                foregroundColor: EaColor.back,
+                              ),
+                              onPressed: () {
+                                final normalized = controller.text.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                );
+                                if (normalized.length != 6) {
+                                  setLocalState(() => invalid = true);
+                                  return;
+                                }
+                                Navigator.of(ctx).pop(normalized);
+                              },
+                              child: Text(EaI18n.t(context, 'Verify')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
+  }
+
   Future<void> _openArticle(_LegalArticleType type) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _LegalArticlePage(
-          articleType: type,
+        builder: (_) => LegalArticlePage(
+          articleType: type == _LegalArticleType.contracts
+              ? LegalArticleType.contracts
+              : LegalArticleType.privacyTerms,
           isPtBr: _isPtBr,
         ),
       ),
@@ -220,10 +374,7 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Checkbox(
-            value: value,
-            onChanged: (v) => onChanged(v ?? false),
-          ),
+          Checkbox(value: value, onChanged: (v) => onChanged(v ?? false)),
           const SizedBox(width: 4),
           Expanded(
             child: Padding(
@@ -354,20 +505,23 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
           if (_authenticated) const SizedBox(height: 8),
           _providerButton(
             label: 'Google',
-            icon: Icons.g_mobiledata_rounded,
+            icon: const _GoogleIcon(),
             onTap: () => _loginWith(OAuthProvider.google),
           ),
           const SizedBox(height: 8),
           _providerButton(
             label: 'Microsoft',
-            icon: Icons.window_rounded,
+            icon: const _MicrosoftIcon(),
             onTap: () => _loginWith(OAuthProvider.microsoft),
           ),
           if (_isIosOrMac) ...[
             const SizedBox(height: 8),
             _providerButton(
               label: 'Apple',
-              icon: Icons.apple_rounded,
+              icon: Icon(
+                Icons.apple_rounded,
+                color: EaAdaptiveColor.bodyText(context),
+              ),
               onTap: () => _loginWith(OAuthProvider.apple),
             ),
           ],
@@ -378,7 +532,7 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
 
   Widget _providerButton({
     required String label,
-    required IconData icon,
+    required Widget icon,
     required VoidCallback onTap,
   }) {
     return SizedBox(
@@ -395,7 +549,7 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: EaAdaptiveColor.bodyText(context)),
+            SizedBox(width: 22, child: Center(child: icon)),
             const SizedBox(width: 10),
             Text(
               label,
@@ -444,7 +598,7 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
         const TextSpan(text: ' e os '),
         _linkSpan(
           'Termos de Uso',
-          () => _openArticle(_LegalArticleType.privacyTerms),
+          () => _openArticle(_LegalArticleType.contracts),
         ),
         const TextSpan(text: '.'),
       ];
@@ -457,7 +611,10 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
         () => _openArticle(_LegalArticleType.privacyTerms),
       ),
       const TextSpan(text: ' and the '),
-      _linkSpan('Terms of Use', () => _openArticle(_LegalArticleType.privacyTerms)),
+      _linkSpan(
+        'Terms of Use',
+        () => _openArticle(_LegalArticleType.contracts),
+      ),
       const TextSpan(text: '.'),
     ];
   }
@@ -465,11 +622,14 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
 
 enum _LegalArticleType { contracts, privacyTerms }
 
-class _LegalArticlePage extends StatelessWidget {
-  final _LegalArticleType articleType;
+enum LegalArticleType { contracts, privacyTerms }
+
+class LegalArticlePage extends StatelessWidget {
+  final LegalArticleType articleType;
   final bool isPtBr;
 
-  const _LegalArticlePage({
+  const LegalArticlePage({
+    super.key,
     required this.articleType,
     required this.isPtBr,
   });
@@ -482,9 +642,7 @@ class _LegalArticlePage extends StatelessWidget {
       appBar: AppBar(title: Text(doc.title)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-        children: [
-          ...doc.sections.map((s) => _section(context, s)),
-        ],
+        children: [...doc.sections.map((s) => _section(context, s))],
       ),
     );
   }
@@ -518,11 +676,11 @@ class _LegalArticlePage extends StatelessWidget {
 
   _DocContent _buildDoc() {
     if (isPtBr) {
-      return articleType == _LegalArticleType.contracts
+      return articleType == LegalArticleType.contracts
           ? _contractsPt()
           : _privacyTermsPt();
     }
-    return articleType == _LegalArticleType.contracts
+    return articleType == LegalArticleType.contracts
         ? _contractsEn()
         : _privacyTermsEn();
   }
@@ -678,6 +836,109 @@ class _LegalArticlePage extends StatelessWidget {
       ],
     );
   }
+}
+
+class _GoogleIcon extends StatelessWidget {
+  const _GoogleIcon();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 22,
+    height: 22,
+    child: CustomPaint(painter: _GooglePainter()),
+  );
+}
+
+class _GooglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const blue = Color(0xFF4285F4);
+    const red = Color(0xFFEA4335);
+    const yellow = Color(0xFFFBBC05);
+    const green = Color(0xFF34A853);
+
+    final stroke = size.width * 0.18;
+    final radius = (size.width - stroke) / 2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    double deg(double v) => v * pi / 180.0;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = stroke;
+
+    paint.color = red;
+    canvas.drawArc(rect, deg(-40), deg(85), false, paint);
+
+    paint.color = yellow;
+    canvas.drawArc(rect, deg(45), deg(90), false, paint);
+
+    paint.color = green;
+    canvas.drawArc(rect, deg(135), deg(90), false, paint);
+
+    paint.color = blue;
+    canvas.drawArc(rect, deg(225), deg(95), false, paint);
+
+    final barHeight = stroke * 0.7;
+    final barTop = center.dy - barHeight / 2;
+    final barLeft = center.dx + radius * 0.05;
+    final barRight = center.dx + radius * 1.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(barLeft, barTop, barRight, barTop + barHeight),
+        Radius.circular(barHeight / 2),
+      ),
+      Paint()..color = blue,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _MicrosoftIcon extends StatelessWidget {
+  const _MicrosoftIcon();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 22,
+    height: 22,
+    child: CustomPaint(painter: _MicrosoftPainter()),
+  );
+}
+
+class _MicrosoftPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final half = size.width / 2 - 1.0;
+    const gap = 2.0;
+
+    final rects = [
+      Rect.fromLTWH(0, 0, half, half),
+      Rect.fromLTWH(half + gap, 0, half, half),
+      Rect.fromLTWH(0, half + gap, half, half),
+      Rect.fromLTWH(half + gap, half + gap, half, half),
+    ];
+
+    const colors = [
+      Color(0xFFF25022),
+      Color(0xFF7FBA00),
+      Color(0xFFFFB900),
+      Color(0xFF00A4EF),
+    ];
+
+    for (int i = 0; i < 4; i++) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(rects[i], const Radius.circular(1.5)),
+        Paint()..color = colors[i],
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DocContent {

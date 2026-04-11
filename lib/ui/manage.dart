@@ -186,7 +186,9 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       return true;
     }
 
-    _showTopErrorSnack(EaI18n.t(context, 'Device limit reached for your plan.'));
+    _showTopErrorSnack(
+      EaI18n.t(context, 'Device limit reached for your plan.'),
+    );
     _openPlanOptions();
     return false;
   }
@@ -1035,43 +1037,45 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                         ),
                       ),
                     ),
-
-                  Positioned.fill(
-                    child: EaBlurFadeSwitcher(
-                      marker: discovering,
-                      beginBlur: 4,
-                      duration: const Duration(milliseconds: 140),
-                      child: OutlinedButton.icon(
-                        onPressed: discovering ? null : _discoverDevices,
-                        icon: const Icon(Icons.radar_rounded, size: 18),
-                        label: discovering
-                            ? Text(
-                                EaI18n.t(context, 'Discovering...'),
-                                style: EaText.secondary.copyWith(
-                                  color: EaAdaptiveColor.bodyText(context),
+                  Expanded(
+                    child: SizedBox(
+                      height: _kBottomActionButtonHeight,
+                      child: EaBlurFadeSwitcher(
+                        marker: discovering,
+                        beginBlur: 4,
+                        duration: const Duration(milliseconds: 140),
+                        child: OutlinedButton.icon(
+                          onPressed: discovering ? null : _discoverDevices,
+                          icon: const Icon(Icons.radar_rounded, size: 18),
+                          label: discovering
+                              ? Text(
+                                  EaI18n.t(context, 'Discovering...'),
+                                  style: EaText.secondary.copyWith(
+                                    color: EaAdaptiveColor.bodyText(context),
+                                  ),
+                                )
+                              : Text(
+                                  EaI18n.t(context, 'Discover'),
+                                  style: EaText.secondary.copyWith(
+                                    color: EaAdaptiveColor.bodyText(context),
+                                  ),
                                 ),
-                              )
-                            : Text(
-                                EaI18n.t(context, 'Discover'),
-                                style: EaText.secondary.copyWith(
-                                  color: EaAdaptiveColor.bodyText(context),
-                                ),
-                              ),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(
-                            _kBottomActionButtonHeight,
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(
+                              _kBottomActionButtonHeight,
+                            ),
+                            alignment: Alignment.center,
+                            side: BorderSide(
+                              color: discovering
+                                  ? Colors.transparent
+                                  : EaColor.fore,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            foregroundColor: EaColor.fore,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                           ),
-                          alignment: Alignment.center,
-                          side: BorderSide(
-                            color: discovering
-                                ? Colors.transparent
-                                : EaColor.fore,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          foregroundColor: EaColor.fore,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                       ),
                     ),
@@ -1106,9 +1110,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                           padding: const EdgeInsets.symmetric(vertical: 0),
                         ).copyWith(
                           minimumSize: WidgetStateProperty.all(
-                            const Size.fromHeight(
-                              _kBottomActionButtonHeight,
-                            ),
+                            const Size.fromHeight(_kBottomActionButtonHeight),
                           ),
                           padding: WidgetStateProperty.all(
                             const EdgeInsets.symmetric(horizontal: 12),
@@ -1974,19 +1976,24 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                         EaI18n.t(context, 'Wi-Fi Provisioning'),
                         style: EaText.primary.copyWith(fontSize: 14),
                       ),
-                      SwitchListTile(
-                        value: rememberWifiCredentials,
-                        onChanged: (value) {
-                          setState(() => rememberWifiCredentials = value);
-                        },
-                        contentPadding: EdgeInsets.zero,
-                        activeThumbColor: EaColor.fore,
-                        title: Text(
-                          EaI18n.t(context, 'Remember Wi-Fi credentials'),
-                          style: EaText.secondary.copyWith(
-                            color: EaAdaptiveColor.secondaryText(context),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              EaI18n.t(context, 'Remember Wi-Fi credentials'),
+                              style: EaText.secondary.copyWith(
+                                color: EaAdaptiveColor.secondaryText(context),
+                              ),
+                            ),
                           ),
-                        ),
+                          Switch.adaptive(
+                            activeThumbColor: EaColor.fore,
+                            value: rememberWifiCredentials,
+                            onChanged: (value) {
+                              setState(() => rememberWifiCredentials = value);
+                            },
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
                       Text(

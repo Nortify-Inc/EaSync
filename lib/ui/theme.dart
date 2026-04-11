@@ -30,6 +30,8 @@ class EaAppSettings extends ChangeNotifier {
   static const String _kLowDataMode = 'usage.low_data_mode';
   static const String _kUsagePattern = 'usage.pattern';
   static const String _kProfileLanguage = 'profile.language';
+  static const String _kRemoteCanControl = 'security.remote.can_control';
+  static const String _kRemoteCanModify = 'security.remote.can_modify';
 
   static final EaAppSettings instance = EaAppSettings._();
   EaAppSettings._();
@@ -53,6 +55,8 @@ class EaAppSettings extends ChangeNotifier {
   bool lowDataMode = false;
   String usagePattern = 'balanced';
   Locale? localeOverride;
+  bool remoteCanControl = true;
+  bool remoteCanModify = true;
 
   static Locale? _localeFromProfileLanguage(String raw) {
     final v = raw.trim().toLowerCase();
@@ -99,6 +103,8 @@ class EaAppSettings extends ChangeNotifier {
     offlineCache = prefs.getBool(_kOfflineCache) ?? true;
     lowDataMode = prefs.getBool(_kLowDataMode) ?? false;
     usagePattern = prefs.getString(_kUsagePattern) ?? 'balanced';
+    remoteCanControl = prefs.getBool(_kRemoteCanControl) ?? true;
+    remoteCanModify = prefs.getBool(_kRemoteCanModify) ?? true;
     localeOverride = _localeFromProfileLanguage(
       prefs.getString(_kProfileLanguage) ?? '',
     );
@@ -150,6 +156,20 @@ class EaAppSettings extends ChangeNotifier {
     await prefs.setBool(_kOfflineCache, offlineCache);
     await prefs.setBool(_kLowDataMode, lowDataMode);
     await prefs.setString(_kUsagePattern, usagePattern);
+    await prefs.setBool(_kRemoteCanControl, remoteCanControl);
+    await prefs.setBool(_kRemoteCanModify, remoteCanModify);
+    notifyListeners();
+  }
+
+  Future<void> applyRemotePermissions({
+    required bool canControl,
+    required bool canModify,
+  }) async {
+    remoteCanControl = canControl;
+    remoteCanModify = canModify;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kRemoteCanControl, canControl);
+    await prefs.setBool(_kRemoteCanModify, canModify);
     notifyListeners();
   }
 }

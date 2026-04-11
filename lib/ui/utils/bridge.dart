@@ -1662,6 +1662,20 @@ class Bridge {
     }
   }
 
+  static void _requireRemoteControlPermission() {
+    if (!EaAppSettings.instance.remoteCanControl) {
+      throw Exception('Remote policy blocks device control on this instance.');
+    }
+  }
+
+  static void _requireRemoteModifyPermission() {
+    if (!EaAppSettings.instance.remoteCanModify) {
+      throw Exception(
+        'Remote policy blocks configuration changes on this instance.',
+      );
+    }
+  }
+
   static Future<void> init() async {
     if (_ready) return;
 
@@ -1765,6 +1779,7 @@ class Bridge {
     String? assetPath,
   }) {
     _ensureReady();
+    _requireRemoteModifyPermission();
     _log('device', 'Registering device $name', uuid: uuid);
 
     final uuidPtr = uuid.toNativeUtf8();
@@ -1866,6 +1881,7 @@ class Bridge {
 
   static void removeDevice(String uuid) {
     _ensureReady();
+    _requireRemoteModifyPermission();
     _log('device', 'Removing device', uuid: uuid);
 
     final uuidPtr = uuid.toNativeUtf8();
@@ -2107,6 +2123,7 @@ class Bridge {
     required String password,
   }) async {
     _ensureReady();
+    _requireRemoteModifyPermission();
     _log('wifi', 'Starting Wi-Fi provisioning', uuid: uuid);
 
     final ssidTrimmed = ssid.trim();
@@ -2781,6 +2798,7 @@ class Bridge {
 
   static void setPower(String uuid, bool value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2802,6 +2820,7 @@ class Bridge {
 
   static void setBrightness(String uuid, int value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2823,6 +2842,7 @@ class Bridge {
 
   static void setColor(String uuid, int value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2844,6 +2864,7 @@ class Bridge {
 
   static void setTemperature(String uuid, double value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2865,6 +2886,7 @@ class Bridge {
 
   static void setTemperatureFridge(String uuid, double value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2886,6 +2908,7 @@ class Bridge {
 
   static void setTemperatureFreezer(String uuid, double value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2907,6 +2930,7 @@ class Bridge {
 
   static void setTime(String uuid, int value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2928,6 +2952,7 @@ class Bridge {
 
   static void setColorTemperature(String uuid, int value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2949,6 +2974,7 @@ class Bridge {
 
   static void setLock(String uuid, bool value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2970,6 +2996,7 @@ class Bridge {
 
   static void setMode(String uuid, int value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 
@@ -2991,6 +3018,7 @@ class Bridge {
 
   static void setPosition(String uuid, double value) {
     _ensureReady();
+    _requireRemoteControlPermission();
 
     final uuidPtr = uuid.toNativeUtf8();
 

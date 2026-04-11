@@ -53,6 +53,7 @@ class AppSecurityService {
   static const _k2faApp = 'account.security.2fa.app';
   static const _k2faVerified = 'account.security.2fa.verified';
   static const _k2faAccountLabel = 'account.security.2fa.account_label';
+  static const _kSessionValidated = 'account.security.session.validated';
 
   static const _kSecure2faSecret = 'account.security.2fa.secret';
 
@@ -89,6 +90,21 @@ class AppSecurityService {
   Future<void> setAuthenticatorEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_k2faApp, enabled);
+  }
+
+  Future<bool> isSessionValidated() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_kSessionValidated) ?? false;
+  }
+
+  Future<void> markSessionValidated(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSessionValidated, value);
+  }
+
+  Future<void> clearSessionValidation() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kSessionValidated);
   }
 
   Future<AuthenticatorSetupData> createOrRotateAuthenticator({
@@ -147,6 +163,16 @@ class AppSecurityService {
     }
 
     return false;
+  }
+
+  Future<bool> confirmAuthenticatorSetupViaQr() async {
+    final secret = await _secure.read(key: _kSecure2faSecret);
+    if (secret == null || secret.trim().isEmpty) return false;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_k2faVerified, true);
+    await prefs.setBool(_k2faApp, true);
+    return true;
   }
 
   Future<void> disableAuthenticator({bool removeSecret = false}) async {

@@ -8,8 +8,10 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:barcode_widget/barcode_widget.dart';
 import 'package:geocoding/geocoding.dart';
@@ -20,6 +22,7 @@ import 'auth/provider.dart';
 import 'auth/security.dart';
 import 'auth/service.dart';
 import 'handler.dart';
+import 'legal_consent.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,18 +34,6 @@ class Account extends StatefulWidget {
 }
 
 class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
-  static String _normalizeLanguageValue(String raw) {
-    final v = raw.trim().toLowerCase();
-    if (v == 'portuguese' ||
-        v == 'português' ||
-        v == 'portugues' ||
-        v == 'pt' ||
-        v == 'pt-br') {
-      return 'Português (Brasil)';
-    }
-    return 'English';
-  }
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -60,7 +51,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   static const String _kAuthPhoto = 'account.auth.photo';
   static const String _kAuthProvider = 'account.auth.provider';
   static const String _kFingerprintEnabled = 'account.security.fingerprint';
-  static const String _kLanguage = 'profile.language';
   static const String _kAddressStreet = 'profile.address.street';
   static const String _kAddressCity = 'profile.address.city';
   static const String _kAddressPostal = 'profile.address.postal';
@@ -82,7 +72,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   String _outsideCondition = '';
   DateTime? _outsideUpdatedAt;
   bool _outsideTempRefreshing = false;
-  String _language = 'English';
   String _fullLocation = 'Unknown location';
   bool _locationRefreshing = false;
 
@@ -152,7 +141,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     }
 
     _fingerprintEnabled = prefs.getBool(_kFingerprintEnabled) ?? false;
-    _language = _normalizeLanguageValue(prefs.getString(_kLanguage) ?? '');
 
     final fallbackProfileLocation = (prefs.getString(_kProfileLocation) ?? '')
         .trim();
@@ -180,6 +168,47 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   Future<void> _loginWith(OAuthProvider provider) async {
     try {
       final profile = await OAuthService.instance.login(provider);
+
+      final security = await AppSecurityService.instance
+          .readStartupSecurityState();
+      if (security.requiresAuthenticatorCode) {
+        var unlocked = false;
+        var attempts = 0;
+        while (mounted && attempts < 5) {
+          attempts++;
+          final normalized = await _askAuthenticatorCodeForSecurityAccess();
+          if (!mounted || normalized == null) break;
+
+          final ok = await AppSecurityService.instance.verifyAuthenticatorCode(
+            normalized,
+          );
+          if (ok) {
+            unlocked = true;
+            break;
+          }
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(EaI18n.t(context, 'Invalid code. Try again.')),
+            ),
+          );
+        }
+
+        if (!unlocked) {
+          await OAuthService.instance.logout();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text(EaI18n.t(context, 'Sign-in failed.')),
+            ),
+          );
+          return;
+        }
+      }
+
       _authName = profile.name;
       _authEmail = profile.email;
       _authPhoto = profile.avatarUrl;
@@ -205,8 +234,179 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _AuthSheet(signUp: signUp, onLogin: _loginWith),
+      builder: (_) => _AuthSheet(
+        signUp: signUp,
+        onLogin: _loginWith,
+        onOpenTerms: _openTermsOfUse,
+        onOpenPrivacy: _openPrivacyPolicy,
+      ),
     );
+  }
+
+  void _openTermsOfUse() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LegalArticlePage(
+          articleType: LegalArticleType.contracts,
+          isPtBr: Localizations.localeOf(context).languageCode == 'pt',
+        ),
+      ),
+    );
+  }
+
+  void _openPrivacyPolicy() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LegalArticlePage(
+          articleType: LegalArticleType.privacyTerms,
+          isPtBr: Localizations.localeOf(context).languageCode == 'pt',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openTwoStepVerificationSafely() async {
+    final security = await AppSecurityService.instance
+        .readStartupSecurityState();
+    if (!mounted) return;
+
+    if (security.requiresAuthenticatorCode) {
+      var unlocked = false;
+      var attempts = 0;
+      while (mounted && attempts < 5) {
+        attempts++;
+        final normalized = await _askAuthenticatorCodeForSecurityAccess();
+        if (!mounted || normalized == null) return;
+
+        final ok = await AppSecurityService.instance.verifyAuthenticatorCode(
+          normalized,
+        );
+        if (ok) {
+          unlocked = true;
+          break;
+        }
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(EaI18n.t(context, 'Invalid code. Try again.')),
+          ),
+        );
+      }
+      if (!unlocked) return;
+    }
+
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TwoStepVerificationPage()),
+    );
+  }
+
+  Future<String?> _askAuthenticatorCodeForSecurityAccess() async {
+    final controller = TextEditingController();
+    var invalid = false;
+
+    try {
+      return await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setLocalState) {
+              return SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    16,
+                    16,
+                    16 + MediaQuery.of(ctx).viewInsets.bottom,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: EaAdaptiveColor.surface(context),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: EaAdaptiveColor.border(context),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            EaI18n.t(
+                              context,
+                              'Enter your 6-digit verification code to continue.',
+                            ),
+                            style: EaText.small.copyWith(
+                              color: EaAdaptiveColor.secondaryText(context),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: controller,
+                            autofocus: true,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              const _GroupedOtpInputFormatter(),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: '123 456',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          if (invalid) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              EaI18n.t(context, 'Invalid code.'),
+                              style: EaText.small.copyWith(
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: EaColor.fore,
+                                foregroundColor: EaColor.back,
+                              ),
+                              onPressed: () {
+                                final normalized = controller.text.replaceAll(
+                                  RegExp(r'[^0-9]'),
+                                  '',
+                                );
+                                if (normalized.length != 6) {
+                                  setLocalState(() => invalid = true);
+                                  return;
+                                }
+                                Navigator.of(ctx).pop(normalized);
+                              },
+                              child: Text(EaI18n.t(context, 'Verify')),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<void> _signOut() async {
@@ -599,11 +799,11 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             content: Text(
               EaI18n.t(
                 context,
-                'Ative o serviço de localização (GPS) para atualizar o endereço.',
+                'Enable location service (GPS) to update address.',
               ),
             ),
             action: SnackBarAction(
-              label: EaI18n.t(context, 'Abrir ajustes'),
+              label: EaI18n.t(context, 'Open settings'),
               onPressed: Geolocator.openLocationSettings,
             ),
           ),
@@ -621,7 +821,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             content: Text(
               EaI18n.t(
                 context,
-                'Permissão de localização negada. Permita o acesso para atualizar.',
+                'Location permission denied. Allow access to update.',
               ),
             ),
           ),
@@ -634,11 +834,11 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             content: Text(
               EaI18n.t(
                 context,
-                'Permissão de localização bloqueada permanentemente. Libere nas configurações do app.',
+                'Location permission permanently denied. Allow it in app settings.',
               ),
             ),
             action: SnackBarAction(
-              label: EaI18n.t(context, 'Abrir app'),
+              label: EaI18n.t(context, 'Open app'),
               onPressed: Geolocator.openAppSettings,
             ),
           ),
@@ -690,11 +890,11 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
             kIsWeb
                 ? EaI18n.t(
                     context,
-                    'GPS indisponível na Web. Usando o campo Localização como fallback.',
+                    'GPS unavailable on Web. Using the Location field as fallback.',
                   )
                 : EaI18n.t(
                     context,
-                    'GPS indisponível nesta plataforma. Usando o campo Localização como fallback.',
+                    'GPS unavailable on this platform. Using the Location field as fallback.',
                   ),
           ),
         ),
@@ -712,14 +912,12 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         SnackBar(
           content: Text(
             geocoded == null
-                ? EaI18n.t(
-                    context,
-                    'Não foi possível atualizar localização: {error}',
-                    {'error': '$e'},
-                  )
+                ? EaI18n.t(context, 'Could not update location: {error}', {
+                    'error': '$e',
+                  })
                 : EaI18n.t(
                     context,
-                    'Localização atualizada com fallback do campo digitado.',
+                    'Location updated using typed field fallback.',
                   ),
           ),
         ),
@@ -798,27 +996,6 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  _profileInfoRow(
-                    icon: Icons.language_outlined,
-                    label: EaI18n.t(context, 'Language'),
-                    value: _language,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LanguageRegionPage(),
-                        ),
-                      ).then((_) => _loadAccountState());
-                    },
-                    action: const SizedBox(
-                      width: 20,
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        color: EaColor.fore,
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -852,14 +1029,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                       context,
                       'Additional access protection to your account',
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TwoStepVerificationPage(),
-                        ),
-                      );
-                    },
+                    onTap: _openTwoStepVerificationSafely,
                   ),
                   _AccountTile(
                     icon: Icons.devices_other_outlined,
@@ -898,7 +1068,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                   ),
                   _AccountTile(
                     icon: Icons.receipt_long_outlined,
-                    title: EaI18n.t(context, 'Billing history'),
+                    title: EaI18n.t(context, 'Billing'),
                     subtitle: EaI18n.t(context, 'Invoices and payment methods'),
                     onTap: () {
                       Navigator.push(
@@ -931,8 +1101,11 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                   ),
                   _AccountTile(
                     icon: Icons.delete_forever_outlined,
-                    title: EaI18n.t(context, 'Delete account'),
-                    subtitle: EaI18n.t(context, 'Permanent removal flow'),
+                    title: EaI18n.t(context, 'Delete application data'),
+                    subtitle: EaI18n.t(
+                      context,
+                      'Permanent local data deletion',
+                    ),
                     danger: true,
                     onTap: () {
                       Navigator.push(
@@ -1357,8 +1530,15 @@ class _GpsCoordinates {
 class _AuthSheet extends StatelessWidget {
   final bool signUp;
   final void Function(OAuthProvider) onLogin;
+  final VoidCallback onOpenTerms;
+  final VoidCallback onOpenPrivacy;
 
-  const _AuthSheet({required this.signUp, required this.onLogin});
+  const _AuthSheet({
+    required this.signUp,
+    required this.onLogin,
+    required this.onOpenTerms,
+    required this.onOpenPrivacy,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1453,20 +1633,67 @@ class _AuthSheet extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Rodapé
-          Text(
-            EaI18n.t(
-              context,
-              'By continuing you agree to our Terms of Service.',
-            ),
+          RichText(
             textAlign: TextAlign.center,
-            style: EaText.small.copyWith(
-              color: EaAdaptiveColor.secondaryText(context),
-              fontSize: 11,
+            text: TextSpan(
+              style: EaText.small.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+                fontSize: 11,
+                height: 1.35,
+              ),
+              children: [
+                TextSpan(
+                  text: EaI18n.t(context, 'By continuing you agree to our '),
+                ),
+                TextSpan(
+                  text: EaI18n.t(context, 'Terms of Use'),
+                  style: EaText.small.copyWith(
+                    color: EaColor.fore,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()..onTap = onOpenTerms,
+                ),
+                TextSpan(text: EaI18n.t(context, ' and ')),
+                TextSpan(
+                  text: EaI18n.t(context, 'Privacy Policy'),
+                  style: EaText.small.copyWith(
+                    color: EaColor.fore,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    decoration: TextDecoration.underline,
+                  ),
+                  recognizer: TapGestureRecognizer()..onTap = onOpenPrivacy,
+                ),
+                const TextSpan(text: '.'),
+              ],
             ),
           ),
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+}
+
+class _GroupedOtpInputFormatter extends TextInputFormatter {
+  const _GroupedOtpInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final capped = digits.length > 6 ? digits.substring(0, 6) : digits;
+    final grouped = capped.length <= 3
+        ? capped
+        : '${capped.substring(0, 3)} ${capped.substring(3)}';
+
+    return TextEditingValue(
+      text: grouped,
+      selection: TextSelection.collapsed(offset: grouped.length),
     );
   }
 }
@@ -1530,40 +1757,45 @@ class _GoogleIcon extends StatelessWidget {
 class _GooglePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = size.width / 2;
+    const blue = Color(0xFF4285F4);
+    const red = Color(0xFFEA4335);
+    const yellow = Color(0xFFFBBC05);
+    const green = Color(0xFF34A853);
 
-    const colors = [
-      Color(0xFF4285F4),
-      Color(0xFF34A853),
-      Color(0xFFFBBC05),
-      Color(0xFFEA4335),
-    ];
+    final stroke = size.width * 0.18;
+    final radius = (size.width - stroke) / 2;
+    final center = Offset(size.width / 2, size.height / 2);
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
-    const sweep = 3.14159265 * 2 / 4; // 90°
+    double deg(double v) => v * pi / 180.0;
 
-    for (int i = 0; i < 4; i++) {
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.72),
-        -1.5708 + sweep * i,
-        sweep * 0.92,
-        false,
-        Paint()
-          ..color = colors[i]
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = size.width * 0.22,
-      );
-    }
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = stroke;
 
-    // Barra horizontal
-    canvas.drawLine(
-      Offset(cx, cy),
-      Offset(size.width * 0.96, cy),
-      Paint()
-        ..color = const Color(0xFF4285F4)
-        ..strokeWidth = size.height * 0.22
-        ..strokeCap = StrokeCap.round,
+    paint.color = red;
+    canvas.drawArc(rect, deg(-40), deg(85), false, paint);
+
+    paint.color = yellow;
+    canvas.drawArc(rect, deg(45), deg(90), false, paint);
+
+    paint.color = green;
+    canvas.drawArc(rect, deg(135), deg(90), false, paint);
+
+    paint.color = blue;
+    canvas.drawArc(rect, deg(225), deg(95), false, paint);
+
+    final barHeight = stroke * 0.7;
+    final barTop = center.dy - barHeight / 2;
+    final barLeft = center.dx + radius * 0.05;
+    final barRight = center.dx + radius * 1.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(barLeft, barTop, barRight, barTop + barHeight),
+        Radius.circular(barHeight / 2),
+      ),
+      Paint()..color = blue,
     );
   }
 
@@ -2206,167 +2438,6 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   }
 }
 
-class LanguageRegionPage extends StatefulWidget {
-  const LanguageRegionPage({super.key});
-
-  @override
-  State<LanguageRegionPage> createState() => _LanguageRegionPageState();
-}
-
-class _LanguageRegionPageState extends State<LanguageRegionPage> {
-  static const _kLanguage = 'profile.language';
-  static const _kRegion = 'profile.region';
-  static const _kTimeFormat24h = 'profile.time_24h';
-
-  String _language = 'English';
-  String _region = 'United States';
-  bool _time24h = true;
-
-  static String _normalizeLanguageValue(String raw) {
-    final v = raw.trim().toLowerCase();
-    if (v == 'portuguese' ||
-        v == 'português' ||
-        v == 'portugues' ||
-        v == 'pt' ||
-        v == 'pt-br') {
-      return 'Portuguese';
-    }
-    return 'English';
-  }
-
-  static String _normalizeRegionValue(String raw) {
-    final v = raw.trim().toLowerCase();
-    if (v == 'brazil' || v == 'brasil') return 'Brazil';
-    if (v == 'united states' || v == 'estados unidos' || v == 'usa') {
-      return 'United States';
-    }
-    return 'United States';
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    _language = _normalizeLanguageValue(prefs.getString(_kLanguage) ?? '');
-    _region = _normalizeRegionValue(prefs.getString(_kRegion) ?? _region);
-    _time24h = prefs.getBool(_kTimeFormat24h) ?? true;
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kLanguage, _language);
-    await prefs.setString(_kRegion, _region);
-    await prefs.setBool(_kTimeFormat24h, _time24h);
-    EaAppSettings.instance.setLocaleFromProfileLanguage(_language);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(EaI18n.t(context, 'Language and region updated.')),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Language and region'))),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          EaFadeSlideIn(
-            child: Container(
-              decoration: BoxDecoration(
-                color: EaAdaptiveColor.surface(context),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: EaAdaptiveColor.border(context)),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    title: Text(EaI18n.t(context, 'Language')),
-                    trailing: DropdownButton<String>(
-                      value: _language,
-                      items: [
-                        DropdownMenuItem(
-                          value: 'English',
-                          child: Text(EaI18n.t(context, 'English')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Portuguese',
-                          child: Text(EaI18n.t(context, 'Portuguese')),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() => _language = v);
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: Text(EaI18n.t(context, 'Region')),
-                    trailing: DropdownButton<String>(
-                      value: _region,
-                      items: [
-                        DropdownMenuItem(
-                          value: 'United States',
-                          child: Text(EaI18n.t(context, 'United States')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Brazil',
-                          child: Text(EaI18n.t(context, 'Brazil')),
-                        ),
-                      ],
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() => _region = v);
-                      },
-                    ),
-                  ),
-                  SwitchListTile.adaptive(
-                    value: _time24h,
-                    activeThumbColor: EaColor.fore,
-                    inactiveThumbColor: EaAdaptiveColor.border(context),
-                    inactiveTrackColor: EaAdaptiveColor.field(context),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                    title: Text(
-                      EaI18n.t(context, '24-hour format'),
-                      style: EaText.small.copyWith(
-                        color: EaAdaptiveColor.bodyText(context),
-                      ),
-                    ),
-                    onChanged: (v) => setState(() => _time24h = v),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          EaGradientButtonFrame(
-            borderRadius: BorderRadius.circular(12),
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: EaColor.back,
-                shadowColor: Colors.transparent,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-              ),
-              onPressed: _save,
-              icon: const Icon(Icons.save_rounded),
-              label: Text(EaI18n.t(context, 'Save preferences')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class PasswordPasskeysPage extends StatefulWidget {
   const PasswordPasskeysPage({super.key});
 
@@ -2412,24 +2483,45 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
               ),
               child: Column(
                 children: [
-                  SwitchListTile.adaptive(
-                    value: _fingerprintEnabled,
-                    title: Text(
-                      EaI18n.t(context, 'Enable device passkeys unlock'),
-                      style: EaText.secondary.copyWith(
-                        color: EaAdaptiveColor.bodyText(context),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                EaI18n.t(
+                                  context,
+                                  'Enable device biometrics unlock',
+                                ),
+                                style: EaText.secondary.copyWith(
+                                  color: EaAdaptiveColor.bodyText(context),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                EaI18n.t(
+                                  context,
+                                  'Use fingerprint or face recognition to unlock the app faster.',
+                                ),
+                                style: EaText.small.copyWith(
+                                  color: EaAdaptiveColor.secondaryText(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Switch.adaptive(
+                          activeThumbColor: EaColor.fore,
+                          value: _fingerprintEnabled,
+                          onChanged: _setFingerprint,
+                        ),
+                      ],
                     ),
-                    subtitle: Text(
-                      EaI18n.t(
-                        context,
-                        'Biometric barrier on the device (without local_auth).',
-                      ),
-                      style: EaText.small.copyWith(
-                        color: EaAdaptiveColor.secondaryText(context),
-                      ),
-                    ),
-                    onChanged: _setFingerprint,
                   ),
                 ],
               ),
@@ -2595,6 +2687,7 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
   String _manualKey = '';
   String _otpauthUri = '';
   bool _busy = false;
+  _TwoFactorSetupMode _setupMode = _TwoFactorSetupMode.qrCode;
 
   @override
   void initState() {
@@ -2651,8 +2744,9 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
   }
 
   Future<void> _verifyOtpCode() async {
+    final normalizedOtp = _otpController.text.replaceAll(RegExp(r'\D'), '');
     final ok = await AppSecurityService.instance.verifyAuthenticatorCode(
-      _otpController.text,
+      normalizedOtp,
     );
     if (!mounted) return;
 
@@ -2675,6 +2769,36 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
     );
   }
 
+  Future<void> _confirmQrSetup() async {
+    final ok = await AppSecurityService.instance
+        .confirmAuthenticatorSetupViaQr();
+    if (!mounted) return;
+
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Could not confirm QR setup. Try Setup key mode.',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _load();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          EaI18n.t(context, 'QR setup confirmed. 2FA is now active.'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -2691,109 +2815,302 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
               ),
               child: Column(
                 children: [
-                  SwitchListTile.adaptive(
-                    activeThumbColor: EaColor.fore,
-                    value: _app,
-                    title: Text(EaI18n.t(context, 'Authenticator app')),
-                    subtitle: Text(
-                      _verified
-                          ? EaI18n.t(context, 'Enabled')
-                          : EaI18n.t(context, 'Disabled'),
-                    ),
-                    onChanged: _busy ? null : _toggleAuthenticator,
-                  ),
-                  if (_app)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 22),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              width: 250,
-                              height: 250,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: EaAdaptiveColor.border(context),
-                                ),
-                              ),
-                              child: BarcodeWidget(
-                                data: _otpauthUri,
-                                barcode: Barcode.qrCode(),
-                                color: Colors.black,
-                                backgroundColor: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 22),
-                          Text(
-                            EaI18n.t(context, 'Manual setup key'),
-                            style: EaText.small.copyWith(
-                              color: EaAdaptiveColor.secondaryText(context),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: EaAdaptiveColor.field(context),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: EaAdaptiveColor.border(context),
-                                    ),
-                                  ),
-                                  child: SelectableText(
-                                    _manualKey,
-                                    style: EaText.secondary.copyWith(
-                                      color: EaAdaptiveColor.bodyText(context),
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
+                              Text(EaI18n.t(context, 'Authenticator app')),
+                              const SizedBox(height: 2),
+                              Text(
+                                _verified
+                                    ? EaI18n.t(context, 'Enabled')
+                                    : EaI18n.t(context, 'Disabled'),
+                                style: EaText.small.copyWith(
+                                  color: EaAdaptiveColor.secondaryText(context),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          TextField(
-                            controller: _otpController,
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              labelText: EaI18n.t(context, 'Enter 6 digit'),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
+                        ),
+                        const SizedBox(width: 10),
+                        Switch.adaptive(
+                          activeThumbColor: EaColor.fore,
+                          value: _app,
+                          onChanged: _busy ? null : _toggleAuthenticator,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: EaAdaptiveColor.field(context),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: EaAdaptiveColor.border(context),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _verified
+                                ? Icons.verified_user_rounded
+                                : (_app
+                                      ? Icons.pending_actions_rounded
+                                      : Icons.radio_button_unchecked_rounded),
+                            color: _verified
+                                ? Colors.green
+                                : (_app
+                                      ? EaColor.fore
+                                      : EaAdaptiveColor.secondaryText(context)),
                           ),
-                          const SizedBox(height: 18),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: EaColor.fore,
-                                foregroundColor: EaColor.back,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  EaI18n.t(context, 'Status'),
+                                  style: EaText.small.copyWith(
+                                    color: EaAdaptiveColor.secondaryText(
+                                      context,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              onPressed: _verifyOtpCode,
-                              icon: const Icon(Icons.verified_user_outlined),
-                              label: Text(EaI18n.t(context, 'Verify')),
+                                const SizedBox(height: 2),
+                                Text(
+                                  EaI18n.t(
+                                    context,
+                                    !_app
+                                        ? 'Inactive'
+                                        : (_verified
+                                              ? 'Active and protected'
+                                              : 'Pending setup'),
+                                  ),
+                                  style: EaText.secondary.copyWith(
+                                    color: EaAdaptiveColor.bodyText(context),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ),
+                  if (_app && !_verified)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(22, 8, 18, 22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SegmentedButton<_TwoFactorSetupMode>(
+                            segments: [
+                              ButtonSegment<_TwoFactorSetupMode>(
+                                value: _TwoFactorSetupMode.qrCode,
+                                icon: const Icon(Icons.qr_code_2_rounded),
+                                label: Text(EaI18n.t(context, 'QR-Code')),
+                              ),
+                              ButtonSegment<_TwoFactorSetupMode>(
+                                value: _TwoFactorSetupMode.setupKey,
+                                icon: const Icon(Icons.vpn_key_outlined),
+                                label: Text(EaI18n.t(context, 'Setup Key')),
+                              ),
+                            ],
+                            selected: {_setupMode},
+                            onSelectionChanged: (v) {
+                              setState(() => _setupMode = v.first);
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          if (_setupMode == _TwoFactorSetupMode.qrCode) ...[
+                            Center(
+                              child: Container(
+                                width: 250,
+                                height: 250,
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: EaAdaptiveColor.border(context),
+                                  ),
+                                ),
+                                child: BarcodeWidget(
+                                  data: _otpauthUri,
+                                  barcode: Barcode.qrCode(),
+                                  color: Colors.black,
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: EaColor.fore,
+                                  foregroundColor: EaColor.back,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                onPressed: _confirmQrSetup,
+                                icon: const Icon(Icons.qr_code_scanner_rounded),
+                                label: Text(
+                                  EaI18n.t(
+                                    context,
+                                    'I scanned the QR code and want to continue',
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            Text(
+                              EaI18n.t(context, 'Manual setup key'),
+                              style: EaText.small.copyWith(
+                                color: EaAdaptiveColor.secondaryText(context),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: EaAdaptiveColor.field(context),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: EaAdaptiveColor.border(context),
+                                ),
+                              ),
+                              child: SelectableText(
+                                _manualKey,
+                                textAlign: TextAlign.center,
+                                style: EaText.secondary.copyWith(
+                                  color: EaAdaptiveColor.bodyText(context),
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            TextField(
+                              controller: _otpController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                _GroupedOtpInputFormatter(),
+                              ],
+                              decoration: InputDecoration(
+                                labelText: EaI18n.t(
+                                  context,
+                                  'Enter 6-digit code',
+                                ),
+                                hintText: '123 456',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: EaColor.fore,
+                                  foregroundColor: EaColor.back,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                ),
+                                onPressed: _verifyOtpCode,
+                                icon: const Icon(Icons.verified_user_outlined),
+                                label: Text(EaI18n.t(context, 'Verify')),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  if (_app && _verified)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 22),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: EaAdaptiveColor.field(context),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: EaAdaptiveColor.border(context),
+                          ),
+                        ),
+                        child: Text(
+                          EaI18n.t(
+                            context,
+                            '2FA is active. Disable and enable again to generate a new setup key.',
+                          ),
+                          style: EaText.small.copyWith(
+                            color: EaAdaptiveColor.secondaryText(context),
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          EaFadeSlideIn(
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    EaI18n.t(context, 'How to configure 2FA'),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _tutorialStep(
+                    icon: Icons.toggle_on_rounded,
+                    text: EaI18n.t(context, '1. Enable Authenticator app.'),
+                  ),
+                  const SizedBox(height: 6),
+                  _tutorialStep(
+                    icon: Icons.swap_horiz_rounded,
+                    text: EaI18n.t(context, '2. Choose QR-Code or Setup Key.'),
+                  ),
+                  const SizedBox(height: 6),
+                  _tutorialStep(
+                    icon: Icons.rule_folder_outlined,
+                    text: EaI18n.t(
+                      context,
+                      '3. Setup Key mode requires the 6-digit code. QR-Code mode does not require code on this screen.',
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -2802,7 +3119,27 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
       ),
     );
   }
+
+  Widget _tutorialStep({required IconData icon, required String text}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: EaColor.fore),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: EaText.small.copyWith(
+              color: EaAdaptiveColor.secondaryText(context),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
+
+enum _TwoFactorSetupMode { qrCode, setupKey }
 
 class TrustedDevicesPage extends StatefulWidget {
   const TrustedDevicesPage({super.key});
@@ -2811,78 +3148,542 @@ class TrustedDevicesPage extends StatefulWidget {
   State<TrustedDevicesPage> createState() => _TrustedDevicesPageState();
 }
 
+class _TrustedPeerNode {
+  final String instanceId;
+  String displayName;
+  String address;
+  DateTime lastSeen;
+
+  _TrustedPeerNode({
+    required this.instanceId,
+    required this.displayName,
+    required this.address,
+    required this.lastSeen,
+  });
+}
+
 class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   static const _kTrustedDevices = 'account.security.trusted_devices';
-  List<String> _devices = [];
+  static const _kTrustedHostId = 'account.security.trusted.host_id';
+  static const _kTrustedInstanceId = 'account.security.trusted.instance_id';
+  static const _kTrustedPermissions =
+      'account.security.trusted.permissions_json';
+  static const _kRemoteCanControl = 'security.remote.can_control';
+  static const _kRemoteCanModify = 'security.remote.can_modify';
+  static const _udpPort = 48321;
+  static const _packetProto = 'easync_trusted_v1';
+
+  RawDatagramSocket? _socket;
+  Timer? _helloTimer;
+  Timer? _cleanupTimer;
+
+  String _instanceId = '';
+  String _hostId = '';
+  String _displayName = 'EaSync Device';
+  bool _loading = true;
+  bool _canControl = true;
+  bool _canModify = true;
+
+  final Map<String, _TrustedPeerNode> _peers = <String, _TrustedPeerNode>{};
+  final Map<String, Map<String, bool>> _policies =
+      <String, Map<String, bool>>{};
+
+  bool get _isHost => _hostId.isNotEmpty && _hostId == _instanceId;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _bootstrap();
   }
 
-  Future<void> _load() async {
+  @override
+  void dispose() {
+    _helloTimer?.cancel();
+    _cleanupTimer?.cancel();
+    _socket?.close();
+    super.dispose();
+  }
+
+  Future<void> _bootstrap() async {
     final prefs = await SharedPreferences.getInstance();
-    _devices =
-        prefs.getStringList(_kTrustedDevices) ??
-        ['${Platform.operatingSystem.toUpperCase()} • This device'];
+
+    _displayName =
+        (prefs.getString('account.auth.name') ?? '').trim().isNotEmpty
+        ? (prefs.getString('account.auth.name') ?? '').trim()
+        : '${Platform.operatingSystem.toUpperCase()} • EaSync';
+
+    var existingId = (prefs.getString(_kTrustedInstanceId) ?? '').trim();
+    if (existingId.isEmpty) {
+      final n = Random.secure().nextInt(0x7fffffff).toRadixString(16);
+      existingId =
+          '${Platform.operatingSystem}-${DateTime.now().millisecondsSinceEpoch}-$n';
+      await prefs.setString(_kTrustedInstanceId, existingId);
+    }
+    _instanceId = existingId;
+
+    _hostId = (prefs.getString(_kTrustedHostId) ?? '').trim();
+    if (_hostId.isEmpty) {
+      _hostId = _instanceId;
+      await prefs.setString(_kTrustedHostId, _hostId);
+    }
+
+    final policyRaw = prefs.getString(_kTrustedPermissions);
+    if (policyRaw != null && policyRaw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(policyRaw);
+        if (decoded is Map) {
+          for (final e in decoded.entries) {
+            final key = e.key.toString();
+            final value = e.value;
+            if (value is Map) {
+              _policies[key] = {
+                'canControl': (value['canControl'] ?? true) == true,
+                'canModify': (value['canModify'] ?? true) == true,
+              };
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    _canControl = prefs.getBool(_kRemoteCanControl) ?? true;
+    _canModify = prefs.getBool(_kRemoteCanModify) ?? true;
+
+    await _saveTrustedLegacyList();
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (!kIsWeb) {
+      await _startDiscovery();
+    }
+  }
+
+  Future<void> _saveTrustedLegacyList() async {
+    final prefs = await SharedPreferences.getInstance();
+    final peers = _sortedPeers;
+    final list = <String>[
+      '${Platform.operatingSystem.toUpperCase()} • This device',
+    ];
+    for (final p in peers) {
+      list.add('${p.displayName} (${p.address})');
+    }
+    await prefs.setStringList(_kTrustedDevices, list);
+  }
+
+  Future<void> _savePolicies() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTrustedPermissions, jsonEncode(_policies));
+  }
+
+  List<_TrustedPeerNode> get _sortedPeers {
+    final peers = _peers.values.toList();
+    peers.sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
+    return peers;
+  }
+
+  Future<void> _becomeHost() async {
+    _hostId = _instanceId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTrustedHostId, _hostId);
+    if (!mounted) return;
+    setState(() {});
+    _broadcastHello();
+    for (final p in _peers.values) {
+      _sendPolicyToPeer(p);
+    }
+  }
+
+  Future<void> _startDiscovery() async {
+    try {
+      final socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        _udpPort,
+        reuseAddress: true,
+        reusePort: true,
+      );
+      socket.broadcastEnabled = true;
+      socket.listen((event) {
+        if (event != RawSocketEvent.read) return;
+        Datagram? d;
+        while ((d = socket.receive()) != null) {
+          _handleDatagram(d!);
+        }
+      });
+      _socket = socket;
+
+      _broadcastHello();
+      _helloTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+        _broadcastHello();
+      });
+      _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+        _cleanupPeers();
+      });
+    } catch (_) {
+      // Discovery is best-effort; page still works in local-only mode.
+    }
+  }
+
+  void _cleanupPeers() {
+    final now = DateTime.now();
+    final expired = <String>[];
+    for (final e in _peers.entries) {
+      if (now.difference(e.value.lastSeen).inSeconds > 18) {
+        expired.add(e.key);
+      }
+    }
+    if (expired.isEmpty) return;
+    for (final id in expired) {
+      _peers.remove(id);
+    }
+    _saveTrustedLegacyList();
     if (mounted) setState(() {});
   }
 
-  Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_kTrustedDevices, _devices);
+  void _broadcastHello() {
+    final socket = _socket;
+    if (socket == null) return;
+
+    final packet = {
+      'proto': _packetProto,
+      'type': 'hello',
+      'instanceId': _instanceId,
+      'displayName': _displayName,
+      'hostId': _hostId,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    };
+
+    final data = utf8.encode(jsonEncode(packet));
+    socket.send(data, InternetAddress('255.255.255.255'), _udpPort);
   }
 
-  Future<void> _removeAt(int index) async {
-    _devices.removeAt(index);
-    await _save();
+  void _sendPolicyToPeer(_TrustedPeerNode peer) {
+    final socket = _socket;
+    if (socket == null || !_isHost) return;
+
+    final p =
+        _policies[peer.instanceId] ?? {'canControl': true, 'canModify': true};
+    final packet = {
+      'proto': _packetProto,
+      'type': 'policy',
+      'hostId': _instanceId,
+      'targetId': peer.instanceId,
+      'canControl': p['canControl'] == true,
+      'canModify': p['canModify'] == true,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    };
+    final data = utf8.encode(jsonEncode(packet));
+    try {
+      socket.send(data, InternetAddress(peer.address), _udpPort);
+      socket.send(data, InternetAddress('255.255.255.255'), _udpPort);
+    } catch (_) {}
+  }
+
+  Future<void> _applyIncomingPolicy(bool canControl, bool canModify) async {
+    _canControl = canControl;
+    _canModify = canModify;
+    await EaAppSettings.instance.applyRemotePermissions(
+      canControl: canControl,
+      canModify: canModify,
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _handleDatagram(Datagram datagram) {
+    Map<String, dynamic>? packet;
+    try {
+      final text = utf8.decode(datagram.data, allowMalformed: true);
+      final decoded = jsonDecode(text);
+      if (decoded is Map) {
+        packet = Map<String, dynamic>.from(decoded);
+      }
+    } catch (_) {
+      return;
+    }
+    if (packet == null || packet['proto'] != _packetProto) return;
+
+    final type = (packet['type'] ?? '').toString();
+    if (type == 'hello') {
+      final peerId = (packet['instanceId'] ?? '').toString().trim();
+      if (peerId.isEmpty || peerId == _instanceId) return;
+
+      final announcedHost = (packet['hostId'] ?? '').toString().trim();
+      if (!_isHost && announcedHost.isNotEmpty && _hostId != announcedHost) {
+        _hostId = announcedHost;
+      }
+
+      final display = (packet['displayName'] ?? '').toString().trim();
+      final node = _peers.putIfAbsent(
+        peerId,
+        () => _TrustedPeerNode(
+          instanceId: peerId,
+          displayName: display.isEmpty ? 'EaSync Node' : display,
+          address: datagram.address.address,
+          lastSeen: DateTime.now(),
+        ),
+      );
+      node.displayName = display.isEmpty ? node.displayName : display;
+      node.address = datagram.address.address;
+      node.lastSeen = DateTime.now();
+      _saveTrustedLegacyList();
+
+      if (_isHost) {
+        _sendPolicyToPeer(node);
+      }
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (type == 'policy') {
+      final hostId = (packet['hostId'] ?? '').toString().trim();
+      final target = (packet['targetId'] ?? '').toString().trim();
+      if (target != _instanceId || hostId.isEmpty || hostId == _instanceId) {
+        return;
+      }
+      _hostId = hostId;
+      final canControl = packet['canControl'] == true;
+      final canModify = packet['canModify'] == true;
+      _applyIncomingPolicy(canControl, canModify);
+    }
+  }
+
+  Future<void> _setPeerPolicy(
+    String peerId, {
+    bool? canControl,
+    bool? canModify,
+  }) async {
+    final current =
+        _policies[peerId] ?? {'canControl': true, 'canModify': true};
+    _policies[peerId] = {
+      'canControl': canControl ?? current['canControl'] == true,
+      'canModify': canModify ?? current['canModify'] == true,
+    };
+    await _savePolicies();
+    final peer = _peers[peerId];
+    if (peer != null) {
+      _sendPolicyToPeer(peer);
+    }
     if (mounted) setState(() {});
+  }
+
+  Widget _localSessionCard() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: EaAdaptiveColor.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EaAdaptiveColor.border(context)),
+      ),
+      child: ListTile(
+        leading: const Icon(Icons.devices_other_outlined, color: EaColor.fore),
+        title: Text('${Platform.operatingSystem.toUpperCase()} • This device'),
+        subtitle: Text(
+          '${EaI18n.t(context, 'Current session')} • ID: ${_instanceId.substring(0, min(10, _instanceId.length))}',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isHost)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: EaColor.fore.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Text(
+                  EaI18n.t(context, 'Host'),
+                  style: EaText.small.copyWith(color: EaColor.fore),
+                ),
+              ),
+            const SizedBox(width: 8),
+            const Icon(Icons.verified_rounded, color: EaColor.fore),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _peerCard(_TrustedPeerNode peer) {
+    final p =
+        _policies[peer.instanceId] ?? {'canControl': true, 'canModify': true};
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: EaAdaptiveColor.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EaAdaptiveColor.border(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.hub_outlined, color: EaColor.fore, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    peer.displayName,
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  EaI18n.t(context, 'Online'),
+                  style: EaText.small.copyWith(color: EaColor.fore),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${peer.address} • ${EaI18n.t(context, 'Trusted session')}',
+              style: EaText.small.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (_isHost)
+              Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(EaI18n.t(context, 'Can control devices')),
+                      ),
+                      Switch.adaptive(
+                        activeThumbColor: EaColor.fore,
+                        value: p['canControl'] == true,
+                        onChanged: (v) =>
+                            _setPeerPolicy(peer.instanceId, canControl: v),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          EaI18n.t(context, 'Can modify configuration'),
+                        ),
+                      ),
+                      Switch.adaptive(
+                        activeThumbColor: EaColor.fore,
+                        value: p['canModify'] == true,
+                        onChanged: (v) =>
+                            _setPeerPolicy(peer.instanceId, canModify: v),
+                      ),
+                    ],
+                  ),
+                ],
+              )
+            else
+              Text(
+                EaI18n.t(
+                  context,
+                  'Host policy: control {control}, modify {modify}',
+                  {
+                    'control': p['canControl'] == true
+                        ? EaI18n.t(context, 'Enabled')
+                        : EaI18n.t(context, 'Disabled'),
+                    'modify': p['canModify'] == true
+                        ? EaI18n.t(context, 'Enabled')
+                        : EaI18n.t(context, 'Disabled'),
+                  },
+                ),
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final peers = _sortedPeers;
+
     return Scaffold(
       appBar: AppBar(title: Text(EaI18n.t(context, 'Trusted devices'))),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: List.generate(_devices.length, (i) {
-          return EaFadeSlideIn(
-            child: Card(
+        children: [
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.only(top: 8, bottom: 10),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (!_isHost)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
               child: ListTile(
-                leading: const Icon(
-                  Icons.devices_other_outlined,
-                  color: EaColor.fore,
-                ),
-                title: Text(_devices[i]),
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: Text(EaI18n.t(context, 'Take host role on this device')),
                 subtitle: Text(
-                  i == 0
-                      ? EaI18n.t(context, 'Current session')
-                      : EaI18n.t(context, 'Trusted session'),
+                  EaI18n.t(
+                    context,
+                    'Host applies permissions to other instances',
+                  ),
                 ),
-                trailing: i == 0
-                    ? const Icon(Icons.verified_rounded, color: EaColor.fore)
-                    : IconButton(
-                        icon: const Icon(
-                          Icons.logout_rounded,
-                          color: Colors.redAccent,
-                        ),
-                        tooltip: EaI18n.t(context, 'Remove device'),
-                        onPressed: () => _removeAt(i),
-                      ),
-                onTap: i == 0 ? null : () => _removeAt(i),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: _becomeHost,
+              ),
+            ),
+          _localSessionCard(),
+          if (_isHost)
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
+              child: Text(
+                EaI18n.t(
+                  context,
+                  'Local policy active: control {control}, modify {modify}',
+                  {
+                    'control': _canControl
+                        ? EaI18n.t(context, 'Enabled')
+                        : EaI18n.t(context, 'Disabled'),
+                    'modify': _canModify
+                        ? EaI18n.t(context, 'Enabled')
+                        : EaI18n.t(context, 'Disabled'),
+                  },
                 ),
-                tileColor: EaAdaptiveColor.surface(context),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
                 ),
               ),
             ),
-          );
-        }),
+          if (peers.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: EaAdaptiveColor.surface(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: EaAdaptiveColor.border(context)),
+              ),
+              child: Text(
+                EaI18n.t(context, 'No trusted peers found on local network.'),
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                ),
+              ),
+            ),
+          ...peers.map(_peerCard),
+        ],
       ),
     );
   }
@@ -3030,7 +3831,7 @@ class _BillingPageState extends State<BillingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Billing history'))),
+      appBar: AppBar(title: Text(EaI18n.t(context, 'Billing'))),
       body: _items.isEmpty
           ? Padding(
               padding: const EdgeInsets.all(16),
@@ -3096,7 +3897,6 @@ class _DataExportPageState extends State<DataExportPage> {
           'fullName': prefs.getString('profile.full_name') ?? '',
           'location': prefs.getString('profile.location') ?? '',
           'language': prefs.getString('profile.language') ?? '',
-          'region': prefs.getString('profile.region') ?? '',
         },
       if (_includeUsage)
         'usage': {'pattern': prefs.getString('usage.pattern') ?? 'balanced'},
@@ -3223,9 +4023,14 @@ class _DeleteAccountPageState extends State<DeleteAccountPage> {
       return;
     }
 
+    await OAuthService.instance.logout();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    await OAuthService.instance.logout();
+
+    const secure = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    );
+    await secure.deleteAll();
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

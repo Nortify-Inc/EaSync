@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'security.dart';
 import 'config.dart';
 import 'provider.dart';
 import 'tokenStore.dart';
@@ -321,13 +322,13 @@ class OAuthService {
     final id = (d['sub'] ?? d['oid'] ?? '').toString();
     final name = (d['name'] ?? d['displayName'] ?? '').toString();
     final email =
-      (d['email'] ??
-          d['userPrincipalName'] ??
-          d['preferred_username'] ??
-          d['upn'] ??
-          d['mail'] ??
-          '')
-        .toString();
+        (d['email'] ??
+                d['userPrincipalName'] ??
+                d['preferred_username'] ??
+                d['upn'] ??
+                d['mail'] ??
+                '')
+            .toString();
     final photo = d['picture']?.toString();
 
     final host = meta.userInfoEndpoint.host;
@@ -337,8 +338,7 @@ class OAuthService {
         ? 'Microsoft'
         : 'OAuth';
 
-    final resolvedName =
-        name.isNotEmpty
+    final resolvedName = name.isNotEmpty
         ? name
         : (email.isNotEmpty
               ? email.split('@').first
@@ -364,6 +364,7 @@ class OAuthService {
       prefs.setString(_kPhoto, p.avatarUrl ?? ''),
       prefs.setString(_kProvider, p.provider),
     ]);
+    await AppSecurityService.instance.markSessionValidated(false);
   }
 
   Future<OAuthUserProfile?> getSavedProfile() async {
@@ -398,6 +399,7 @@ class OAuthService {
       prefs.remove(_kPhoto),
       prefs.remove(_kProvider),
     ]);
+    await AppSecurityService.instance.clearSessionValidation();
   }
 
   // ── Config por provedor ───────────────────────────────────
