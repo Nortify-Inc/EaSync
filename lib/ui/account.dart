@@ -50,7 +50,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   }
 
   static const String _kOutsideTempCache = 'assistant.outside_temp_cache';
-    static const String _kOutsideConditionCache =
+  static const String _kOutsideConditionCache =
       'assistant.outside_condition_cache';
   static const String _kOutsideTempUpdatedAt =
       'assistant.outside_temp_updated_at';
@@ -107,7 +107,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
     final cachedTemp = prefs.getDouble(_kOutsideTempCache);
     final cachedCondition = (prefs.getString(_kOutsideConditionCache) ?? '')
-      .trim();
+        .trim();
     final updatedAtMs = prefs.getInt(_kOutsideTempUpdatedAt);
 
     if (cachedTemp != null) {
@@ -257,7 +257,9 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     return '';
   }
 
-  Future<_OutsideWeatherSnapshot?> _fetchOutsideTempFromQuery(String query) async {
+  Future<_OutsideWeatherSnapshot?> _fetchOutsideTempFromQuery(
+    String query,
+  ) async {
     if (query.trim().isEmpty) return null;
     HttpClient? client;
     try {
@@ -396,22 +398,30 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         lower.contains('trov')) {
       return 'Stormy';
     }
-    if (lower.contains('snow') || lower.contains('neve') || lower.contains('sleet')) {
+    if (lower.contains('snow') ||
+        lower.contains('neve') ||
+        lower.contains('sleet')) {
       return 'Snowy';
     }
     if (lower.contains('drizzle') || lower.contains('garoa')) {
       return 'Light drizzle';
     }
-    if (lower.contains('rain') || lower.contains('chuva') || lower.contains('shower')) {
+    if (lower.contains('rain') ||
+        lower.contains('chuva') ||
+        lower.contains('shower')) {
       return 'Rainy';
     }
-    if (lower.contains('fog') || lower.contains('mist') || lower.contains('nebl')) {
+    if (lower.contains('fog') ||
+        lower.contains('mist') ||
+        lower.contains('nebl')) {
       return 'Foggy';
     }
     if (lower.contains('cloud')) {
       return 'Cloudy sky';
     }
-    if (lower.contains('clear') || lower.contains('sun') || lower.contains('limpo')) {
+    if (lower.contains('clear') ||
+        lower.contains('sun') ||
+        lower.contains('limpo')) {
       return 'Clear sky';
     }
 
@@ -430,7 +440,9 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       }
 
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+        ),
       ).timeout(const Duration(seconds: 4));
 
       return _GpsCoordinates(position.latitude, position.longitude);
@@ -820,7 +832,10 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                   _AccountTile(
                     icon: Icons.lock_outline_rounded,
                     title: EaI18n.t(context, 'Biometrics and passkeys'),
-                    subtitle: EaI18n.t(context, 'Increase the security to access the app'),
+                    subtitle: EaI18n.t(
+                      context,
+                      'Increase the security to access the app',
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -833,7 +848,10 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                   _AccountTile(
                     icon: Icons.shield_moon_outlined,
                     title: EaI18n.t(context, '2-step verification'),
-                    subtitle: EaI18n.t(context, 'Additional access protection to your account'),
+                    subtitle: EaI18n.t(
+                      context,
+                      'Additional access protection to your account',
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -1128,7 +1146,9 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               value: _outsideCondition.isEmpty
                   ? '${_outsideTemp.toStringAsFixed(1)} °C'
                   : '${_outsideTemp.toStringAsFixed(1)} °C • ${EaI18n.t(context, _outsideCondition)}',
-              onTap: _outsideTempRefreshing ? () {} : _refreshOutsideTemperature,
+              onTap: _outsideTempRefreshing
+                  ? () {}
+                  : _refreshOutsideTemperature,
             ),
           ),
           const SizedBox(width: 10),
@@ -1137,7 +1157,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               icon: Icons.place_rounded,
               label: EaI18n.t(context, 'Location'),
               value: _fullLocation,
-              onTap: (){}
+              onTap: () {},
             ),
           ),
         ],
@@ -2066,10 +2086,8 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               icon: const Icon(Icons.save_outlined),
               label: Text(
                 EaI18n.t(context, 'Save changes'),
-                style: EaText.small.copyWith(
-                  color: EaColor.back,
-                ),
-              )
+                style: EaText.small.copyWith(color: EaColor.back),
+              ),
             ),
           ),
         ],
@@ -2358,9 +2376,7 @@ class PasswordPasskeysPage extends StatefulWidget {
 
 class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
   static const _kFingerprintEnabled = 'account.security.fingerprint';
-  final _secure = const FlutterSecureStorage();
   bool _fingerprintEnabled = false;
-  bool _hasPassword = false;
 
   @override
   void initState() {
@@ -2371,8 +2387,6 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
     _fingerprintEnabled = prefs.getBool(_kFingerprintEnabled) ?? false;
-    final pwd = await _secure.read(key: 'account.password');
-    _hasPassword = (pwd ?? '').isNotEmpty;
     if (mounted) setState(() {});
   }
 
@@ -2595,7 +2609,8 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
   }
 
   Future<void> _load() async {
-    final startup = await AppSecurityService.instance.readStartupSecurityState();
+    final startup = await AppSecurityService.instance
+        .readStartupSecurityState();
     _app = startup.authenticatorEnabled;
     _verified = startup.authenticatorVerified;
     _manualKey = startup.manualEntryKey ?? '';
@@ -2623,9 +2638,8 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
           ? email
           : (name.isNotEmpty ? name : 'user@easync.local');
 
-      final setup = await AppSecurityService.instance.createOrRotateAuthenticator(
-        accountLabel: accountLabel,
-      );
+      final setup = await AppSecurityService.instance
+          .createOrRotateAuthenticator(accountLabel: accountLabel);
 
       _app = true;
       _verified = false;
@@ -2958,10 +2972,7 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
             ),
           ),
           const SizedBox(height: 12),
-          _planTile(
-            'Free',
-            EaI18n.t(context, 'Up to 3 devices and 1 profile'),
-          ),
+          _planTile('Free', EaI18n.t(context, 'Up to 3 devices and 1 profile')),
           _planTile(
             'Plus',
             EaI18n.t(
