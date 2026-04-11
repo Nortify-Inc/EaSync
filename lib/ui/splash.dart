@@ -21,7 +21,6 @@ class Splash extends StatefulWidget {
 }
 
 class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
-  bool _aiAllowed = false;
   final LocalAuthentication _localAuth = LocalAuthentication();
   late final AnimationController _fadeController;
   late final Animation<double> _fade;
@@ -41,14 +40,12 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   ];
 
   final List<String> _tips = const [
-    'Use shorter prompts first. They warm up generation and reduce initial latency.',
-    'If AI setup fails, you can still control devices normally and retry later.',
-    'A stable Wi-Fi connection makes first model download significantly faster.',
-    'Keeping at least 1.5GB free storage avoids model write interruptions.',
-    'The assistant improves when prompts are explicit: device + action + intent.',
-    'If responses feel vague, add context like room, device name, and desired outcome.',
-    'During first run, keep the app open so model initialization can finish cleanly.',
-    'You can keep using device controls while AI remains disabled.',
+    'You can use the Profiles page to create profiles for auto apply states and grouping your devices by room, behavior and more.',
+    'Use the Dashboard page to monitore your place, control devices and view statistics.',
+    "If you're using EaSync in multiple devices, you can list the sessions opened and manage their permissions",
+    'In the Account page, you can enable additional security with biometrics to protect who can access EaSync on this device.',
+    'AI will observe and learn your patterns and provide personalized suggestions. You can disable it anytime in the Account page if you change your mind.',
+    'Use the Manage page to register new devices, check their status and create custom names.',
   ];
   int _tipIndex = 0;
 
@@ -98,47 +95,16 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     if (!mounted) return;
 
     if (Platform.isAndroid) {
-      final allow = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          title: Text(EaI18n.t(context, 'Complete experience?')),
-          content: Text(
-            EaI18n.t(
-              context,
-              'To use the AI assistant, you need to download the model (~700MB). This may be heavy on some devices. Do you want to download and enable the assistant?',
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(EaI18n.t(context, 'No, skip')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(EaI18n.t(context, 'Yes, I want AI')),
-            ),
-          ],
-        ),
-      );
-
-      _aiAllowed = allow == true;
-      EaAppSettings.instance.aiEnabled = _aiAllowed;
-      _showAiProgress = _aiAllowed;
+      EaAppSettings.instance.aiEnabled = true;
+      _showAiProgress = true;
       if (mounted) setState(() {});
 
-      if (_aiAllowed) {
-        _markStepRunning('modelDownload', detail: 'Waiting for model stream…');
-        final ok = await _runAndroidModelSetup();
-        if (!ok) {
-          _aiAllowed = false;
-          EaAppSettings.instance.aiEnabled = false;
-          _markStepFailed('aiInit', detail: 'AI disabled for this session');
-          debugPrint('[splash] AI setup failed, continuing with AI disabled');
-        }
-      } else {
-        _markStepSkipped('modelDownload', detail: 'Skipped by user');
-        _markStepSkipped('aiInit', detail: 'Skipped by user');
+      _markStepRunning('modelDownload', detail: 'Waiting for model stream…');
+      final ok = await _runAndroidModelSetup();
+      if (!ok) {
+        EaAppSettings.instance.aiEnabled = false;
+        _markStepFailed('aiInit', detail: 'AI disabled for this session');
+        debugPrint('[splash] AI setup failed, continuing with AI disabled');
       }
     } else {
       _markStepRunning('aiInit', detail: 'Waiting for runtime preload…');
@@ -539,49 +505,73 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   }
 
   Widget _tipTile() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            EaColor.fore.withValues(alpha: 0.22),
-            EaAdaptiveColor.field(context).withValues(alpha: 0.75),
-          ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EaAdaptiveColor.border(context)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lightbulb_outline, size: 16, color: EaColor.fore),
-          const SizedBox(width: 8),
-          Text(
-            'Tip:',
-            style: EaText.secondary.copyWith(
-              color: EaAdaptiveColor.bodyText(context),
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isCompact = constraints.maxWidth < 360;
+        final labelSize = isCompact ? 11.5 : 12.0;
+        final bodySize = isCompact ? 11.5 : 12.0;
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 280),
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(
+            horizontal: isCompact ? 10 : 12,
+            vertical: isCompact ? 9 : 10,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 240),
-              child: Text(
-                _tips[_tipIndex],
-                key: ValueKey<int>(_tipIndex),
-                style: EaText.secondary.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
-                  fontSize: 12,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                EaColor.fore.withValues(alpha: 0.22),
+                EaAdaptiveColor.field(context).withValues(alpha: 0.75),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: EaAdaptiveColor.border(context)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.lightbulb_outline,
+                    size: 16,
+                    color: EaColor.fore,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tip:',
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                      fontSize: labelSize,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 240),
+                child: Text(
+                  EaI18n.t(context, _tips[_tipIndex]),
+                  key: ValueKey<int>(_tipIndex),
+                  softWrap: true,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                    fontSize: bodySize,
+                    height: 1.3,
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

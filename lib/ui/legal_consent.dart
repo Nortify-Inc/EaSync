@@ -801,7 +801,7 @@ class LegalArticlePage extends StatelessWidget {
 
   _DocContent _privacyTermsEn() {
     return const _DocContent(
-      title: 'Privacy Policy and Terms of Use',
+      title: 'Privacy Policy',
       sections: [
         _DocSection(
           title: '1. Data Collected',
@@ -845,7 +845,11 @@ class _GoogleIcon extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: 22,
     height: 22,
-    child: CustomPaint(painter: _GooglePainter()),
+    child: Image.asset(
+      'assets/images/google.png',
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => CustomPaint(painter: _GooglePainter()),
+    ),
   );
 }
 

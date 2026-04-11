@@ -124,19 +124,7 @@ class _SettingsState extends State<Settings> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(
-                          EaI18n.t(
-                            context,
-                            _language == 'Portuguese'
-                                ? 'Portuguese'
-                                : 'English',
-                          ),
-                          style: EaText.small.copyWith(
-                            color: EaAdaptiveColor.secondaryText(context),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 15),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(

@@ -7,10 +7,7 @@
  */
 
 import 'dart:ui';
-
-import 'package:easync/ui/agent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'handler.dart';
 
 List<DeviceInfo> devices = [];
@@ -215,7 +212,7 @@ class _HomeState extends State<Home> {
                   ),
                 ),
                 Spacer(),
-                if (idx == 4)
+                if (idx == tabs.length - 1)
                   IconButton(
                     tooltip: EaI18n.t(context, 'Settings'),
                     icon: const Icon(
@@ -233,7 +230,7 @@ class _HomeState extends State<Home> {
                 else
                   GestureDetector(
                     onTap: () {
-                      _goToIndex(4);
+                      _goToIndex(tabs.length - 1);
                     },
                     child: CircleAvatar(
                       radius: 14,

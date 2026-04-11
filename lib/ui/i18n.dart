@@ -61,6 +61,18 @@ class EaI18n {
         'Para usar o assistente de IA, é necessário baixar o modelo (~2GB). Isso pode ser pesado em alguns dispositivos. Deseja baixar e ativar o assistente?',
     'No, skip': 'Não, pular',
     'Yes, I want AI': 'Sim, quero IA',
+    'Ask the assistant with device + room + intent for more accurate actions.':
+        'Peça ao assistente com dispositivo + ambiente + intenção para ações mais precisas.',
+    'If the AI response is too broad, add limits like range, time, or priority.':
+        'Se a resposta da IA estiver ampla demais, adicione limites como faixa, horário ou prioridade.',
+    'Short follow-up prompts usually improve continuity after the first answer.':
+        'Prompts curtos de continuação geralmente melhoram a continuidade após a primeira resposta.',
+    'If the assistant misunderstands, mention the exact device name as registered.':
+        'Se o assistente entender errado, mencione o nome exato do dispositivo como cadastrado.',
+    'Use one task per prompt when speed matters; batched requests can take longer.':
+        'Use uma tarefa por prompt quando velocidade importar; pedidos em lote podem levar mais tempo.',
+    'Before applying automation, ask AI for a preview of what will be changed.':
+        'Antes de aplicar automações, peça para a IA uma prévia do que será alterado.',
     'Dashboard': 'Painel',
     'Profiles': 'Perfis',
     'Assistant': 'Assistente',
@@ -352,6 +364,8 @@ class EaI18n {
         'Não foi possível atualizar localização: {error}',
     'Location updated using typed field fallback.':
         'Localização atualizada com fallback do campo digitado.',
+    'Could not get GPS right now. Using Location fallback when available.':
+        'Não foi possível obter o GPS agora. Usando fallback de Localização quando disponível.',
     'Enable location service (GPS) to update address.':
         'Ative o serviço de localização (GPS) para atualizar o endereço.',
     'Open settings': 'Abrir ajustes',
@@ -520,6 +534,9 @@ class EaI18n {
     'No billing entries yet.': 'Nenhuma cobrança registrada ainda.',
     'Export copied to clipboard.':
         'Export copiado para a área de transferência.',
+    'Copy setup key': 'Copiar setup key',
+    'Setup key copied to clipboard.':
+        'Setup key copiada para a área de transferência.',
     'This device': 'Este dispositivo',
     'Profile data': 'Dados de perfil',
     'Usage data': 'Dados de uso',

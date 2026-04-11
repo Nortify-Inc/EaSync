@@ -782,6 +782,66 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     }
   }
 
+  Future<Position> _readCurrentPositionWithRetry() async {
+    Position? lastKnown;
+    try {
+      lastKnown = await Geolocator.getLastKnownPosition();
+    } catch (_) {}
+
+    Object? lastError;
+    const settings = LocationSettings(
+      accuracy: LocationAccuracy.high,
+      distanceFilter: 0,
+      timeLimit: Duration(seconds: 15),
+    );
+
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+      try {
+        return await Geolocator.getCurrentPosition(locationSettings: settings);
+      } on TimeoutException catch (e) {
+        lastError = e;
+      } on PlatformException catch (e) {
+        lastError = e;
+        final message = (e.message ?? '').toLowerCase();
+        final retryable =
+            message.contains('waited') ||
+            message.contains('timeout') ||
+            message.contains('time out');
+        if (!retryable) break;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    if (lastKnown != null) return lastKnown;
+    throw lastError ?? Exception('Location unavailable');
+  }
+
+  Future<Placemark?> _reverseGeocodeWithRetry(double lat, double lon) async {
+    for (var attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(const Duration(milliseconds: 350));
+      }
+      try {
+        final places = await placemarkFromCoordinates(
+          lat,
+          lon,
+        ).timeout(const Duration(seconds: 8));
+        if (places.isNotEmpty) return places.first;
+      } on TimeoutException {
+        continue;
+      } on PlatformException {
+        continue;
+      } catch (_) {
+        break;
+      }
+    }
+    return null;
+  }
+
   Future<void> _refreshCurrentLocation() async {
     if (_locationRefreshing) return;
     final messenger = ScaffoldMessenger.maybeOf(context);
@@ -811,7 +871,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         return;
       }
 
-      var permission = await Geolocator.checkPermission();
+      final previousPermission = await Geolocator.checkPermission();
+      var permission = previousPermission;
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
@@ -846,13 +907,20 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         return;
       }
 
-      final position = await Geolocator.getCurrentPosition();
-      final places = await placemarkFromCoordinates(
+      if (previousPermission == LocationPermission.denied &&
+          (permission == LocationPermission.whileInUse ||
+              permission == LocationPermission.always)) {
+        // On first Android grant, providers may need a short warm-up.
+        await Future.delayed(const Duration(milliseconds: 450));
+      }
+
+      final position = await _readCurrentPositionWithRetry();
+      final placemark = await _reverseGeocodeWithRetry(
         position.latitude,
         position.longitude,
       );
 
-      final p = places.isNotEmpty ? places.first : Placemark();
+      final p = placemark ?? Placemark();
       final full = <String>[
         (p.street ?? '').trim(),
         (p.subLocality ?? '').trim(),
@@ -896,6 +964,44 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     context,
                     'GPS unavailable on this platform. Using the Location field as fallback.',
                   ),
+          ),
+        ),
+      );
+    } on TimeoutException {
+      final geocoded = await _resolveLocationFromTypedField();
+      if (geocoded != null && geocoded.trim().isNotEmpty) {
+        final safe = geocoded.trim();
+        await prefs.setString(_kAddressFull, safe);
+        if (mounted) setState(() => _fullLocation = safe);
+        await _refreshOutsideTemperature();
+      }
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Could not get GPS right now. Using Location fallback when available.',
+            ),
+          ),
+        ),
+      );
+    } on PlatformException {
+      final geocoded = await _resolveLocationFromTypedField();
+      if (geocoded != null && geocoded.trim().isNotEmpty) {
+        final safe = geocoded.trim();
+        await prefs.setString(_kAddressFull, safe);
+        if (mounted) setState(() => _fullLocation = safe);
+        await _refreshOutsideTemperature();
+      }
+      if (!mounted) return;
+      messenger?.showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(
+              context,
+              'Could not get GPS right now. Using Location fallback when available.',
+            ),
           ),
         ),
       );
@@ -1750,7 +1856,11 @@ class _GoogleIcon extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: 22,
     height: 22,
-    child: CustomPaint(painter: _GooglePainter()),
+    child: Image.asset(
+      'assets/images/google.png',
+      fit: BoxFit.contain,
+      errorBuilder: (_, _, _) => CustomPaint(painter: _GooglePainter()),
+    ),
   );
 }
 
@@ -3003,6 +3113,32 @@ class _TwoStepVerificationPageState extends State<TwoStepVerificationPage> {
                                   color: EaAdaptiveColor.bodyText(context),
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  await Clipboard.setData(
+                                    ClipboardData(text: _manualKey),
+                                  );
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        EaI18n.t(
+                                          context,
+                                          'Setup key copied to clipboard.',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.content_copy_rounded),
+                                label: Text(
+                                  EaI18n.t(context, 'Copy setup key'),
                                 ),
                               ),
                             ),
