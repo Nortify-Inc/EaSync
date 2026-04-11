@@ -63,7 +63,6 @@ class _ProfilesState extends State<Profiles>
   late final AnimationController _profileApplyPulse;
   Timer? _profileApplyPulseTimer;
   String? _highlightedProfileName;
-  UsageStats? _usageStats;
 
   @override
   bool get wantKeepAlive => true;
@@ -77,12 +76,10 @@ class _ProfilesState extends State<Profiles>
     );
     _loadDevices();
     _loadPlanTier();
-    _refreshUsageStats();
     _eventSub = Bridge.onEvents.listen((event) {
       if (event.type == CoreEventType.CORE_EVENT_DEVICE_ADDED ||
           event.type == CoreEventType.CORE_EVENT_DEVICE_REMOVED) {
         _loadDevices();
-        _refreshUsageStats();
       }
     });
   }
@@ -193,19 +190,13 @@ class _ProfilesState extends State<Profiles>
     } catch (_) {}
   }
 
-  void _refreshUsageStats() {
-    try {
-      final stats = Bridge.usageStats();
-      if (!mounted) return;
-      setState(() => _usageStats = stats);
-    } catch (_) {}
-  }
-
   void _openEditor({Profile? profile}) {
     final creating = profile == null;
     if (creating &&
         !EaPlanService.instance.canCreateProfile(_planTier, profiles.length)) {
-      _showTopErrorSnack(EaI18n.t(context, 'Profile limit reached for your plan.'));
+      _showTopErrorSnack(
+        EaI18n.t(context, 'Profile limit reached for your plan.'),
+      );
       _openPlanOptions();
       return;
     }
@@ -332,239 +323,17 @@ class _ProfilesState extends State<Profiles>
         );
       }
 
+      Bridge.observeProfileApplied(
+        profileName: profile.name,
+        actionCount: profile.actions.length,
+        deviceIds: profile.actions.map((a) => a.deviceId).toSet().toList(),
+      );
+
       _showBottomSnack('Profile ${profile.name} was applied.');
       _pulseAppliedProfile(profile);
     } catch (e) {
       _showTopErrorSnack(e.toString());
     }
-  }
-
-  DeviceInfo? _firstWithCapability(int capability) {
-    for (final d in devices) {
-      if (d.capabilities.contains(capability)) return d;
-    }
-    return null;
-  }
-
-  int _topPowerHour() {
-    final hour = _usageStats?.predictedArrivalHour ?? -1;
-    if (hour < 0) return 18;
-    return hour.clamp(0, 23);
-  }
-
-  DeviceInfo? _mostUsedWithCapability(int capability) {
-    final preferredUuid = _usageStats?.mostActiveUuid ?? '';
-    if (preferredUuid.isNotEmpty) {
-      for (final d in devices) {
-        if (d.uuid == preferredUuid && d.capabilities.contains(capability)) {
-          return d;
-        }
-      }
-    }
-
-    DeviceInfo? best;
-    var bestScore = -1;
-    for (final d in devices) {
-      if (!d.capabilities.contains(capability)) continue;
-      final score = d.uuid == preferredUuid ? 2 : 1;
-      if (score > bestScore) {
-        best = d;
-        bestScore = score;
-      }
-    }
-    return best ?? _firstWithCapability(capability);
-  }
-
-  String _assistantRecommendationReasonLine1() {
-    final hour = _topPowerHour();
-    final hh = hour.toString().padLeft(2, '0');
-    final temp = (_usageStats?.preferredTemperature ?? 23).toStringAsFixed(0);
-    final bright = (_usageStats?.preferredBrightness ?? 45);
-    return '$hh:00 • $temp°C • $bright%';
-  }
-
-  Profile? _assistantRecommendedProfile() {
-    final actions = <DeviceAction>[];
-
-    final climate = _mostUsedWithCapability(
-      CoreCapability.CORE_CAP_TEMPERATURE,
-    );
-    if (climate != null) {
-      actions.add(
-        DeviceAction(
-          deviceId: climate.uuid,
-          power: climate.capabilities.contains(CoreCapability.CORE_CAP_POWER)
-              ? true
-              : null,
-          temperature: _usageStats?.preferredTemperature ?? 23,
-        ),
-      );
-    }
-
-    final light =
-        _mostUsedWithCapability(CoreCapability.CORE_CAP_BRIGHTNESS) ??
-        _firstWithCapability(CoreCapability.CORE_CAP_POWER);
-    if (light != null) {
-      actions.add(
-        DeviceAction(
-          deviceId: light.uuid,
-          power: light.capabilities.contains(CoreCapability.CORE_CAP_POWER)
-              ? true
-              : null,
-          brightness:
-              light.capabilities.contains(CoreCapability.CORE_CAP_BRIGHTNESS)
-              ? ((_usageStats?.preferredBrightness ?? 38).clamp(0, 100).toInt())
-              : null,
-        ),
-      );
-    }
-
-    final curtain = _mostUsedWithCapability(CoreCapability.CORE_CAP_POSITION);
-    if (curtain != null) {
-      actions.add(
-        DeviceAction(
-          deviceId: curtain.uuid,
-          position: (_usageStats?.preferredPosition ?? 28).toDouble(),
-        ),
-      );
-    }
-
-    if (actions.isEmpty) return null;
-    final hour = _topPowerHour().toString().padLeft(2, '0');
-    return Profile(
-      name: 'AI Comfort ${hour}h',
-      actions: actions,
-      icon: Icons.auto_awesome,
-    );
-  }
-
-  void _addAssistantRecommendedProfile(Profile recommended) {
-    if (_planTier != EaPlanTier.pro) {
-      _showBottomSnack(EaI18n.t(context, 'Profile recommendation is Pro only.'));
-      _openPlanOptions();
-      return;
-    }
-
-    if (!EaPlanService.instance.canCreateProfile(_planTier, profiles.length)) {
-      _showBottomSnack(EaI18n.t(context, 'Profile limit reached for your plan.'));
-      _openPlanOptions();
-      return;
-    }
-
-    var name = recommended.name;
-    var index = 2;
-    while (profiles.any((p) => p.name.toLowerCase() == name.toLowerCase())) {
-      name = '${recommended.name} $index';
-      index++;
-    }
-
-    setState(() {
-      profiles.add(
-        Profile(
-          name: name,
-          actions: recommended.actions,
-          icon: recommended.icon,
-        ),
-      );
-    });
-    _showBottomSnack('Profile $name was added.');
-  }
-
-  Widget _assistantRecommendedCard() {
-    if (_planTier != EaPlanTier.pro) return const SizedBox.shrink();
-
-    final recommended = _assistantRecommendedProfile();
-    if (recommended == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [EaColor.fore.withValues(alpha: 0.18), EaColor.back],
-          ),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: EaColor.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: EaColor.fore.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: EaColor.fore,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    EaI18n.t(context, 'Assistant recommendation'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: EaText.secondary.copyWith(
-                      fontSize: 11,
-                      color: EaAdaptiveColor.secondaryText(
-                        context,
-                      ).withValues(alpha: .9),
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    recommended.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: EaText.primary.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: EaColor.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    _assistantRecommendationReasonLine1(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: EaText.secondary.copyWith(
-                      fontSize: 12,
-                      color: EaAdaptiveColor.secondaryText(context),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            OutlinedButton.icon(
-              onPressed: () => _addAssistantRecommendedProfile(recommended),
-              icon: const Icon(Icons.add, size: 16),
-              label: Text(EaI18n.t(context, 'Add')),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: EaColor.fore,
-                side: const BorderSide(color: EaColor.fore),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
-                ),
-                minimumSize: const Size(86, 34),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                textStyle: EaText.secondary.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -580,7 +349,6 @@ class _ProfilesState extends State<Profiles>
         child: Column(
           children: [
             Expanded(child: _body()),
-            _assistantRecommendedCard(),
             _fab(),
           ],
         ),
@@ -608,7 +376,10 @@ class _ProfilesState extends State<Profiles>
               style: EaButtonStyle.gradientFilled(
                 context: context,
                 borderRadius: BorderRadius.circular(12),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 12,
+                ),
               ),
             ),
           ),
@@ -717,7 +488,15 @@ class _ProfilesState extends State<Profiles>
                     children: [
                       Text(p.name, style: EaText.primary),
                       Text(
-                        "${p.actions.isNotEmpty ? p.actions.length : "No"} ${p.actions.length > 1 ? "actions" : "action"}",
+                        p.actions.isEmpty
+                            ? EaI18n.t(context, 'No actions')
+                            : EaI18n.t(
+                                context,
+                                p.actions.length == 1
+                                    ? '{count} action'
+                                    : '{count} actions',
+                                {'count': '${p.actions.length}'},
+                              ),
                         style: EaText.secondary,
                       ),
                     ],
@@ -1122,19 +901,13 @@ class _ProfileEditorState extends State<_ProfileEditor> {
     final hasColor = d.capabilities.contains(CoreCapability.CORE_CAP_COLOR);
     final hasTemperature =
         widget.allowTemperatureControl &&
-        d.capabilities.contains(
-      CoreCapability.CORE_CAP_TEMPERATURE,
-    );
+        d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE);
     final hasTemperatureFridge =
         widget.allowTemperatureControl &&
-        d.capabilities.contains(
-      CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
-    );
+        d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE);
     final hasTemperatureFreezer =
         widget.allowTemperatureControl &&
-        d.capabilities.contains(
-      CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
-    );
+        d.capabilities.contains(CoreCapability.CORE_CAP_TEMPERATURE_FREEZER);
     final hasTime = d.capabilities.contains(CoreCapability.CORE_CAP_TIMESTAMP);
     final hasColorTemperature = d.capabilities.contains(
       CoreCapability.CORE_CAP_COLOR_TEMPERATURE,
@@ -1335,6 +1108,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
                                   style: EaButtonStyle.gradientFilled(
                                     context: context,
                                     borderRadius: BorderRadius.circular(12),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                      horizontal: 10,
+                                    ),
                                   ),
                                   onPressed: () {
                                     final rgb =
@@ -1832,6 +1609,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             style: EaButtonStyle.gradientFilled(
               context: context,
               borderRadius: BorderRadius.circular(18),
+              padding: EdgeInsetsGeometry.symmetric(horizontal: 10),
             ),
             child: Text(
               EaI18n.t(context, 'Save Profile'),
@@ -1865,6 +1643,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               style: EaButtonStyle.gradientFilled(
                 context: context,
                 borderRadius: BorderRadius.circular(18),
+                padding: EdgeInsetsGeometry.symmetric(horizontal: 10),
               ),
               child: Text(
                 EaI18n.t(context, 'Save Profile'),

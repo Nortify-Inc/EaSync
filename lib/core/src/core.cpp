@@ -37,6 +37,7 @@
 
 #include <unordered_map>
 #include <unordered_set>
+#include <array>
 #include <deque>
 #include <string>
 #include <vector>
@@ -122,11 +123,205 @@ struct CoreContext {
     bool usageAnyPowered = false;
     uint64_t usageLastPowerOffTsMs = 0;
     uint64_t usageLastRecommendationTsMs = 0;
+    std::array<float, 24> patternW1{};
+    std::array<float, 4> patternB1{};
+    std::array<float, 24> patternW2{};
+    std::array<float, 6> patternB2{};
+    uint64_t patternModelUpdates = 0;
+    float patternLossEma = 1.0f;
+    std::unordered_map<int, int> usageColorHueBuckets;
 };
 
 static constexpr size_t kMaxUsageSamples = 4096;
 static constexpr uint64_t kArrivalGapMs = 45ULL * 60ULL * 1000ULL;
 static constexpr uint64_t kRecommendationCooldownMs = 40ULL * 60ULL * 1000ULL;
+static constexpr int kPatternInputDim = 6;
+static constexpr int kPatternHiddenDim = 4;
+
+static int hourOfDay(uint64_t tsMs);
+
+static float clamp01(float v)
+{
+    return std::clamp(v, 0.0f, 1.0f);
+}
+
+static float sigmoidf(float x)
+{
+    return 1.0f / (1.0f + std::exp(-x));
+}
+
+static float reluf(float x)
+{
+    return x > 0.0f ? x : 0.0f;
+}
+
+static void initPatternModelLocked(CoreContext* core)
+{
+    if (!core || core->patternModelUpdates > 0)
+        return;
+
+    for (size_t i = 0; i < core->patternW1.size(); ++i) {
+        core->patternW1[i] = 0.08f * std::sin(static_cast<float>(i + 1) * 1.618f);
+    }
+    for (size_t i = 0; i < core->patternW2.size(); ++i) {
+        core->patternW2[i] = 0.08f * std::cos(static_cast<float>(i + 1) * 1.414f);
+    }
+    core->patternB1.fill(0.0f);
+    core->patternB2.fill(0.0f);
+    core->patternLossEma = 1.0f;
+}
+
+static float colorHueNorm(uint32_t rgb)
+{
+    const float r = static_cast<float>((rgb >> 16) & 0xFF) / 255.0f;
+    const float g = static_cast<float>((rgb >> 8) & 0xFF) / 255.0f;
+    const float b = static_cast<float>(rgb & 0xFF) / 255.0f;
+
+    const float maxv = std::max({r, g, b});
+    const float minv = std::min({r, g, b});
+    const float d = maxv - minv;
+    if (d < 0.0001f)
+        return 0.5f;
+
+    float h = 0.0f;
+    if (maxv == r) {
+        h = std::fmod(((g - b) / d), 6.0f);
+    } else if (maxv == g) {
+        h = ((b - r) / d) + 2.0f;
+    } else {
+        h = ((r - g) / d) + 4.0f;
+    }
+
+    h *= 60.0f;
+    if (h < 0.0f)
+        h += 360.0f;
+    return clamp01(h / 360.0f);
+}
+
+static std::array<float, kPatternInputDim> buildPatternInput(const CoreDeviceState& state,
+                                                             uint64_t tsMs)
+{
+    std::array<float, kPatternInputDim> x{};
+    constexpr double kTwoPi = 6.28318530717958647692;
+    const double hour = static_cast<double>(hourOfDay(tsMs));
+    const double angle = (kTwoPi * hour) / 24.0;
+
+    x[0] = static_cast<float>((std::sin(angle) + 1.0) * 0.5);
+    x[1] = static_cast<float>((std::cos(angle) + 1.0) * 0.5);
+    x[2] = clamp01((state.temperature - 16.0f) / 14.0f);
+    x[3] = clamp01(static_cast<float>(state.brightness) / 100.0f);
+    x[4] = colorHueNorm(state.color);
+    x[5] = clamp01(state.position / 100.0f);
+    return x;
+}
+
+static float trainUnsupervisedPatternMlpLocked(CoreContext* core,
+                                                const std::array<float, kPatternInputDim>& x,
+                                                std::array<float, kPatternInputDim>* outRecon = nullptr)
+{
+    if (!core)
+        return 1.0f;
+
+    initPatternModelLocked(core);
+
+    std::array<float, kPatternHiddenDim> z1{};
+    for (int h = 0; h < kPatternHiddenDim; ++h) {
+        float acc = core->patternB1[h];
+        for (int i = 0; i < kPatternInputDim; ++i) {
+            acc += core->patternW1[h * kPatternInputDim + i] * x[i];
+        }
+        z1[h] = reluf(acc);
+    }
+
+    std::array<float, kPatternInputDim> y{};
+    for (int i = 0; i < kPatternInputDim; ++i) {
+        float acc = core->patternB2[i];
+        for (int h = 0; h < kPatternHiddenDim; ++h) {
+            acc += core->patternW2[i * kPatternHiddenDim + h] * z1[h];
+        }
+        y[i] = sigmoidf(acc);
+    }
+
+    float mse = 0.0f;
+    std::array<float, kPatternInputDim> dy{};
+    for (int i = 0; i < kPatternInputDim; ++i) {
+        const float e = y[i] - x[i];
+        mse += e * e;
+        dy[i] = e * (y[i] * (1.0f - y[i]));
+    }
+    mse /= static_cast<float>(kPatternInputDim);
+
+    std::array<float, kPatternHiddenDim> dz1{};
+    for (int h = 0; h < kPatternHiddenDim; ++h) {
+        float back = 0.0f;
+        for (int i = 0; i < kPatternInputDim; ++i) {
+            back += core->patternW2[i * kPatternHiddenDim + h] * dy[i];
+        }
+        dz1[h] = z1[h] > 0.0f ? back : 0.0f;
+    }
+
+    const float lr = 0.03f;
+    for (int i = 0; i < kPatternInputDim; ++i) {
+        for (int h = 0; h < kPatternHiddenDim; ++h) {
+            core->patternW2[i * kPatternHiddenDim + h] -= lr * (dy[i] * z1[h]);
+        }
+        core->patternB2[i] -= lr * dy[i];
+    }
+
+    for (int h = 0; h < kPatternHiddenDim; ++h) {
+        for (int i = 0; i < kPatternInputDim; ++i) {
+            core->patternW1[h * kPatternInputDim + i] -= lr * (dz1[h] * x[i]);
+        }
+        core->patternB1[h] -= lr * dz1[h];
+    }
+
+    if (core->patternModelUpdates == 0) {
+        core->patternLossEma = mse;
+    } else {
+        core->patternLossEma = (core->patternLossEma * 0.94f) + (mse * 0.06f);
+    }
+    core->patternModelUpdates++;
+
+    if (outRecon) {
+        *outRecon = y;
+    }
+    return mse;
+}
+
+static std::string colorBucketLabel(int bucket)
+{
+    static const char* kLabels[12] = {
+        "red", "orange", "amber", "yellow", "lime", "green",
+        "teal", "cyan", "blue", "indigo", "violet", "magenta"
+    };
+    if (bucket < 0)
+        return "neutral";
+    return kLabels[bucket % 12];
+}
+
+static std::string dominantColorSummaryLocked(CoreContext* core)
+{
+    if (!core || core->usageColorHueBuckets.empty())
+        return "neutral";
+
+    std::vector<std::pair<int, int>> ranked;
+    ranked.reserve(core->usageColorHueBuckets.size());
+    for (const auto& it : core->usageColorHueBuckets) {
+        ranked.push_back(it);
+    }
+    std::sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) {
+        return a.second > b.second;
+    });
+
+    std::string summary;
+    const size_t maxItems = std::min<size_t>(3, ranked.size());
+    for (size_t i = 0; i < maxItems; ++i) {
+        if (!summary.empty())
+            summary += "/";
+        summary += colorBucketLabel(ranked[i].first);
+    }
+    return summary.empty() ? "neutral" : summary;
+}
 
 static uint64_t nowMs() {
     return static_cast<uint64_t>(
@@ -200,6 +395,12 @@ static void recordUsageSampleLocked(CoreContext* core,
         core->usagePositionSum += state.position;
         core->usagePositionCount++;
     }
+
+    const int hueBucket = static_cast<int>(std::floor(colorHueNorm(state.color) * 12.0f)) % 12;
+    core->usageColorHueBuckets[hueBucket]++;
+
+    const auto x = buildPatternInput(state, ts);
+    (void)trainUnsupervisedPatternMlpLocked(core, x, nullptr);
 
     const bool wasAnyPowered = core->usageAnyPowered;
     core->usagePowerByDevice[uuid] = state.power;
@@ -315,6 +516,45 @@ static bool extractJsonStringField(const std::string& json,
 
     *outValue = json.substr(firstQuote + 1, secondQuote - firstQuote - 1);
     return true;
+}
+
+static bool extractJsonStringArrayField(const std::string& json,
+                                        const std::string& key,
+                                        std::vector<std::string>* outValues)
+{
+    if (!outValues)
+        return false;
+
+    const std::string token = "\"" + key + "\"";
+    const size_t keyPos = json.find(token);
+    if (keyPos == std::string::npos)
+        return false;
+
+    const size_t colonPos = json.find(':', keyPos + token.size());
+    if (colonPos == std::string::npos)
+        return false;
+
+    const size_t openPos = json.find('[', colonPos + 1);
+    if (openPos == std::string::npos)
+        return false;
+
+    const size_t closePos = json.find(']', openPos + 1);
+    if (closePos == std::string::npos || closePos <= openPos)
+        return false;
+
+    size_t cursor = openPos + 1;
+    while (cursor < closePos) {
+        const size_t q1 = json.find('"', cursor);
+        if (q1 == std::string::npos || q1 >= closePos)
+            break;
+        const size_t q2 = json.find('"', q1 + 1);
+        if (q2 == std::string::npos || q2 > closePos)
+            break;
+        outValues->push_back(json.substr(q1 + 1, q2 - q1 - 1));
+        cursor = q2 + 1;
+    }
+
+    return !outValues->empty();
 }
 
 
@@ -1756,7 +1996,8 @@ CoreResult core_usage_get_recommendation(CoreContext* core,
     CoreUsageStats stats{};
     gatherUsageStatsLocked(core, &stats);
 
-    if (stats.sampleCount < 20 || stats.confidence < 0.35f || stats.predictedArrivalHour < 0) {
+    if (stats.sampleCount < 20 || stats.confidence < 0.35f ||
+        core->patternModelUpdates < 24) {
         outRecommendation->available = false;
         return CORE_OK;
     }
@@ -1768,40 +2009,69 @@ CoreResult core_usage_get_recommendation(CoreContext* core,
         return CORE_OK;
     }
 
-    const int hourNow = hourOfDay(ts);
-    const int h = stats.predictedArrivalHour;
-    int hourDelta = std::abs(hourNow - h);
-    hourDelta = std::min(hourDelta, 24 - hourDelta);
+    std::string targetUuid = stats.mostActiveUuid;
+    if (targetUuid.empty() && !core->usageLastState.empty()) {
+        targetUuid = core->usageLastState.begin()->first;
+    }
 
-    // Suggest only around the predicted window to avoid noisy nudges.
-    if (hourDelta > 1) {
+    auto stateIt = core->usageLastState.find(targetUuid);
+    if (stateIt == core->usageLastState.end()) {
         outRecommendation->available = false;
         return CORE_OK;
     }
 
-    const int preferredTemp = static_cast<int>(std::llround(stats.preferredTemperature > 0.1f ? stats.preferredTemperature : 23.0f));
-    const int preferredBright = static_cast<int>(stats.preferredBrightness > 0 ? stats.preferredBrightness : 45);
+    std::array<float, kPatternInputDim> recon{};
+    const auto x = buildPatternInput(stateIt->second, ts);
+    const float reconError = trainUnsupervisedPatternMlpLocked(core, x, &recon);
 
-    std::string targetUuid = stats.mostActiveUuid;
+    const float modelConfidence = clamp01(1.0f - std::sqrt(std::max(0.0f, reconError)));
+    if (modelConfidence < 0.22f) {
+        outRecommendation->available = false;
+        return CORE_OK;
+    }
+
+    const int inferredHour = static_cast<int>(std::llround(
+        std::atan2((recon[0] * 2.0f) - 1.0f, (recon[1] * 2.0f) - 1.0f) * 24.0 / 6.28318530717958647692));
+    const int shownHour = ((inferredHour % 24) + 24) % 24;
+
+    const float recTempF = 16.0f + (clamp01(recon[2]) * 14.0f);
+    const int preferredTemp = static_cast<int>(std::llround(recTempF));
+    const int preferredBright = static_cast<int>(
+        std::llround(clamp01(recon[3]) * 100.0f));
+
+    const float tempGap = clamp01(std::fabs(stateIt->second.temperature - recTempF) / 8.0f);
+    const float brightGap = clamp01(std::fabs(static_cast<float>(stateIt->second.brightness) -
+                                              static_cast<float>(preferredBright)) / 60.0f);
+    const float posGap = clamp01(std::fabs(stateIt->second.position - (clamp01(recon[5]) * 100.0f)) / 55.0f);
+    const float needScore = std::max({tempGap, brightGap, posGap});
+    const float confidence = clamp01((needScore * 0.45f) +
+                                     (stats.confidence * 0.30f) +
+                                     (modelConfidence * 0.25f));
+    if (confidence < 0.52f) {
+        outRecommendation->available = false;
+        return CORE_OK;
+    }
+
     if (!targetUuid.empty()) {
         std::strncpy(outRecommendation->uuid, targetUuid.c_str(), CORE_MAX_UUID - 1);
         outRecommendation->uuid[CORE_MAX_UUID - 1] = '\0';
     }
 
-    const int shownHour = std::clamp(h, 0, 23);
+    const std::string colorHint = dominantColorSummaryLocked(core);
     std::snprintf(outRecommendation->title,
                   CORE_MAX_USAGE_TITLE,
-                  "Routine detectada perto de %02dh",
+                  "Padrao aprendido: ajuste sugerido (%02dh)",
                   shownHour);
 
     std::snprintf(outRecommendation->message,
                   CORE_MAX_USAGE_MESSAGE,
-                  "Voce costuma chegar nesse horario. Recomendacao: manter conforto em %dC e brilho em %d%%.",
+                  "MLP nao-supervisionada detectou oportunidade de conforto. Sugestao: %dC, brilho %d%%, perfil de cor %s.",
                   preferredTemp,
-                  std::clamp(preferredBright, 0, 100));
+                  std::clamp(preferredBright, 0, 100),
+                  colorHint.c_str());
 
     outRecommendation->recommendedHour = shownHour;
-    outRecommendation->confidence = stats.confidence;
+    outRecommendation->confidence = confidence;
     outRecommendation->generatedAtMs = ts;
     outRecommendation->available = true;
 
@@ -1894,6 +2164,8 @@ CoreResult core_usage_observe_frontend_json(CoreContext* core,
     const std::string json(eventJson);
     std::string eventType;
     std::string uuid;
+    std::string capability;
+    std::vector<std::string> deviceIds;
 
     if (!extractJsonStringField(json, "type", &eventType)) {
         // Tolerate malformed events so ingestion stays non-blocking.
@@ -1901,12 +2173,34 @@ CoreResult core_usage_observe_frontend_json(CoreContext* core,
     }
 
     (void)extractJsonStringField(json, "uuid", &uuid);
+    (void)extractJsonStringField(json, "capability", &capability);
+    (void)extractJsonStringArrayField(json, "deviceIds", &deviceIds);
 
-    if (!uuid.empty()) {
+    bool shouldCaptureSnapshot = false;
+    if (eventType == "profile_applied") {
+        shouldCaptureSnapshot = true;
+    } else if (eventType == "device_control") {
+        shouldCaptureSnapshot = (capability == "temperature" ||
+                                 capability == "brightness" ||
+                                 capability == "color" ||
+                                 capability == "color_temperature" ||
+                                 capability == "position");
+    }
+
+    if (shouldCaptureSnapshot && !uuid.empty()) {
         auto it = core->devices.find(uuid);
         if (it != core->devices.end()) {
-            // Capture snapshot to reinforce learning from frontend-observed actions.
+            // Capture only high-signal preference events to avoid noisy supervision data.
             recordUsageSampleLocked(core, uuid, it->second.state, true);
+        }
+    }
+
+    if (eventType == "profile_applied" && !deviceIds.empty()) {
+        for (const auto& id : deviceIds) {
+            auto it = core->devices.find(id);
+            if (it != core->devices.end()) {
+                recordUsageSampleLocked(core, id, it->second.state, true);
+            }
         }
     }
 

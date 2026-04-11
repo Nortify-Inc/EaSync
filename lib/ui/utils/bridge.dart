@@ -9,6 +9,7 @@
  */
 
 import '../handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 String _loadedCoreLibraryPath = 'libeasync_core.so';
 
@@ -129,6 +130,71 @@ String _readCStringSafe(Pointer<Int8> outBuf, int outLen) {
   return utf8.decode(bytes.sublist(0, end), allowMalformed: true);
 }
 
+Uint8List _readCStringBytes(Pointer<Int8> outBuf, int outLen) {
+  if (outLen <= 0) return Uint8List(0);
+  final bytes = outBuf.cast<Uint8>().asTypedList(outLen);
+  var end = 0;
+  while (end < bytes.length && bytes[end] != 0) {
+    end++;
+  }
+  if (end == 0) return Uint8List(0);
+  return Uint8List.fromList(bytes.sublist(0, end));
+}
+
+int _utf8SafePrefixLength(List<int> data) {
+  if (data.isEmpty) return 0;
+
+  // Try full payload first. If it fails, trim up to 3 trailing bytes,
+  // which is enough to recover from a split UTF-8 code point across chunks.
+  final maxTrim = data.length < 3 ? data.length : 3;
+  for (var trim = 0; trim <= maxTrim; trim++) {
+    final len = data.length - trim;
+    if (len <= 0) continue;
+    try {
+      utf8.decode(data.sublist(0, len), allowMalformed: false);
+      return len;
+    } catch (_) {}
+  }
+
+  // If decoding still fails, do not keep unbounded junk in pending buffer.
+  return data.length;
+}
+
+class _Utf8ChunkDecoder {
+  final List<int> _pending = <int>[];
+
+  String decode(Uint8List bytes) {
+    if (bytes.isEmpty && _pending.isEmpty) return '';
+
+    final merged = <int>[..._pending, ...bytes];
+    _pending.clear();
+
+    final prefixLen = _utf8SafePrefixLength(merged);
+    if (prefixLen <= 0) {
+      _pending.addAll(merged);
+      return '';
+    }
+
+    final ready = merged.sublist(0, prefixLen);
+    if (prefixLen < merged.length) {
+      _pending.addAll(merged.sublist(prefixLen));
+    }
+
+    try {
+      return utf8.decode(ready, allowMalformed: false);
+    } catch (_) {
+      return utf8.decode(ready, allowMalformed: true);
+    }
+  }
+
+  String flush() {
+    if (_pending.isEmpty) return '';
+    final out = utf8.decode(_pending, allowMalformed: true);
+    _pending.clear();
+    return out;
+  }
+}
+
 typedef _aiQueryC =
     Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
 typedef _aiQueryDart =
@@ -236,7 +302,7 @@ final aiSetSystemPrompt = (() {
 })();
 
 const String _kAiSystemPrompt =
-   "You are Agent, an AI assistant created by Nortify Inc. "
+    "You are Agent, an AI assistant created by Nortify Inc. "
     "Be quick and concise. Don't invent info.";
 
 void _configureAiSystemPrompt() {
@@ -440,6 +506,7 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
     final outLen = 65536;
     final outBuf = malloc.allocate<Int8>(outLen);
     final finishedFlag = malloc.allocate<Uint8>(1);
+    final decoder = _Utf8ChunkDecoder();
 
     try {
       while (true) {
@@ -454,9 +521,11 @@ Future<String> aiQueryAsync(String prompt, {int pollIntervalMs = 60}) async {
           '[Bridge] aiQueryAsync: pollRc=$pollRc finished=${finishedFlag.value}',
         );
         if (pollRc == 0) {
-          final res = _readCStringSafe(outBuf, outLen);
-          print('[Bridge] aiQueryAsync: got result len=${res.length}');
-          return res;
+          final res = decoder.decode(_readCStringBytes(outBuf, outLen));
+          final tail = decoder.flush();
+          final out = '$res$tail';
+          print('[Bridge] aiQueryAsync: got result len=${out.length}');
+          return out;
         }
         await Future.delayed(Duration(milliseconds: pollIntervalMs));
       }
@@ -525,6 +594,7 @@ Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 12}) {
   final controller = StreamController<String>();
 
   Future<void>(() async {
+    final decoder = _Utf8ChunkDecoder();
     final inPtr = prompt.toNativeUtf8();
     final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
     try {
@@ -556,7 +626,7 @@ Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 12}) {
             outLen,
           );
 
-          final resRaw = _readCStringSafe(outBuf, outLen);
+          final resRaw = decoder.decode(_readCStringBytes(outBuf, outLen));
           final res = _sanitizeChunk(resRaw);
 
           if (res.isNotEmpty && !hasFirstChunk) {
@@ -572,6 +642,8 @@ Stream<String> _aiQueryStreamMain(String prompt, {int pollIntervalMs = 12}) {
 
           if (pollRc == 0) {
             if (res.isNotEmpty) controller.add(res);
+            final tail = _sanitizeChunk(decoder.flush());
+            if (tail.isNotEmpty) controller.add(tail);
             await controller.close();
             return;
           }
@@ -682,6 +754,7 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
     final inPtr = prompt.toNativeUtf8();
     final handlePtr = malloc.allocate<Uint64>(sizeOf<Uint64>());
     try {
+      final decoder = _Utf8ChunkDecoder();
       final rc = _aiQueryStartLocal(nullptr, inPtr, handlePtr);
       if (rc != 0) {
         reply.send({'error': 'AI async start failed (rc=$rc)'});
@@ -703,7 +776,7 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
             outBuf,
             outLen,
           );
-          final resRaw = _readCStringSafe(outBuf, outLen);
+          final resRaw = decoder.decode(_readCStringBytes(outBuf, outLen));
           final res = _sanitizeChunk(resRaw);
 
           if (res.isNotEmpty && !hasFirstChunk) {
@@ -723,6 +796,10 @@ Future<void> _aiQueryIsolateEntry(dynamic message) async {
             // final chunk
             if (res.isNotEmpty) {
               reply.send({'chunk': res});
+            }
+            final tail = _sanitizeChunk(decoder.flush());
+            if (tail.isNotEmpty) {
+              reply.send({'chunk': tail});
             }
             reply.send({'done': true});
             return;
@@ -1081,9 +1158,9 @@ typedef _coreUsageGetRecommendationDart =
     int Function(Pointer<Void>, Pointer<CoreUsageRecommendationNative>);
 
 typedef _coreUsageObserveFrontendJsonC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreUsageObserveFrontendJsonDart =
-  int Function(Pointer<Void>, Pointer<Utf8>);
+    int Function(Pointer<Void>, Pointer<Utf8>);
 
 typedef _coreEventTrampolineC =
     Void Function(Pointer<CoreEventNative>, Pointer<Void>);
@@ -1450,6 +1527,8 @@ Never _throwLastError(int code) {
 }
 
 class Bridge {
+  static const String _kAiNotes = 'assistant.ai.notes.v1';
+
   static bool _ready = false;
   static bool get isReady => _ready;
 
@@ -1473,6 +1552,9 @@ class Bridge {
   static final StreamController<CoreEventData> _eventController =
       StreamController.broadcast();
 
+  static final StreamController<Map<String, dynamic>>
+  _frontendLearningEventController = StreamController.broadcast();
+
   static Pointer<NativeFunction<_coreEventTrampolineC>>? _eventCallbackPointer;
 
   static Timer? _simulateTimer;
@@ -1484,6 +1566,9 @@ class Bridge {
   static Stream<String> get onStateChanged => _stateController.stream;
 
   static Stream<CoreEventData> get onEvents => _eventController.stream;
+
+  static Stream<Map<String, dynamic>> get onFrontendLearningEvents =>
+      _frontendLearningEventController.stream;
 
   static void _log(String category, String message, {String? uuid}) {
     _diagnostics.add(
@@ -1773,10 +1858,7 @@ class Bridge {
     _observeFrontendLearningEvent(
       'device_registered',
       uuid: uuid,
-      payload: {
-        'protocol': protocol,
-        'capabilityCount': capabilities.length,
-      },
+      payload: {'protocol': protocol, 'capabilityCount': capabilities.length},
     );
 
     _log('device', 'Device registered', uuid: uuid);
@@ -3014,13 +3096,146 @@ class Bridge {
     String? uuid,
     Map<String, dynamic>? payload,
   }) {
+    final topLevelCapability = type == 'device_control'
+        ? (payload?['capability'] ?? '').toString().trim()
+        : '';
+
     final event = <String, dynamic>{
       'type': type,
       'atMs': DateTime.now().millisecondsSinceEpoch,
       if (uuid != null && uuid.trim().isNotEmpty) 'uuid': uuid,
+      if (topLevelCapability.isNotEmpty) 'capability': topLevelCapability,
       if (payload != null && payload.isNotEmpty) 'payload': payload,
     };
+    _frontendLearningEventController.add(event);
+
+    _appendAiNoteFromFrontendEvent(type, uuid: uuid, payload: payload);
+
+    if (!_shouldForwardLearningEvent(type, payload)) {
+      return;
+    }
+
+    final settings = EaAppSettings.instance;
+    if (!settings.telemetryEnabled || !settings.aiUseUsageHistory) {
+      return;
+    }
     sendFrontendLearningEvent(event);
+  }
+
+  static bool _shouldForwardLearningEvent(
+    String type,
+    Map<String, dynamic>? payload,
+  ) {
+    if (type == 'profile_applied' ||
+        type == 'recommendation_shown' ||
+        type == 'recommendation_accepted' ||
+        type == 'recommendation_dismissed') {
+      return true;
+    }
+
+    if (type != 'device_control') return false;
+
+    final capability = (payload?['capability'] ?? '').toString().trim();
+    if (capability.isEmpty) return false;
+
+    return capability == 'temperature' ||
+        capability == 'brightness' ||
+        capability == 'color' ||
+        capability == 'color_temperature' ||
+        capability == 'position';
+  }
+
+  static Future<void> _appendAiNoteFromFrontendEvent(
+    String type, {
+    String? uuid,
+    Map<String, dynamic>? payload,
+  }) async {
+    String? kind;
+    String? title;
+    String? message;
+
+    if (type == 'profile_applied') {
+      final profileName = (payload?['name'] ?? '').toString().trim();
+      final actions = payload?['actionCount'];
+      if (profileName.isEmpty) return;
+      kind = 'profile_applied';
+      title = 'Profile applied';
+      message = '$profileName (${actions ?? 0} actions)';
+    }
+
+    if (kind == null || title == null || message == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_kAiNotes);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final nextEntry = <String, dynamic>{
+      'id': '$now',
+      'kind': kind,
+      'title': title,
+      'message': message,
+      'createdAtMs': now,
+    };
+
+    final list = <Map<String, dynamic>>[];
+    if (raw != null && raw.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          list.addAll(
+            decoded
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList(),
+          );
+        }
+      } catch (_) {}
+    }
+
+    final nextSignature = '$kind|$title|$message';
+    if (list.isNotEmpty) {
+      final first = list.first;
+      final sig =
+          '${first['kind'] ?? ''}|${first['title'] ?? ''}|${first['message'] ?? ''}';
+      if (sig == nextSignature) {
+        return;
+      }
+    }
+
+    list.insert(0, nextEntry);
+    if (list.length > 120) {
+      list.removeRange(120, list.length);
+    }
+
+    await prefs.setString(_kAiNotes, jsonEncode(list));
+  }
+
+  static void observeProfileApplied({
+    required String profileName,
+    required int actionCount,
+    required List<String> deviceIds,
+  }) {
+    final normalizedName = profileName.trim();
+    if (normalizedName.isEmpty) return;
+
+    _observeFrontendLearningEvent(
+      'profile_applied',
+      payload: {
+        'name': normalizedName,
+        'actionCount': actionCount,
+        'deviceCount': deviceIds.length,
+        'deviceIds': deviceIds,
+      },
+    );
+  }
+
+  static void observeAppOpen({
+    required String source,
+    required bool aiEnabled,
+  }) {
+    _observeFrontendLearningEvent(
+      'app_open',
+      payload: {'source': source, 'aiEnabled': aiEnabled},
+    );
   }
 
   static void _onCoreEvent(

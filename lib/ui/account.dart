@@ -819,8 +819,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                 children: [
                   _AccountTile(
                     icon: Icons.lock_outline_rounded,
-                    title: EaI18n.t(context, 'Password and passkeys'),
-                    subtitle: EaI18n.t(context, 'Credential management'),
+                    title: EaI18n.t(context, 'Biometrics and passkeys'),
+                    subtitle: EaI18n.t(context, 'Increase the security to access the app'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -833,7 +833,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                   _AccountTile(
                     icon: Icons.shield_moon_outlined,
                     title: EaI18n.t(context, '2-step verification'),
-                    subtitle: EaI18n.t(context, 'Additional access protection'),
+                    subtitle: EaI18n.t(context, 'Additional access protection to your account'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -2401,7 +2401,7 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
                   SwitchListTile.adaptive(
                     value: _fingerprintEnabled,
                     title: Text(
-                      EaI18n.t(context, 'Enable fingerprint unlock'),
+                      EaI18n.t(context, 'Enable device passkeys unlock'),
                       style: EaText.secondary.copyWith(
                         color: EaAdaptiveColor.bodyText(context),
                       ),
@@ -2416,33 +2416,6 @@ class _PasswordPasskeysPageState extends State<PasswordPasskeysPage> {
                       ),
                     ),
                     onChanged: _setFingerprint,
-                  ),
-                  Divider(height: 1, color: EaAdaptiveColor.border(context)),
-                  ListTile(
-                    leading: const Icon(Icons.password_rounded),
-                    title: Text(
-                      _hasPassword
-                          ? EaI18n.t(context, 'Change login password')
-                          : EaI18n.t(context, 'Create login password'),
-                      style: EaText.secondary.copyWith(
-                        color: EaAdaptiveColor.bodyText(context),
-                      ),
-                    ),
-                    subtitle: Text(
-                      EaI18n.t(context, 'Configure your local login password'),
-                      style: EaText.small.copyWith(
-                        color: EaAdaptiveColor.secondaryText(context),
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PasswordSetupPage(),
-                        ),
-                      ).then((_) => _load());
-                    },
                   ),
                 ],
               ),
