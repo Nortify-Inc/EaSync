@@ -1680,7 +1680,7 @@ class _AuthSheet extends StatelessWidget {
           Text(
             signUp
                 ? EaI18n.t(context, 'Create your account')
-                : EaI18n.t(context, 'Welcome back'),
+                : EaI18n.t(context, 'Welcome'),
             style: EaText.primary.copyWith(
               fontSize: 22,
               fontWeight: FontWeight.w700,

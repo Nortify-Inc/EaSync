@@ -33,9 +33,8 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     _BootStepItem(id: 'drivers', title: 'Initializing drivers'),
     _BootStepItem(id: 'identity', title: 'Validating identity'),
     _BootStepItem(id: 'aiRuntime', title: 'Loading AI runtime'),
-    _BootStepItem(id: 'modelCache', title: 'Checking local model'),
-    _BootStepItem(id: 'modelDownload', title: 'Downloading AI model'),
-    _BootStepItem(id: 'aiInit', title: 'Initializing AI engine'),
+    _BootStepItem(id: 'modelDownload', title: 'Downloading resources'),
+    _BootStepItem(id: 'aiInit', title: 'Initializing engine'),
     _BootStepItem(id: 'finalize', title: 'Finalizing startup'),
   ];
 
@@ -140,8 +139,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   Future<bool> _runAndroidModelSetup() async {
     final ready = await Downloader.isReady();
     if (ready) {
-      // Model is already local; just configure data dir and initialize runtime.
-      _markStepDone('modelCache', detail: 'Model found locally');
       _markStepSkipped('modelDownload', detail: 'Download not required');
       _markStepRunning('aiInit', detail: 'Configuring runtime…');
       setState(() {
@@ -150,7 +147,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
         _aiStatus = DownloadStatus.initializing;
       });
     } else {
-      _markStepDone('modelCache', detail: 'Model not found locally');
       _markStepRunning('modelDownload', detail: 'Starting download…');
       setState(() => _showAiProgress = true);
     }
@@ -166,7 +162,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
       if (state.status == DownloadStatus.downloading) {
         _markStepRunning(
           'modelDownload',
-          detail: '${(state.progress * 100).toStringAsFixed(1)}% downloaded',
+          detail: '${(state.progress * 100).toStringAsFixed(1)}% Downloaded',
         );
       } else if (state.status == DownloadStatus.initializing) {
         _markStepDone('modelDownload', detail: 'Model downloaded');
@@ -368,9 +364,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
                   FadeTransition(opacity: _fade, child: _bootChecklist()),
                   const Spacer(),
                   FadeTransition(opacity: _fade, child: _tipTile()),
-                  const SizedBox(height: 12),
-                  if (_showAiProgress)
-                    FadeTransition(opacity: _fade, child: _aiProgressWidget()),
                   const SizedBox(height: 32),
                 ],
               ),
@@ -378,44 +371,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _aiProgressWidget() {
-    final isDownloading = _aiStatus == DownloadStatus.downloading;
-    final isError = _aiStatus == DownloadStatus.error;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            if (isError)
-              Icon(Icons.error_outline, size: 14, color: Colors.redAccent),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                _aiMessage,
-                style: EaText.secondary.copyWith(
-                  color: isError
-                      ? Colors.redAccent
-                      : EaAdaptiveColor.secondaryText(context),
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            if (isDownloading)
-              Text(
-                '${(_aiProgress * 100).toStringAsFixed(1)}%',
-                style: EaText.secondary.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
-                  fontSize: 12,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
     );
   }
 
@@ -484,9 +439,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
             ClipRRect(
               borderRadius: BorderRadius.circular(5),
               child: LinearProgressIndicator(
-                value: step.state == _BootStepState.running
-                    ? null
-                    : ((safeIndex + 1) / _bootSteps.length),
+                value: ((safeIndex + 1) / _bootSteps.length),
                 minHeight: 4,
                 backgroundColor: EaAdaptiveColor.secondaryText(
                   context,
@@ -658,23 +611,14 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Image(
-                      image: const AssetImage("assets/images/easyncLogo.png"),
-                      width: 50,
-                      height: 50,
-                    ),
-                    Text(
-                      "EaSync",
-                      style: EaText.primary.copyWith(
-                        color: EaAdaptiveColor.bodyText(context),
-                        fontSize: 48,
-                        height: 1.05,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                Text(
+                  "EaSync",
+                  style: EaText.primary.copyWith(
+                    color: EaAdaptiveColor.bodyText(context),
+                    fontSize: 48,
+                    height: 1.05,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(

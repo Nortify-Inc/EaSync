@@ -415,7 +415,7 @@ class EaI18n {
     'Disabled': 'Desativado',
     'Authenticated via {provider}': 'Autenticado via {provider}',
     'Create your account': 'Crie sua conta',
-    'Welcome back': 'Bem-vindo de volta',
+    'Welcome': 'Bem-vindo',
     'Choose a provider to get started': 'Escolha um provedor para começar',
     'Choose a provider to continue': 'Escolha um provedor para continuar',
     'By continuing you agree to our ':
