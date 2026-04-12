@@ -22,6 +22,8 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
   Timer? _lifeTimer;
   DateTime? _shownAt;
   StreamSubscription<HostTransferRequestNotice>? _hostRequestSub;
+  final Map<String, DateTime> _hostRequestSnackShownAt =
+      <String, DateTime>{};
 
   @override
   void initState() {
@@ -30,6 +32,9 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
     _initPlanAndPolling();
     _hostRequestSub = TrustedPresenceService.instance.onHostTransferRequest
         .listen(_showHostRequestSnack);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPendingHostRequestSnacks();
+    });
   }
 
   @override
@@ -45,11 +50,26 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _refreshPlanAndPolling();
+      _showPendingHostRequestSnacks();
+    }
+  }
+
+  void _showPendingHostRequestSnacks() {
+    final pending = TrustedPresenceService.instance.pendingHostTransferRequests();
+    for (final notice in pending) {
+      _showHostRequestSnack(notice);
     }
   }
 
   void _showHostRequestSnack(HostTransferRequestNotice notice) {
     if (!mounted) return;
+
+    final lastShownAt = _hostRequestSnackShownAt[notice.requestId];
+    final now = DateTime.now();
+    if (lastShownAt != null && now.difference(lastShownAt).inSeconds < 10) {
+      return;
+    }
+    _hostRequestSnackShownAt[notice.requestId] = now;
 
     final name = notice.requesterName.trim().isEmpty
         ? EaI18n.t(context, 'Unknown session')

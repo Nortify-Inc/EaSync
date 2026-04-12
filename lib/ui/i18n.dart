@@ -412,15 +412,10 @@ class EaI18n {
     'Can modify configuration': 'Pode modificar configurações',
     'Host policy: control {control}, modify {modify}':
         'Política do host: controle {control}, modificação {modify}',
-    'Take host role on this device': 'Assumir papel de host neste dispositivo',
     'Host applies permissions to other instances':
         'O host aplica permissões para outras instâncias',
     'Unknown session': 'Sessão desconhecida',
-    'You are host': 'Você é host',
-    '{host} is host': '{host} é host',
-    'Host transfer requests: {count}':
-        'Solicitações de transferência de host: {count}',
-    'Request transfer': 'Solicitar transferência',
+    'Request to be Host': 'Solicitar para ser Host',
     'Host transfer requests': 'Solicitações de transferência de host',
     'Host transfer request from {name}':
         'Solicitação de transferência de host de {name}',

@@ -34,11 +34,13 @@ class TrustedPresenceService {
   static const int _udpPort = 48321;
   static const String _packetProto = 'easync_trusted_v1';
   static const Duration _helloInterval = Duration(seconds: 3);
+  static const int _hostStaleSeconds = 9;
 
   RawDatagramSocket? _socket;
   Timer? _helloTimer;
   Timer? _retryTimer;
   bool _started = false;
+  final Map<String, DateTime> _peerLastSeenAt = <String, DateTime>{};
   final Set<String> _seenRequestIds = <String>{};
   final Map<String, HostTransferRequestNotice> _pendingRequests =
       <String, HostTransferRequestNotice>{};
@@ -160,11 +162,51 @@ class TrustedPresenceService {
     if (packet == null || packet['proto'] != _packetProto) return;
 
     final type = (packet['type'] ?? '').toString().trim();
+    final prefs = await SharedPreferences.getInstance();
+    final localInstanceId = (prefs.getString(_kTrustedInstanceId) ?? '').trim();
+    var currentHostId = (prefs.getString(_kTrustedHostId) ?? '').trim();
+
+    if (type == 'hello') {
+      final peerId = (packet['instanceId'] ?? '').toString().trim();
+      if (peerId.isNotEmpty && peerId != localInstanceId) {
+        final now = DateTime.now();
+        _peerLastSeenAt[peerId] = now;
+
+        final announcedHost = (packet['hostId'] ?? '').toString().trim();
+        final senderClaimsSelfHost =
+            announcedHost.isNotEmpty && announcedHost == peerId;
+        if (senderClaimsSelfHost && announcedHost != currentHostId) {
+          final currentHostIsLocal =
+              currentHostId.isNotEmpty && currentHostId == localInstanceId;
+          final currentHostFresh = _isPeerFresh(currentHostId, now);
+          if (currentHostId.isEmpty || currentHostIsLocal || !currentHostFresh) {
+            currentHostId = announcedHost;
+            await prefs.setString(_kTrustedHostId, currentHostId);
+          }
+        }
+      }
+      return;
+    }
+
+    if (type == 'policy') {
+      final targetId = (packet['targetId'] ?? '').toString().trim();
+      final hostId = (packet['hostId'] ?? '').toString().trim();
+      if (targetId == localInstanceId &&
+          hostId.isNotEmpty &&
+          hostId != currentHostId) {
+        await prefs.setString(_kTrustedHostId, hostId);
+      }
+      return;
+    }
 
     if (type == 'host_transfer_result') {
       final requestId = (packet['requestId'] ?? '').toString().trim();
       if (requestId.isNotEmpty) {
         _pendingRequests.remove(requestId);
+      }
+      final newHostId = (packet['newHostId'] ?? '').toString().trim();
+      if (newHostId.isNotEmpty && newHostId != currentHostId) {
+        await prefs.setString(_kTrustedHostId, newHostId);
       }
       return;
     }
@@ -175,8 +217,6 @@ class TrustedPresenceService {
     final requesterId = (packet['requesterId'] ?? '').toString().trim();
     if (requestId.isEmpty || requesterId.isEmpty) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    final localInstanceId = (prefs.getString(_kTrustedInstanceId) ?? '').trim();
     if (localInstanceId.isNotEmpty && requesterId == localInstanceId) return;
 
     if (_seenRequestIds.contains(requestId)) return;
@@ -195,5 +235,12 @@ class TrustedPresenceService {
     _requestController.add(
       notice,
     );
+  }
+
+  bool _isPeerFresh(String instanceId, DateTime now) {
+    if (instanceId.trim().isEmpty) return false;
+    final seen = _peerLastSeenAt[instanceId];
+    if (seen == null) return false;
+    return now.difference(seen).inSeconds <= _hostStaleSeconds;
   }
 }

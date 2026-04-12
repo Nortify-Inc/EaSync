@@ -3382,6 +3382,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   static const _kRemoteCanModify = 'security.remote.can_modify';
   static const _udpPort = 48321;
   static const _packetProto = 'easync_trusted_v1';
+  static const _hostStaleSeconds = 9;
 
   RawDatagramSocket? _socket;
   Timer? _helloTimer;
@@ -3643,6 +3644,62 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     } catch (_) {}
   }
 
+  void _requestTransferStateSync() {
+    _broadcastPacket({
+      'proto': _packetProto,
+      'type': 'host_transfer_sync_request',
+      'requesterId': _instanceId,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  void _sendTransferStateToAddress(_HostTransferRequest req, String address) {
+    final socket = _socket;
+    if (socket == null) return;
+    final packet = {
+      'proto': _packetProto,
+      'type': 'host_transfer_state',
+      'requestId': req.requestId,
+      'requesterId': req.requesterId,
+      'requesterName': req.requesterName,
+      'approvedBy': req.approvedBy.toList(growable: false),
+      'rejectedBy': req.rejectedBy.toList(growable: false),
+      'resolved': req.resolved,
+      'accepted': req.accepted,
+      'message': req.resolutionMessage,
+      'hostId': _hostId,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    };
+    final data = utf8.encode(jsonEncode(packet));
+    try {
+      socket.send(data, InternetAddress(address), _udpPort);
+    } catch (_) {}
+  }
+
+  void _broadcastTransferState(_HostTransferRequest req) {
+    _broadcastPacket({
+      'proto': _packetProto,
+      'type': 'host_transfer_state',
+      'requestId': req.requestId,
+      'requesterId': req.requesterId,
+      'requesterName': req.requesterName,
+      'approvedBy': req.approvedBy.toList(growable: false),
+      'rejectedBy': req.rejectedBy.toList(growable: false),
+      'resolved': req.resolved,
+      'accepted': req.accepted,
+      'message': req.resolutionMessage,
+      'hostId': _hostId,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  void _sendAllTransferStatesToAddress(String address) {
+    for (final req in _transferRequests.values) {
+      if (req.resolved) continue;
+      _sendTransferStateToAddress(req, address);
+    }
+  }
+
   Future<void> _submitTransferVote(
     _HostTransferRequest req,
     bool approve,
@@ -3668,6 +3725,10 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       'atMs': DateTime.now().millisecondsSinceEpoch,
     };
     _broadcastPacket(packet);
+
+    if (_isHost) {
+      _broadcastTransferState(req);
+    }
 
     if (_isHost) {
       _evaluateTransferRequest(req);
@@ -3713,6 +3774,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       'message': message,
       'atMs': DateTime.now().millisecondsSinceEpoch,
     };
+    _broadcastTransferState(req);
     _broadcastPacket(resultPacket);
     if (mounted) setState(() {});
   }
@@ -3771,6 +3833,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       _socket = socket;
 
       _broadcastHello();
+      Future<void>.delayed(const Duration(milliseconds: 420), () {
+        _requestTransferStateSync();
+      });
       _helloTimer = Timer.periodic(const Duration(seconds: 3), (_) {
         _broadcastHello();
       });
@@ -3797,6 +3862,27 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     }
     _saveTrustedLegacyList();
     if (mounted) setState(() {});
+  }
+
+  bool _isHostPeerFresh(String hostId) {
+    final host = _peers[hostId];
+    if (host == null) return false;
+    return DateTime.now().difference(host.lastSeen).inSeconds <=
+        _hostStaleSeconds;
+  }
+
+  bool _shouldAcceptHelloHostClaim({
+    required String peerId,
+    required String announcedHost,
+  }) {
+    if (_isHost) return false;
+    if (announcedHost.isEmpty) return false;
+    if (announcedHost != peerId) return false;
+    if (_hostId == announcedHost) return false;
+    if (_hostId.isEmpty) return true;
+
+    // Keep the host stable while current host is still alive.
+    return !_isHostPeerFresh(_hostId);
   }
 
   void _broadcastHello() {
@@ -3869,14 +3955,6 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       final peerId = (packet['instanceId'] ?? '').toString().trim();
       if (peerId.isEmpty || peerId == _instanceId) return;
 
-      final announcedHost = (packet['hostId'] ?? '').toString().trim();
-      // Avoid UI host badge flicker: only trust host changes when the sender
-      // is the announced host itself.
-      final senderClaimsSelfHost = announcedHost.isNotEmpty && announcedHost == peerId;
-      if (!_isHost && senderClaimsSelfHost && _hostId != announcedHost) {
-        _hostId = announcedHost;
-      }
-
       final display = (packet['displayName'] ?? '').toString().trim();
       final platformRaw = (packet['platform'] ?? '').toString().trim();
       final platform = platformRaw.isEmpty
@@ -3903,10 +3981,25 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       node.photo = photo.isEmpty ? node.photo : photo;
       node.address = datagram.address.address;
       node.lastSeen = DateTime.now();
+
+      final announcedHost = (packet['hostId'] ?? '').toString().trim();
+      if (
+        _shouldAcceptHelloHostClaim(
+          peerId: peerId,
+          announcedHost: announcedHost,
+        )
+      ) {
+        _hostId = announcedHost;
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString(_kTrustedHostId, _hostId);
+        });
+      }
+
       _saveTrustedLegacyList();
 
       if (_isHost) {
         _sendPolicyToPeer(node);
+        _sendAllTransferStatesToAddress(node.address);
       }
       if (mounted) setState(() {});
       return;
@@ -3919,6 +4012,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         return;
       }
       _hostId = hostId;
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString(_kTrustedHostId, _hostId);
+      });
       final canControl = packet['canControl'] == true;
       final canModify = packet['canModify'] == true;
       _applyIncomingPolicy(canControl, canModify);
@@ -3952,6 +4048,83 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         req.requesterName = requesterName;
       }
 
+      if (_isHost) {
+        _broadcastTransferState(req);
+      }
+
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (type == 'host_transfer_sync_request') {
+      if (!_isHost) return;
+      final requesterId = (packet['requesterId'] ?? '').toString().trim();
+      if (requesterId.isEmpty || requesterId == _instanceId) return;
+      _sendAllTransferStatesToAddress(datagram.address.address);
+      return;
+    }
+
+    if (type == 'host_transfer_state') {
+      final requestId = (packet['requestId'] ?? '').toString().trim();
+      final requesterId = (packet['requesterId'] ?? '').toString().trim();
+      if (requestId.isEmpty || requesterId.isEmpty) return;
+
+      final requesterName = (packet['requesterName'] ?? '').toString().trim();
+      final req = _transferRequests.putIfAbsent(
+        requestId,
+        () => _HostTransferRequest(
+          requestId: requestId,
+          requesterId: requesterId,
+          requesterName: requesterName.isEmpty
+              ? _displayNameForInstance(requesterId)
+              : requesterName,
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      if (requesterName.isNotEmpty) {
+        req.requesterName = requesterName;
+        _instanceNames[requesterId] = requesterName;
+      }
+
+      final approvedByRaw = packet['approvedBy'];
+      if (approvedByRaw is List) {
+        req.approvedBy
+          ..clear()
+          ..addAll(
+            approvedByRaw
+                .map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty),
+          );
+      }
+
+      final rejectedByRaw = packet['rejectedBy'];
+      if (rejectedByRaw is List) {
+        req.rejectedBy
+          ..clear()
+          ..addAll(
+            rejectedByRaw
+                .map((e) => e.toString().trim())
+                .where((e) => e.isNotEmpty),
+          );
+      }
+
+      req.resolved = packet['resolved'] == true;
+      req.accepted = packet['accepted'] == true;
+      req.resolutionMessage = (packet['message'] ?? '').toString().trim();
+
+      final hostId = (packet['hostId'] ?? '').toString().trim();
+      if (hostId.isNotEmpty && _hostId != hostId) {
+        _hostId = hostId;
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString(_kTrustedHostId, _hostId);
+        });
+      }
+
+      if (_activeTransferRequestId == requestId && req.resolved) {
+        _activeTransferRequestId = null;
+      }
+
       if (mounted) setState(() {});
       return;
     }
@@ -3972,6 +4145,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       }
 
       if (_isHost) {
+        _broadcastTransferState(req);
         _evaluateTransferRequest(req);
       }
       if (mounted) setState(() {});
