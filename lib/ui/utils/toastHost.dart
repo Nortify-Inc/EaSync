@@ -6,7 +6,8 @@ class RecommendationToastHost extends StatefulWidget {
   const RecommendationToastHost({super.key, required this.child});
 
   @override
-  State<RecommendationToastHost> createState() => _RecommendationToastHostState();
+  State<RecommendationToastHost> createState() =>
+      _RecommendationToastHostState();
 }
 
 class _RecommendationToastHostState extends State<RecommendationToastHost>
@@ -20,12 +21,15 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
   double _life = 1.0;
   Timer? _lifeTimer;
   DateTime? _shownAt;
+  StreamSubscription<HostTransferRequestNotice>? _hostRequestSub;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initPlanAndPolling();
+    _hostRequestSub = TrustedPresenceService.instance.onHostTransferRequest
+        .listen(_showHostRequestSnack);
   }
 
   @override
@@ -33,6 +37,7 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     _lifeTimer?.cancel();
+    _hostRequestSub?.cancel();
     super.dispose();
   }
 
@@ -41,6 +46,67 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
     if (state == AppLifecycleState.resumed) {
       _refreshPlanAndPolling();
     }
+  }
+
+  void _showHostRequestSnack(HostTransferRequestNotice notice) {
+    if (!mounted) return;
+
+    final name = notice.requesterName.trim().isEmpty
+        ? EaI18n.t(context, 'Unknown session')
+        : notice.requesterName.trim();
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    if (messenger == null) return;
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+          duration: const Duration(seconds: 7),
+          content: Row(
+            children: [
+              const Icon(Icons.swap_horizontal_circle_outlined, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  EaI18n.t(
+                    context,
+                    'Host transfer request from {name}',
+                    {'name': name},
+                  ),
+                  style: EaText.secondary.copyWith(
+                    color: EaColor.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    messenger.hideCurrentSnackBar();
+                    final nav = eaNavigatorKey.currentState;
+                    if (nav == null) return;
+                    nav.push(
+                      MaterialPageRoute(
+                        builder: (_) => const TrustedDevicesPage(),
+                      ),
+                    );
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: Icon(Icons.chevron_right_rounded, size: 32),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
   }
 
   Future<void> _initPlanAndPolling() async {
@@ -69,7 +135,8 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
         ? const Duration(seconds: 25)
         : const Duration(minutes: 4);
 
-    _pollTimer = Timer.periodic(period, (_) => _tryFetchAndShowRecommendation());
+    _pollTimer =
+        Timer.periodic(period, (_) => _tryFetchAndShowRecommendation());
   }
 
   Duration _lifeDurationForTier() {

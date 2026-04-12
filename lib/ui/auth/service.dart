@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -22,21 +23,100 @@ class OAuthService {
 
   final _store = OAuthTokenStore.instance;
 
+  GoogleSignIn _createGoogleSignIn() {
+    return GoogleSignIn(
+      scopes: const ['openid', 'email', 'profile'],
+      clientId: (!kIsWeb &&
+              Platform.isIOS &&
+              OAuthConfig.googleIosClientId.trim().isNotEmpty)
+          ? OAuthConfig.googleIosClientId
+          : null,
+      serverClientId: OAuthConfig.googleClientId.trim().isEmpty
+          ? null
+          : OAuthConfig.googleClientId,
+    );
+  }
+
   static const _kUid = 'account.auth.uid';
   static const _kName = 'account.auth.name';
   static const _kEmail = 'account.auth.email';
   static const _kPhoto = 'account.auth.photo';
   static const _kProvider = 'account.auth.provider';
 
+  String _googleClientIdForCurrentPlatform() {
+    if (!kIsWeb && Platform.isAndroid) {
+      return OAuthConfig.googleAndroidClientId;
+    }
+    return OAuthConfig.googleClientId;
+  }
+
   // ── Ponto de entrada ──────────────────────────────────────
 
   Future<OAuthUserProfile> login(OAuthProvider provider) {
     switch (provider) {
       case OAuthProvider.google:
+        if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+          return _googleNativeFlow();
+        }
+        return _webOAuthFlow(provider);
       case OAuthProvider.microsoft:
         return _webOAuthFlow(provider);
       case OAuthProvider.apple:
         return _appleNativeFlow();
+    }
+  }
+
+  Future<OAuthUserProfile> _googleNativeFlow() async {
+    try {
+      final googleSignIn = _createGoogleSignIn();
+
+      // Force account picker instead of reusing the previously authorized account.
+      // Warm up + revoke cached authorization when possible, then sign in interactively.
+      try {
+        await googleSignIn.signInSilently(suppressErrors: true);
+      } catch (_) {}
+
+      try {
+        await googleSignIn.disconnect();
+      } catch (_) {}
+      await googleSignIn.signOut();
+
+      if (!kIsWeb && Platform.isAndroid) {
+        // Give Play Services a moment to flush local account selection state.
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+      }
+
+      final account = await googleSignIn.signIn();
+      if (account == null) {
+        throw const OAuthException('Login Google cancelado.');
+      }
+
+      final auth = await account.authentication;
+      final token = auth.accessToken ?? auth.idToken ?? '';
+
+      await _store.save(
+        accessToken: token,
+        refreshToken: null,
+        expiresInSeconds: 3600,
+        provider: OAuthProvider.google.name,
+      );
+
+      final profile = OAuthUserProfile(
+        id: account.id,
+        name: account.displayName?.trim().isNotEmpty == true
+            ? account.displayName!.trim()
+            : account.email.split('@').first,
+        email: account.email,
+        avatarUrl: account.photoUrl,
+        provider: 'Google',
+      );
+
+      await _persistProfile(profile);
+      return profile;
+    } on OAuthException {
+      rethrow;
+    } catch (e) {
+      throw OAuthException('Falha no login Google nativo: $e');
     }
   }
 
@@ -46,11 +126,22 @@ class OAuthService {
     final meta = _metaFor(provider);
     _validateProviderConfig(provider, meta);
 
-    final server = await HttpServer.bind(
-      InternetAddress.loopbackIPv4,
-      8888,
-      shared: true,
-    );
+    late final HttpServer server;
+    try {
+      // Some Android devices resolve localhost to ::1 first.
+      server = await HttpServer.bind(
+        InternetAddress.loopbackIPv6,
+        8888,
+        shared: true,
+        v6Only: false,
+      );
+    } catch (_) {
+      server = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        8888,
+        shared: true,
+      );
+    }
     final redirectUri = Uri.parse('http://localhost:8888');
 
     final verifier = _makeVerifier();
@@ -68,12 +159,21 @@ class OAuthService {
         'code_challenge_method': 'S256',
         if (provider == OAuthProvider.google) ...{
           'access_type': 'offline',
-          'prompt': 'consent',
+          'prompt': 'select_account consent',
         },
       },
     );
 
-    if (!await launchUrl(authUrl, mode: LaunchMode.externalApplication)) {
+    final launchMode = (Platform.isAndroid || Platform.isIOS)
+        ? LaunchMode.inAppBrowserView
+        : LaunchMode.externalApplication;
+
+    var opened = await launchUrl(authUrl, mode: launchMode);
+    if (!opened && launchMode != LaunchMode.externalApplication) {
+      opened = await launchUrl(authUrl, mode: LaunchMode.externalApplication);
+    }
+
+    if (!opened) {
       await server.close(force: true);
       throw OAuthException(
         'Não foi possível abrir o browser para autenticação.',
@@ -204,30 +304,75 @@ class OAuthService {
 
   // ── Troca code → tokens ───────────────────────────────────
 
+  List<Uri> _tokenEndpointCandidates(Uri endpoint) {
+    final raw = endpoint.toString().trim();
+    final normalized = raw.replaceFirst(
+      '://loauth2.googleapis.com',
+      '://oauth2.googleapis.com',
+    );
+
+    final candidates = <Uri>[Uri.parse(normalized)];
+
+    final host = candidates.first.host.toLowerCase();
+    if (host == 'oauth2.googleapis.com' || host == 'loauth2.googleapis.com') {
+      candidates.add(Uri.parse('https://www.googleapis.com/oauth2/v4/token'));
+      candidates.add(Uri.parse('https://accounts.google.com/o/oauth2/token'));
+    }
+
+    return candidates;
+  }
+
+  Future<http.Response> _postTokenExchange({
+    required Uri endpoint,
+    required Map<String, String> headers,
+    required Map<String, String> body,
+  }) {
+    return http
+        .post(endpoint, headers: headers, body: body)
+        .timeout(const Duration(seconds: 20));
+  }
+
   Future<Map<String, String?>> _exchangeCode({
     required OAuthProviderMeta meta,
     required String code,
     required Uri redirectUri,
     required String codeVerifier,
   }) async {
-    final response = await http
-        .post(
-          meta.tokenEndpoint,
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'application/json',
-          },
-          body: {
-            'grant_type': 'authorization_code',
-            'code': code,
-            'redirect_uri': redirectUri.toString(),
-            'client_id': meta.clientId,
-            'code_verifier': codeVerifier,
-            if (meta.clientSecret.isNotEmpty)
-              'client_secret': meta.clientSecret,
-          },
-        )
-        .timeout(const Duration(seconds: 20));
+    final headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    };
+    final body = {
+      'grant_type': 'authorization_code',
+      'code': code,
+      'redirect_uri': redirectUri.toString(),
+      'client_id': meta.clientId,
+      'code_verifier': codeVerifier,
+      if (meta.clientSecret.isNotEmpty) 'client_secret': meta.clientSecret,
+    };
+
+    http.Response? response;
+    SocketException? socketError;
+
+    for (final endpoint in _tokenEndpointCandidates(meta.tokenEndpoint)) {
+      try {
+        response = await _postTokenExchange(
+          endpoint: endpoint,
+          headers: headers,
+          body: body,
+        );
+        break;
+      } on SocketException catch (e) {
+        socketError = e;
+        continue;
+      }
+    }
+
+    if (response == null) {
+      throw OAuthException(
+        'Falha de rede ao contactar servidores OAuth do Google. Verifique DNS, data/hora e filtros de rede no aparelho. ${socketError ?? ''}',
+      );
+    }
 
     if (response.statusCode != 200) {
       throw OAuthException(
@@ -251,7 +396,16 @@ class OAuthService {
   Future<String?> _refreshAccessToken() async {
     final refreshToken = await _store.readRefreshToken();
     final providerName = await _store.readProvider();
-    if (refreshToken == null || providerName == null) return null;
+    if (providerName == null) return null;
+    if (!kIsWeb &&
+        (Platform.isAndroid || Platform.isIOS) &&
+        providerName == OAuthProvider.google.name) {
+      // Never do silent Google auth on mobile.
+      // This enforces interactive account selection on next explicit login.
+      return null;
+    }
+
+    if (refreshToken == null) return null;
     if (providerName == OAuthProvider.apple.name) return null;
 
     final provider = OAuthProvider.values.firstWhere(
@@ -261,22 +415,30 @@ class OAuthService {
     final meta = _metaFor(provider);
 
     try {
-      final response = await http
-          .post(
-            meta.tokenEndpoint,
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Accept': 'application/json',
-            },
-            body: {
-              'grant_type': 'refresh_token',
-              'refresh_token': refreshToken,
-              'client_id': meta.clientId,
-              if (meta.clientSecret.isNotEmpty)
-                'client_secret': meta.clientSecret,
-            },
-          )
-          .timeout(const Duration(seconds: 15));
+      final headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+      };
+      final body = {
+        'grant_type': 'refresh_token',
+        'refresh_token': refreshToken,
+        'client_id': meta.clientId,
+        if (meta.clientSecret.isNotEmpty) 'client_secret': meta.clientSecret,
+      };
+
+      http.Response? response;
+      for (final endpoint in _tokenEndpointCandidates(meta.tokenEndpoint)) {
+        try {
+          response = await http
+              .post(endpoint, headers: headers, body: body)
+              .timeout(const Duration(seconds: 15));
+          break;
+        } on SocketException {
+          continue;
+        }
+      }
+
+      if (response == null) return null;
 
       if (response.statusCode != 200) return null;
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -390,6 +552,15 @@ class OAuthService {
   Future<bool> get isLoggedIn async => (await getSavedProfile()) != null;
 
   Future<void> logout() async {
+    final providerName = await _store.readProvider();
+    if (!kIsWeb &&
+        (Platform.isAndroid || Platform.isIOS) &&
+        providerName == OAuthProvider.google.name) {
+      try {
+        await _createGoogleSignIn().signOut();
+      } catch (_) {}
+    }
+
     await _store.clear();
     final prefs = await SharedPreferences.getInstance();
     await Future.wait([
@@ -411,11 +582,11 @@ class OAuthService {
           authorizationEndpoint: Uri.parse(
             'https://accounts.google.com/o/oauth2/v2/auth',
           ),
-          tokenEndpoint: Uri.parse('https://oauth2.googleapis.com/token'),
+          tokenEndpoint: Uri.parse(OAuthConfig.googleTokenUri),
           userInfoEndpoint: Uri.parse(
             'https://www.googleapis.com/oauth2/v3/userinfo',
           ),
-          clientId: OAuthConfig.googleClientId,
+          clientId: _googleClientIdForCurrentPlatform(),
           clientSecret: OAuthConfig.googleClientSecret,
           scopes: OAuthConfig.googleScopes,
         );

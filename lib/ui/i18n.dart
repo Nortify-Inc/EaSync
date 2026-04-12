@@ -73,6 +73,19 @@ class EaI18n {
         'Use uma tarefa por prompt quando velocidade importar; pedidos em lote podem levar mais tempo.',
     'Before applying automation, ask AI for a preview of what will be changed.':
         'Antes de aplicar automações, peça para a IA uma prévia do que será alterado.',
+    'Tip:': 'Dica:',
+    'You can use the Profiles page to create profiles for auto apply states and grouping your devices by room, behavior and more.':
+        'Você pode usar a página de Perfis para criar perfis com estados de aplicação automática e agrupar seus dispositivos por cômodo, comportamento e mais.',
+    'Use the Dashboard page to monitore your place, control devices and view statistics.':
+        'Use a página Painel para monitorar seu ambiente, controlar dispositivos e ver estatísticas.',
+    'If you\'re using EaSync in multiple devices, you can list the sessions opened and manage their permissions':
+        'Se você usa o EaSync em múltiplos dispositivos, pode listar as sessões abertas e gerenciar suas permissões.',
+    'In the Account page, you can enable additional security with biometrics to protect who can access EaSync on this device.':
+        'Na página Conta, você pode ativar segurança adicional com biometria para proteger quem pode acessar o EaSync neste dispositivo.',
+    'AI will observe and learn your patterns and provide personalized suggestions. You can disable it anytime in the Account page if you change your mind.':
+        'A IA vai observar e aprender seus padrões, oferecendo sugestões personalizadas. Você pode desativá-la a qualquer momento na página Conta se mudar de ideia.',
+    'Use the Manage page to register new devices, check their status and create custom names.':
+        'Use a página Gerenciar para registrar novos dispositivos, verificar status e criar nomes personalizados.',
     'Dashboard': 'Painel',
     'Profiles': 'Perfis',
     'Assistant': 'Assistente',
@@ -237,6 +250,11 @@ class EaI18n {
     'Go to plan': 'Ir para plano',
     'Retry connection': 'Tentar conexão novamente',
     'Diagnostics': 'Diagnóstico',
+    'LAN discovery socket': 'Socket de descoberta LAN',
+    'Socket not active yet': 'Socket ainda não está ativo',
+    'Socket active': 'Socket ativo',
+    'Peers currently visible': 'Peers visíveis no momento',
+    'No DNS records returned': 'Nenhum registro DNS retornado',
     'Retry provisioning': 'Tentar provisionamento novamente',
     'Provisioning': 'Provisionamento',
     'Capabilities': 'Capacidades',
@@ -356,6 +374,7 @@ class EaI18n {
         'Firebase ainda não está configurado nesta build.',
     'Could not pick image: {error}':
         'Não foi possível escolher a imagem: {error}',
+    'Unexpected error: {error}': 'Erro inesperado: {error}',
     'GPS unavailable on Web. Using the Location field as fallback.':
         'GPS indisponível na Web. Usando o campo Localização como fallback.',
     'GPS unavailable on this platform. Using the Location field as fallback.':
@@ -374,8 +393,6 @@ class EaI18n {
     'Location permission permanently denied. Allow it in app settings.':
         'Permissão de localização bloqueada permanentemente. Libere nas configurações do app.',
     'Open app': 'Abrir app',
-    'Firebase is not configured for this platform yet.':
-        'Firebase ainda não está configurado para esta plataforma.',
     'Sign-in failed.': 'Falha ao entrar.',
     'Sign-in failed: {error}': 'Falha ao entrar: {error}',
     'Verification code (demo): {code}': 'Código de verificação (demo): {code}',
@@ -390,6 +407,7 @@ class EaI18n {
     'Trusted devices': 'Dispositivos confiáveis',
     'Current and recent sessions': 'Sessões atuais e recentes',
     'Host': 'Host',
+    'You': 'Você',
     'Can control devices': 'Pode controlar dispositivos',
     'Can modify configuration': 'Pode modificar configurações',
     'Host policy: control {control}, modify {modify}':
@@ -397,10 +415,59 @@ class EaI18n {
     'Take host role on this device': 'Assumir papel de host neste dispositivo',
     'Host applies permissions to other instances':
         'O host aplica permissões para outras instâncias',
+    'Unknown session': 'Sessão desconhecida',
+    'You are host': 'Você é host',
+    '{host} is host': '{host} é host',
+    'Host transfer requests: {count}':
+        'Solicitações de transferência de host: {count}',
+    'Request transfer': 'Solicitar transferência',
+    'Host transfer requests': 'Solicitações de transferência de host',
+    'Host transfer request from {name}':
+        'Solicitação de transferência de host de {name}',
+    'You requested host transfer': 'Você solicitou transferência de host',
+    '{name} requested host transfer': '{name} solicitou transferência de host',
+    'Approvals {ok}/{total} • Rejections {no}':
+        'Aprovações {ok}/{total} • Rejeições {no}',
+    'Reject': 'Recusar',
+    'Approve': 'Aprovar',
+    'There is already a pending host transfer request.':
+        'Já existe uma solicitação de transferência de host pendente.',
+    'Host transfer request sent. All online sessions must approve.':
+        'Solicitação de transferência enviada. Todas as sessões online devem aprovar.',
+    'Transfer canceled because one session rejected.':
+        'Transferência cancelada porque uma sessão recusou.',
+    'Transfer approved by all online sessions.':
+        'Transferência aprovada por todas as sessões online.',
+    'Host transfer tutorial': 'Tutorial de transferência de host',
+    '1. The candidate session taps Request transfer in the status tile.':
+        '1. A sessão candidata toca em Solicitar transferência na tile de status.',
+    '2. Every other online session receives an Approve or Reject prompt.':
+        '2. Todas as outras sessões online recebem um pedido para Aprovar ou Recusar.',
+    '3. If all approve, host role moves to the candidate and policies are reapplied.':
+        '3. Se todas aprovarem, o papel de host é transferido para a candidata e as políticas são reaplicadas.',
+    '4. If any session rejects, transfer is canceled immediately.':
+        '4. Se qualquer sessão recusar, a transferência é cancelada imediatamente.',
+    'The candidate session taps Request transfer in the status tile.':
+        'A sessão candidata toca em Solicitar transferência na tile de status.',
+    'Everyone online receives an Approve or Reject prompt.':
+        'Todas as sessões online recebem um pedido para Aprovar ou Recusar.',
+    'If all approve, host is switched and policies are reapplied.':
+        'Se todas aprovarem, o host é trocado e as políticas são reaplicadas.',
+    'If any session rejects, transfer is canceled immediately.':
+        'Se qualquer sessão recusar, a transferência é cancelada imediatamente.',
+    'Explicit security rules': 'Regras de segurança explícitas',
+    '• A transfer request is valid only for currently online trusted sessions.':
+        '• Uma solicitação de transferência é válida apenas para sessões confiáveis atualmente online.',
+    '• Unanimous approval is required from all online sessions except the requester.':
+        '• Aprovação unânime é obrigatória de todas as sessões online, exceto da solicitante.',
+    '• A single rejection cancels the request instantly.':
+        '• Uma única recusa cancela a solicitação instantaneamente.',
+    '• Only one pending transfer request can exist per session at a time.':
+        '• Apenas uma solicitação pendente de transferência pode existir por sessão ao mesmo tempo.',
     'Local policy active: control {control}, modify {modify}':
         'Política local ativa: controle {control}, modificação {modify}',
-    'No trusted peers found on local network.':
-        'Nenhum dispositivo confiável encontrado na rede local.',
+    'There are no other EaSync active sessions.':
+        'Não há outras sessões ativas do EaSync',
     'Plan details and benefits': 'Detalhes do plano e benefícios',
     'Billing': 'Cobranças',
     'Invoices and payment methods': 'Faturas e meios de pagamento',

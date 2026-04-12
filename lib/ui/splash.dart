@@ -53,7 +53,6 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   static const Duration _minSplashDuration = Duration(seconds: 6);
   static const Duration _finalCharmDelay = Duration(milliseconds: 700);
 
-  // AI download state
   DownloadStatus _aiStatus = DownloadStatus.checking;
   double _aiProgress = 0.0;
   String _aiMessage = '';
@@ -496,7 +495,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Tip:',
+                    EaI18n.t(context, 'Tip:'),
                     style: EaText.secondary.copyWith(
                       color: EaAdaptiveColor.bodyText(context),
                       fontWeight: FontWeight.w700,

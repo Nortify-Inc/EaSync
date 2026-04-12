@@ -63,6 +63,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   late final AnimationController _updatePulse;
 
   bool _isAuthenticated = false;
+  bool _authBusy = false;
   String? _authName;
   String? _authEmail;
   String? _authPhoto;
@@ -166,6 +167,8 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _loginWith(OAuthProvider provider) async {
+    if (_authBusy) return;
+    if (mounted) setState(() => _authBusy = true);
     try {
       final profile = await OAuthService.instance.login(provider);
 
@@ -225,11 +228,20 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Unexpected error: $e')));
+      ).showSnackBar(
+        SnackBar(
+          content: Text(
+            EaI18n.t(context, 'Unexpected error: {error}', {'error': '$e'}),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _authBusy = false);
     }
   }
 
   void _openAuthSheet({required bool signUp}) {
+    if (_authBusy) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1296,17 +1308,40 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
                     Expanded(
                       child: EaGradientButtonFrame(
                         borderRadius: BorderRadius.circular(12),
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: EaColor.back,
-                            shadowColor: Colors.transparent,
-                            alignment: Alignment.centerLeft,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: ElevatedButton.icon(
+                          style: EaButtonStyle.gradientFilled(
+                            context: context,
+                            borderRadius: BorderRadius.circular(12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                           ),
-                          onPressed: () => _openAuthSheet(signUp: false),
-                          icon: const Icon(Icons.login_rounded),
-                          label: Text(EaI18n.t(context, 'Sign in')),
+                          onPressed: () {
+                            if (_authBusy) return;
+                            _openAuthSheet(signUp: false);
+                          },
+                          icon: _authBusy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      EaColor.back,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(Icons.login_rounded),
+
+                          label: _authBusy
+                              ? const SizedBox.shrink()
+                              : Text(
+                                  EaI18n.t(context, 'Sign in'),
+                                  style: EaText.secondary.copyWith(
+                                    color: EaColor.back,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
@@ -3287,14 +3322,53 @@ class TrustedDevicesPage extends StatefulWidget {
 class _TrustedPeerNode {
   final String instanceId;
   String displayName;
+  String platform;
+  String photo;
   String address;
   DateTime lastSeen;
 
   _TrustedPeerNode({
     required this.instanceId,
     required this.displayName,
+    required this.platform,
+    required this.photo,
     required this.address,
     required this.lastSeen,
+  });
+}
+
+class _HostTransferRequest {
+  final String requestId;
+  final String requesterId;
+  String requesterName;
+  final DateTime createdAt;
+  final Set<String> approvedBy = <String>{};
+  final Set<String> rejectedBy = <String>{};
+  bool resolved = false;
+  bool accepted = false;
+  String resolutionMessage = '';
+
+  _HostTransferRequest({
+    required this.requestId,
+    required this.requesterId,
+    required this.requesterName,
+    required this.createdAt,
+  });
+
+  bool hasVoteFrom(String instanceId) {
+    return approvedBy.contains(instanceId) || rejectedBy.contains(instanceId);
+  }
+}
+
+class _NetDiagItem {
+  final String label;
+  final bool ok;
+  final String detail;
+
+  const _NetDiagItem({
+    required this.label,
+    required this.ok,
+    required this.detail,
   });
 }
 
@@ -3316,6 +3390,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   String _instanceId = '';
   String _hostId = '';
   String _displayName = 'EaSync Device';
+  String _profilePhoto = '';
   bool _loading = true;
   bool _canControl = true;
   bool _canModify = true;
@@ -3323,8 +3398,17 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   final Map<String, _TrustedPeerNode> _peers = <String, _TrustedPeerNode>{};
   final Map<String, Map<String, bool>> _policies =
       <String, Map<String, bool>>{};
+  final Map<String, String> _instanceNames = <String, String>{};
+    final Map<String, int> _peerDiscoveryOrder = <String, int>{};
+    int _nextPeerOrder = 0;
+  final Map<String, _HostTransferRequest> _transferRequests =
+      <String, _HostTransferRequest>{};
+
+  String? _activeTransferRequestId;
 
   bool get _isHost => _hostId.isNotEmpty && _hostId == _instanceId;
+
+  Set<String> get _activeSessionIds => <String>{_instanceId, ..._peers.keys};
 
   @override
   void initState() {
@@ -3348,6 +3432,12 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         ? (prefs.getString('account.auth.name') ?? '').trim()
         : '${Platform.operatingSystem.toUpperCase()} • EaSync';
 
+    _profilePhoto = (prefs.getString('account.auth.photo') ?? '').trim();
+    if (_profilePhoto.isEmpty) {
+      final saved = await OAuthService.instance.getSavedProfile();
+      _profilePhoto = (saved?.avatarUrl ?? '').trim();
+    }
+
     var existingId = (prefs.getString(_kTrustedInstanceId) ?? '').trim();
     if (existingId.isEmpty) {
       final n = Random.secure().nextInt(0x7fffffff).toRadixString(16);
@@ -3356,6 +3446,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       await prefs.setString(_kTrustedInstanceId, existingId);
     }
     _instanceId = existingId;
+    _instanceNames[_instanceId] = _displayName;
 
     _hostId = (prefs.getString(_kTrustedHostId) ?? '').trim();
     if (_hostId.isEmpty) {
@@ -3385,6 +3476,22 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     _canControl = prefs.getBool(_kRemoteCanControl) ?? true;
     _canModify = prefs.getBool(_kRemoteCanModify) ?? true;
 
+    final pending = TrustedPresenceService.instance
+        .pendingHostTransferRequests();
+    for (final notice in pending) {
+      _transferRequests.putIfAbsent(
+        notice.requestId,
+        () => _HostTransferRequest(
+          requestId: notice.requestId,
+          requesterId: notice.requesterId,
+          requesterName: notice.requesterName.trim().isEmpty
+              ? _displayNameForInstance(notice.requesterId)
+              : notice.requesterName.trim(),
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+
     await _saveTrustedLegacyList();
     if (!mounted) return;
     setState(() => _loading = false);
@@ -3413,30 +3520,246 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
 
   List<_TrustedPeerNode> get _sortedPeers {
     final peers = _peers.values.toList();
-    peers.sort((a, b) => b.lastSeen.compareTo(a.lastSeen));
+    peers.sort((a, b) {
+      final ao = _peerDiscoveryOrder[a.instanceId] ?? 1 << 30;
+      final bo = _peerDiscoveryOrder[b.instanceId] ?? 1 << 30;
+      if (ao != bo) return ao.compareTo(bo);
+      return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+    });
     return peers;
   }
 
-  Future<void> _becomeHost() async {
-    _hostId = _instanceId;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kTrustedHostId, _hostId);
-    if (!mounted) return;
-    setState(() {});
-    _broadcastHello();
-    for (final p in _peers.values) {
-      _sendPolicyToPeer(p);
+  String _displayNameForInstance(String instanceId) {
+    if (instanceId == _instanceId) {
+      return '${Platform.operatingSystem.toUpperCase()} • ${EaI18n.t(context, 'This device')}';
     }
+
+    final peerName = (_peers[instanceId]?.displayName ?? '').trim();
+    if (peerName.isNotEmpty) return peerName;
+
+    final cachedName = (_instanceNames[instanceId] ?? '').trim();
+    if (cachedName.isNotEmpty) return cachedName;
+
+    final normalized = instanceId.trim();
+    if (normalized.isEmpty) return EaI18n.t(context, 'Unknown session');
+
+    final platform = _platformFromInstanceId(instanceId);
+    return platform.isNotEmpty ? platform : EaI18n.t(context, 'Unknown session');
+  }
+
+  String _platformFromInstanceId(String instanceId) {
+    final normalized = instanceId.trim();
+    if (normalized.isEmpty) return '';
+
+    final prefix = normalized.split('-').first.toLowerCase().trim();
+    switch (prefix) {
+      case 'android':
+        return 'Android';
+      case 'ios':
+        return 'iOS';
+      case 'linux':
+        return 'Linux';
+      case 'macos':
+        return 'macOS';
+      case 'windows':
+        return 'Windows';
+      case 'web':
+        return 'Web';
+      default:
+        return '';
+    }
+  }
+
+  Future<void> _requestHostTransfer() async {
+    if (_isHost) return;
+
+    if (_activeTransferRequestId != null) {
+      final active = _transferRequests[_activeTransferRequestId!];
+      if (active != null && !active.resolved) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              EaI18n.t(context, 'There is already a pending host transfer request.'),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    final requestId =
+        '${DateTime.now().millisecondsSinceEpoch}-${Random.secure().nextInt(0x7fffffff).toRadixString(16)}';
+
+    final req = _HostTransferRequest(
+      requestId: requestId,
+      requesterId: _instanceId,
+      requesterName: _displayName,
+      createdAt: DateTime.now(),
+    );
+
+    _transferRequests[requestId] = req;
+    _activeTransferRequestId = requestId;
+    if (mounted) setState(() {});
+
+    final packet = {
+      'proto': _packetProto,
+      'type': 'host_transfer_request',
+      'requestId': req.requestId,
+      'requesterId': req.requesterId,
+      'requesterName': req.requesterName,
+      'currentHostId': _hostId,
+      'atMs': req.createdAt.millisecondsSinceEpoch,
+    };
+
+    _broadcastPacket(packet);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          EaI18n.t(
+            context,
+            'Host transfer request sent. All online sessions must approve.',
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _broadcastPacket(Map<String, dynamic> packet) {
+    final socket = _socket;
+    if (socket == null) return;
+
+    final data = utf8.encode(jsonEncode(packet));
+    try {
+      socket.send(data, InternetAddress('255.255.255.255'), _udpPort);
+      if (_hostId.isNotEmpty && _hostId != _instanceId) {
+        final hostNode = _peers[_hostId];
+        if (hostNode != null) {
+          socket.send(data, InternetAddress(hostNode.address), _udpPort);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _submitTransferVote(
+    _HostTransferRequest req,
+    bool approve,
+  ) async {
+    if (req.resolved || req.requesterId == _instanceId) return;
+    if (req.hasVoteFrom(_instanceId)) return;
+
+    if (approve) {
+      req.approvedBy.add(_instanceId);
+      req.rejectedBy.remove(_instanceId);
+    } else {
+      req.rejectedBy.add(_instanceId);
+      req.approvedBy.remove(_instanceId);
+    }
+
+    final packet = {
+      'proto': _packetProto,
+      'type': 'host_transfer_vote',
+      'requestId': req.requestId,
+      'requesterId': req.requesterId,
+      'voterId': _instanceId,
+      'approve': approve,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    };
+    _broadcastPacket(packet);
+
+    if (_isHost) {
+      _evaluateTransferRequest(req);
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _resolveTransferRequest(
+    _HostTransferRequest req, {
+    required bool accepted,
+    required String message,
+  }) async {
+    if (req.resolved) return;
+
+    req.resolved = true;
+    req.accepted = accepted;
+    req.resolutionMessage = message;
+
+    if (accepted) {
+      _hostId = req.requesterId;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kTrustedHostId, _hostId);
+
+      if (_hostId == _instanceId) {
+        _broadcastHello();
+        for (final peer in _peers.values) {
+          _sendPolicyToPeer(peer);
+        }
+      }
+    }
+
+    if (_activeTransferRequestId == req.requestId) {
+      _activeTransferRequestId = null;
+    }
+
+    final resultPacket = {
+      'proto': _packetProto,
+      'type': 'host_transfer_result',
+      'requestId': req.requestId,
+      'requesterId': req.requesterId,
+      'accepted': accepted,
+      'newHostId': accepted ? req.requesterId : _hostId,
+      'message': message,
+      'atMs': DateTime.now().millisecondsSinceEpoch,
+    };
+    _broadcastPacket(resultPacket);
+    if (mounted) setState(() {});
+  }
+
+  void _evaluateTransferRequest(_HostTransferRequest req) {
+    if (!_isHost || req.resolved) return;
+
+    if (req.rejectedBy.isNotEmpty) {
+      _resolveTransferRequest(
+        req,
+        accepted: false,
+        message: EaI18n.t(context, 'Transfer canceled because one session rejected.'),
+      );
+      return;
+    }
+
+    final requiredApprovals = _activeSessionIds
+        .where((id) => id != req.requesterId)
+        .toSet();
+
+    final approvedAll = requiredApprovals.every(req.approvedBy.contains);
+    if (!approvedAll) return;
+
+    _resolveTransferRequest(
+      req,
+      accepted: true,
+      message: EaI18n.t(context, 'Transfer approved by all online sessions.'),
+    );
   }
 
   Future<void> _startDiscovery() async {
     try {
-      final socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        _udpPort,
-        reuseAddress: true,
-        reusePort: true,
-      );
+      RawDatagramSocket socket;
+      try {
+        socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          _udpPort,
+          reuseAddress: true,
+          reusePort: true,
+        );
+      } catch (_) {
+        socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          _udpPort,
+          reuseAddress: true,
+        );
+      }
       socket.broadcastEnabled = true;
       socket.listen((event) {
         if (event != RawSocketEvent.read) return;
@@ -3470,6 +3793,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     if (expired.isEmpty) return;
     for (final id in expired) {
       _peers.remove(id);
+      _peerDiscoveryOrder.remove(id);
     }
     _saveTrustedLegacyList();
     if (mounted) setState(() {});
@@ -3484,6 +3808,8 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       'type': 'hello',
       'instanceId': _instanceId,
       'displayName': _displayName,
+      'platform': Platform.operatingSystem,
+      'photo': _profilePhoto.startsWith('http') ? _profilePhoto : '',
       'hostId': _hostId,
       'atMs': DateTime.now().millisecondsSinceEpoch,
     };
@@ -3544,21 +3870,37 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       if (peerId.isEmpty || peerId == _instanceId) return;
 
       final announcedHost = (packet['hostId'] ?? '').toString().trim();
-      if (!_isHost && announcedHost.isNotEmpty && _hostId != announcedHost) {
+      // Avoid UI host badge flicker: only trust host changes when the sender
+      // is the announced host itself.
+      final senderClaimsSelfHost = announcedHost.isNotEmpty && announcedHost == peerId;
+      if (!_isHost && senderClaimsSelfHost && _hostId != announcedHost) {
         _hostId = announcedHost;
       }
 
       final display = (packet['displayName'] ?? '').toString().trim();
+      final platformRaw = (packet['platform'] ?? '').toString().trim();
+      final platform = platformRaw.isEmpty
+          ? _platformFromInstanceId(peerId)
+          : platformRaw.toLowerCase();
+      final photo = (packet['photo'] ?? '').toString().trim();
+      if (display.isNotEmpty) {
+        _instanceNames[peerId] = display;
+      }
       final node = _peers.putIfAbsent(
         peerId,
         () => _TrustedPeerNode(
           instanceId: peerId,
           displayName: display.isEmpty ? 'EaSync Node' : display,
+          platform: platform,
+          photo: photo,
           address: datagram.address.address,
           lastSeen: DateTime.now(),
         ),
       );
+      _peerDiscoveryOrder.putIfAbsent(peerId, () => _nextPeerOrder++);
       node.displayName = display.isEmpty ? node.displayName : display;
+      node.platform = platform.isEmpty ? node.platform : platform;
+      node.photo = photo.isEmpty ? node.photo : photo;
       node.address = datagram.address.address;
       node.lastSeen = DateTime.now();
       _saveTrustedLegacyList();
@@ -3580,6 +3922,89 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       final canControl = packet['canControl'] == true;
       final canModify = packet['canModify'] == true;
       _applyIncomingPolicy(canControl, canModify);
+      return;
+    }
+
+    if (type == 'host_transfer_request') {
+      final requestId = (packet['requestId'] ?? '').toString().trim();
+      final requesterId = (packet['requesterId'] ?? '').toString().trim();
+      if (requestId.isEmpty || requesterId.isEmpty || requesterId == _instanceId) {
+        return;
+      }
+
+      final requesterName = (packet['requesterName'] ?? '').toString().trim();
+      if (requesterName.isNotEmpty) {
+        _instanceNames[requesterId] = requesterName;
+      }
+      final req = _transferRequests.putIfAbsent(
+        requestId,
+        () => _HostTransferRequest(
+          requestId: requestId,
+          requesterId: requesterId,
+          requesterName: requesterName.isEmpty
+              ? EaI18n.t(context, 'Unknown session')
+              : requesterName,
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      if (requesterName.isNotEmpty && req.requesterName != requesterName) {
+        req.requesterName = requesterName;
+      }
+
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (type == 'host_transfer_vote') {
+      final requestId = (packet['requestId'] ?? '').toString().trim();
+      final voterId = (packet['voterId'] ?? '').toString().trim();
+      final approve = packet['approve'] == true;
+      final req = _transferRequests[requestId];
+      if (req == null || req.resolved || voterId.isEmpty) return;
+
+      if (approve) {
+        req.approvedBy.add(voterId);
+        req.rejectedBy.remove(voterId);
+      } else {
+        req.rejectedBy.add(voterId);
+        req.approvedBy.remove(voterId);
+      }
+
+      if (_isHost) {
+        _evaluateTransferRequest(req);
+      }
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (type == 'host_transfer_result') {
+      final requestId = (packet['requestId'] ?? '').toString().trim();
+      if (requestId.isEmpty) return;
+
+      final req = _transferRequests[requestId];
+      final accepted = packet['accepted'] == true;
+      final newHostId = (packet['newHostId'] ?? '').toString().trim();
+      final message = (packet['message'] ?? '').toString().trim();
+
+      if (req != null) {
+        req.resolved = true;
+        req.accepted = accepted;
+        req.resolutionMessage = message;
+      }
+
+      if (newHostId.isNotEmpty) {
+        _hostId = newHostId;
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString(_kTrustedHostId, _hostId);
+        });
+      }
+
+      if (_activeTransferRequestId == requestId) {
+        _activeTransferRequestId = null;
+      }
+
+      if (mounted) setState(() {});
     }
   }
 
@@ -3602,46 +4027,42 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     if (mounted) setState(() {});
   }
 
-  Widget _localSessionCard() {
+  Widget _flagChip(String text) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: EaAdaptiveColor.surface(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: EaAdaptiveColor.border(context)),
+        color: EaColor.fore.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(99),
       ),
-      child: ListTile(
-        leading: const Icon(Icons.devices_other_outlined, color: EaColor.fore),
-        title: Text('${Platform.operatingSystem.toUpperCase()} • This device'),
-        subtitle: Text(
-          '${EaI18n.t(context, 'Current session')} • ID: ${_instanceId.substring(0, min(10, _instanceId.length))}',
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_isHost)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: EaColor.fore.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  EaI18n.t(context, 'Host'),
-                  style: EaText.small.copyWith(color: EaColor.fore),
-                ),
-              ),
-            const SizedBox(width: 8),
-            const Icon(Icons.verified_rounded, color: EaColor.fore),
-          ],
-        ),
-      ),
+      child: Text(text, style: EaText.small.copyWith(color: EaColor.fore)),
     );
   }
 
-  Widget _peerCard(_TrustedPeerNode peer) {
-    final p =
-        _policies[peer.instanceId] ?? {'canControl': true, 'canModify': true};
+  ImageProvider? _avatarProvider(String raw, {required bool isLocal}) {
+    final photo = raw.trim();
+    if (photo.isEmpty) return null;
+    if (photo.startsWith('http')) return NetworkImage(photo);
+    if (isLocal) return FileImage(File(photo));
+    return null;
+  }
+
+  String _shortId(String id) => id.substring(0, min(10, id.length));
+
+  Widget _sessionTile({
+    required String instanceId,
+    required String displayName,
+    required String platform,
+    required String photo,
+    String? address,
+  }) {
+    final isYou = instanceId == _instanceId;
+    final isHost = instanceId == _hostId;
+    final avatar = _avatarProvider(photo, isLocal: isYou);
+    final subtitlePlatform = platform.trim().isEmpty
+        ? _platformFromInstanceId(instanceId)
+        : platform;
+
+    final p = _policies[instanceId] ?? {'canControl': true, 'canModify': true};
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -3656,169 +4077,556 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.hub_outlined, color: EaColor.fore, size: 18),
-                const SizedBox(width: 8),
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: EaColor.fore.withValues(alpha: 0.14),
+                  backgroundImage: avatar,
+                  child: avatar == null
+                      ? Icon(
+                          isYou
+                              ? Icons.person_outline_rounded
+                              : Icons.devices_other_outlined,
+                          size: 18,
+                          color: EaColor.fore,
+                        )
+                      : null,
+                ),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    peer.displayName,
-                    style: EaText.secondary.copyWith(
-                      color: EaAdaptiveColor.bodyText(context),
-                      fontWeight: FontWeight.w700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: EaText.secondary.copyWith(
+                          color: EaAdaptiveColor.bodyText(context),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$subtitlePlatform • ID: ${_shortId(instanceId)}',
+                        style: EaText.small.copyWith(
+                          color: EaAdaptiveColor.secondaryText(context),
+                        ),
+                      ),
+                      if (!isYou && (address ?? '').trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '${address!.trim()} • ${EaI18n.t(context, 'Trusted session')}',
+                          style: EaText.small.copyWith(
+                            color: EaAdaptiveColor.secondaryText(context),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                Text(
-                  EaI18n.t(context, 'Online'),
-                  style: EaText.small.copyWith(color: EaColor.fore),
+                const SizedBox(width: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (isHost) _flagChip(EaI18n.t(context, 'Host')),
+                    if (isYou) _flagChip(EaI18n.t(context, 'You')),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${peer.address} • ${EaI18n.t(context, 'Trusted session')}',
-              style: EaText.small.copyWith(
-                color: EaAdaptiveColor.secondaryText(context),
+            if (isYou && !_isHost) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: _requestHostTransfer,
+                  icon: const Icon(Icons.swap_horiz, size: 16),
+                  label: Text(EaI18n.t(context, 'Request to be Host')),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            if (_isHost)
-              Column(
+            ],
+            if (!isYou && _isHost) ...[
+              const SizedBox(height: 8),
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(EaI18n.t(context, 'Can control devices')),
-                      ),
-                      Switch.adaptive(
-                        activeThumbColor: EaColor.fore,
-                        value: p['canControl'] == true,
-                        onChanged: (v) =>
-                            _setPeerPolicy(peer.instanceId, canControl: v),
-                      ),
-                    ],
+                  Expanded(
+                    child: Text(EaI18n.t(context, 'Can control devices')),
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          EaI18n.t(context, 'Can modify configuration'),
-                        ),
-                      ),
-                      Switch.adaptive(
-                        activeThumbColor: EaColor.fore,
-                        value: p['canModify'] == true,
-                        onChanged: (v) =>
-                            _setPeerPolicy(peer.instanceId, canModify: v),
-                      ),
-                    ],
+                  Switch.adaptive(
+                    activeThumbColor: EaColor.fore,
+                    value: p['canControl'] == true,
+                    onChanged: (v) => _setPeerPolicy(instanceId, canControl: v),
                   ),
                 ],
-              )
-            else
-              Text(
-                EaI18n.t(
-                  context,
-                  'Host policy: control {control}, modify {modify}',
-                  {
-                    'control': p['canControl'] == true
-                        ? EaI18n.t(context, 'Enabled')
-                        : EaI18n.t(context, 'Disabled'),
-                    'modify': p['canModify'] == true
-                        ? EaI18n.t(context, 'Enabled')
-                        : EaI18n.t(context, 'Disabled'),
-                  },
-                ),
-                style: EaText.small.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
-                ),
               ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(EaI18n.t(context, 'Can modify configuration')),
+                  ),
+                  Switch.adaptive(
+                    activeThumbColor: EaColor.fore,
+                    value: p['canModify'] == true,
+                    onChanged: (v) => _setPeerPolicy(instanceId, canModify: v),
+                  ),
+                ],
+              ),
+            ] 
           ],
         ),
       ),
     );
   }
 
+  Widget _transferRequestCard(_HostTransferRequest req) {
+    final participants = _activeSessionIds.where((id) => id != req.requesterId).toSet();
+    final needed = participants.length;
+    final approvals = req.approvedBy.length;
+    final rejections = req.rejectedBy.length;
+    final canVote = !req.resolved && req.requesterId != _instanceId && !req.hasVoteFrom(_instanceId);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: EaAdaptiveColor.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EaAdaptiveColor.border(context)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.swap_horizontal_circle_outlined, color: EaColor.fore, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    req.requesterId == _instanceId
+                        ? EaI18n.t(context, 'You requested host transfer')
+                        : EaI18n.t(context, '{name} requested host transfer', {
+                            'name': _displayNameForInstance(req.requesterId),
+                          }),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (req.resolved) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: (req.accepted ? Colors.green : Colors.redAccent)
+                          .withValues(alpha: 0.16),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      req.accepted ? Icons.check : Icons.close,
+                      color: req.accepted ? Colors.green : Colors.redAccent,
+                      size: 14,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              EaI18n.t(
+                context,
+                'Approvals {ok}/{total} • Rejections {no}',
+                {'ok': '$approvals', 'total': '$needed', 'no': '$rejections'},
+              ),
+              style: EaText.small.copyWith(
+                color: EaAdaptiveColor.secondaryText(context),
+              ),
+            ),
+            if (req.resolutionMessage.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                req.resolutionMessage,
+                style: EaText.small.copyWith(
+                  color: EaAdaptiveColor.secondaryText(context),
+                ),
+              ),
+            ],
+            if (canVote) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _submitTransferVote(req, false),
+                      icon: const Icon(Icons.close_rounded, size: 16),
+                      label: Text(EaI18n.t(context, 'Reject')),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => _submitTransferVote(req, true),
+                      icon: const Icon(Icons.check_rounded, size: 16),
+                      label: Text(EaI18n.t(context, 'Approve')),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _hostTransferTutorial() {
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: EaAdaptiveColor.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: EaAdaptiveColor.border(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            EaI18n.t(context, 'Host transfer tutorial'),
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.bodyText(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _tutorialStep(
+            icon: Icons.touch_app_rounded,
+            text: EaI18n.t(
+              context,
+              'The candidate session taps Request transfer in the status tile.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _tutorialStep(
+            icon: Icons.campaign_outlined,
+            text: EaI18n.t(
+              context,
+              'Everyone online receives an Approve or Reject prompt.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _tutorialStep(
+            icon: Icons.verified_user_outlined,
+            text: EaI18n.t(
+              context,
+              'If all approve, host is switched and policies are reapplied.',
+            ),
+          ),
+          const SizedBox(height: 12),
+          _tutorialStep(
+            icon: Icons.gpp_bad_outlined,
+            text: EaI18n.t(
+              context,
+              'If any session rejects, transfer is canceled immediately.',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tutorialStep({required IconData icon, required String text}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 22,
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Icon(icon, size: 20, color: EaColor.fore),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: EaText.secondary.copyWith(
+              color: EaAdaptiveColor.secondaryText(context),
+              fontSize: 12,
+              height: 1.32,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<_NetDiagItem> _dnsCheck(String host) async {
+    try {
+      final results = await InternetAddress.lookup(host).timeout(
+        const Duration(seconds: 5),
+      );
+      if (results.isEmpty) {
+        return _NetDiagItem(
+          label: 'DNS $host',
+          ok: false,
+          detail: EaI18n.t(context, 'No DNS records returned'),
+        );
+      }
+      final first = results.first.address;
+      return _NetDiagItem(
+        label: 'DNS $host',
+        ok: true,
+        detail: first,
+      );
+    } catch (e) {
+      return _NetDiagItem(
+        label: 'DNS $host',
+        ok: false,
+        detail: '$e',
+      );
+    }
+  }
+
+  Future<_NetDiagItem> _httpsCheck(Uri uri) async {
+    HttpClient? client;
+    try {
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+      final req = await client.getUrl(uri);
+      req.followRedirects = false;
+      final res = await req.close().timeout(const Duration(seconds: 6));
+      return _NetDiagItem(
+        label: 'HTTPS ${uri.host}',
+        ok: true,
+        detail: 'HTTP ${res.statusCode}',
+      );
+    } catch (e) {
+      return _NetDiagItem(
+        label: 'HTTPS ${uri.host}',
+        ok: false,
+        detail: '$e',
+      );
+    } finally {
+      client?.close(force: true);
+    }
+  }
+
+  Future<List<_NetDiagItem>> _collectDiagnostics() async {
+    final items = <_NetDiagItem>[];
+
+    items.add(
+      _NetDiagItem(
+        label: EaI18n.t(context, 'LAN discovery socket'),
+        ok: _socket != null,
+        detail: _socket == null
+            ? EaI18n.t(context, 'Socket not active yet')
+            : EaI18n.t(context, 'Socket active'),
+      ),
+    );
+
+    items.add(
+      _NetDiagItem(
+        label: EaI18n.t(context, 'Peers currently visible'),
+        ok: _peers.isNotEmpty,
+        detail: '${_peers.length}',
+      ),
+    );
+
+    items.add(await _dnsCheck('oauth2.googleapis.com'));
+    items.add(await _dnsCheck('www.googleapis.com'));
+    items.add(await _dnsCheck('accounts.google.com'));
+
+    items.add(
+      await _httpsCheck(Uri.parse('https://oauth2.googleapis.com/token')),
+    );
+    items.add(
+      await _httpsCheck(Uri.parse('https://www.googleapis.com/oauth2/v4/token')),
+    );
+    items.add(
+      await _httpsCheck(Uri.parse('https://accounts.google.com/o/oauth2/token')),
+    );
+
+    return items;
+  }
+
+  void _openDiagnosticsSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) {
+        return Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          decoration: BoxDecoration(
+            color: EaAdaptiveColor.surface(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            border: Border.all(color: EaAdaptiveColor.border(context)),
+          ),
+          child: FutureBuilder<List<_NetDiagItem>>(
+            future: _collectDiagnostics(),
+            builder: (context, snap) {
+              if (!snap.hasData) {
+                return const SizedBox(
+                  height: 220,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final items = snap.data!;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    EaI18n.t(context, 'Diagnostics'),
+                    style: EaText.secondary.copyWith(
+                      color: EaAdaptiveColor.bodyText(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.of(context).size.height * 0.64,
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) => Divider(
+                        color: EaAdaptiveColor.border(context),
+                        height: 12,
+                      ),
+                      itemBuilder: (_, i) {
+                        final item = items[i];
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              item.ok
+                                  ? Icons.check_circle_rounded
+                                  : Icons.error_outline_rounded,
+                              size: 18,
+                              color: item.ok ? Colors.green : Colors.redAccent,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.label,
+                                    style: EaText.secondary.copyWith(
+                                      color: EaAdaptiveColor.bodyText(context),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item.detail,
+                                    style: EaText.small.copyWith(
+                                      color: EaAdaptiveColor.secondaryText(
+                                        context,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final peers = _sortedPeers;
+    final requests = _transferRequests.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return Scaffold(
-      appBar: AppBar(title: Text(EaI18n.t(context, 'Trusted devices'))),
+      appBar: AppBar(
+        title: Text(EaI18n.t(context, 'Trusted devices')),
+        actions: [
+          IconButton(
+            tooltip: EaI18n.t(context, 'Diagnostics'),
+            onPressed: _openDiagnosticsSheet,
+            icon: const Icon(Icons.network_check_rounded),
+          ),
+        ],
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
         children: [
           if (_loading)
             const Padding(
               padding: EdgeInsets.only(top: 8, bottom: 10),
               child: Center(child: CircularProgressIndicator()),
             ),
-          if (!_isHost)
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              decoration: BoxDecoration(
-                color: EaAdaptiveColor.surface(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: EaAdaptiveColor.border(context)),
-              ),
-              child: ListTile(
-                leading: const Icon(Icons.admin_panel_settings_outlined),
-                title: Text(EaI18n.t(context, 'Take host role on this device')),
-                subtitle: Text(
-                  EaI18n.t(
-                    context,
-                    'Host applies permissions to other instances',
-                  ),
-                ),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: _becomeHost,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Text(
+              EaI18n.t(context, 'Current and recent sessions'),
+              style: EaText.secondary.copyWith(
+                color: EaAdaptiveColor.bodyText(context),
+                fontWeight: FontWeight.w700,
               ),
             ),
-          _localSessionCard(),
-          if (_isHost)
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: EaAdaptiveColor.surface(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: EaAdaptiveColor.border(context)),
-              ),
+          ),
+          _sessionTile(
+            instanceId: _instanceId,
+            displayName: _displayName,
+            platform: Platform.operatingSystem,
+            photo: _profilePhoto,
+          ),
+          ...peers.map(
+            (peer) => _sessionTile(
+              instanceId: peer.instanceId,
+              displayName: peer.displayName,
+              platform: peer.platform,
+              photo: peer.photo,
+              address: peer.address,
+            ),
+          ),
+          if (requests.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
               child: Text(
-                EaI18n.t(
-                  context,
-                  'Local policy active: control {control}, modify {modify}',
-                  {
-                    'control': _canControl
-                        ? EaI18n.t(context, 'Enabled')
-                        : EaI18n.t(context, 'Disabled'),
-                    'modify': _canModify
-                        ? EaI18n.t(context, 'Enabled')
-                        : EaI18n.t(context, 'Disabled'),
-                  },
-                ),
-                style: EaText.small.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
+                EaI18n.t(context, 'Host transfer requests'),
+                style: EaText.secondary.copyWith(
+                  color: EaAdaptiveColor.bodyText(context),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
+          ...requests.map(_transferRequestCard),
           if (peers.isEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: EaAdaptiveColor.surface(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: EaAdaptiveColor.border(context)),
-              ),
-              child: Text(
-                EaI18n.t(context, 'No trusted peers found on local network.'),
-                style: EaText.small.copyWith(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Center(
+                child: Text(
+                EaI18n.t(context, 'There are no other EaSync active sessions.'),
+                textAlign: TextAlign.center,
+                style: EaText.secondary.copyWith(
                   color: EaAdaptiveColor.secondaryText(context),
+                  fontSize: 14,
                 ),
               ),
             ),
-          ...peers.map(_peerCard),
+            ),
+          _hostTransferTutorial(),
         ],
       ),
     );

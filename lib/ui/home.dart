@@ -8,6 +8,7 @@
 
 import 'dart:ui';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'auth/service.dart';
 import 'handler.dart';
 
 List<DeviceInfo> devices = [];
@@ -66,10 +67,18 @@ class _HomeState extends State<Home> {
 
   Future<void> _loadProfilePhoto() async {
     final prefs = await SharedPreferences.getInstance();
-    final photo = prefs.getString(_kAuthPhoto);
+    var photo = (prefs.getString(_kAuthPhoto) ?? '').trim();
+    if (photo.isEmpty) {
+      final saved = await OAuthService.instance.getSavedProfile();
+      final fallback = (saved?.avatarUrl ?? '').trim();
+      if (fallback.isNotEmpty) {
+        photo = fallback;
+        await prefs.setString(_kAuthPhoto, fallback);
+      }
+    }
     if (!mounted) return;
     setState(() {
-      _profilePhoto = photo;
+      _profilePhoto = photo.isEmpty ? null : photo;
     });
   }
 
@@ -313,6 +322,7 @@ class _HomeState extends State<Home> {
                     _virtualPage = virtualIndex;
                     selectedIndex = _realIndexFromVirtual(virtualIndex);
                   });
+                  _loadProfilePhoto();
                 },
                 itemBuilder: (context, virtualIndex) {
                   final realIndex = _realIndexFromVirtual(virtualIndex);

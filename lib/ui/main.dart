@@ -24,6 +24,12 @@ void main() async {
 
   Future<void>(() async {
     try {
+      await TrustedPresenceService.instance.start();
+    } catch (e) {
+      debugPrint('[boot] Trusted presence start skipped: $e');
+    }
+
+    try {
       await Bridge.init().timeout(const Duration(seconds: 8));
     } catch (e) {
       debugPrint('[boot] Bridge init skipped/timed out: $e');
@@ -40,6 +46,7 @@ class EaSync extends StatelessWidget {
       animation: EaAppSettings.instance,
       builder: (_, _) {
         return MaterialApp(
+          navigatorKey: eaNavigatorKey,
           debugShowCheckedModeBanner: false,
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
