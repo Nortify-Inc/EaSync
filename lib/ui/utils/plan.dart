@@ -52,8 +52,7 @@ class EaPlanService {
 
   bool allowsAssistantFull(EaPlanTier tier) => tier == EaPlanTier.pro;
 
-  bool allowsTemperature(EaPlanTier tier) =>
-      tier == EaPlanTier.plus || tier == EaPlanTier.pro;
+  bool allowsTemperature(EaPlanTier tier) => true;
 
   bool allowsRareAssistantRecommendations(EaPlanTier tier) =>
       tier == EaPlanTier.plus;
