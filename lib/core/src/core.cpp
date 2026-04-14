@@ -21,6 +21,7 @@
 #include "driver.hpp"
 #include "mock.hpp"
 #include "ble.hpp"
+#include "adaptive_layer.hpp"
 #include "payload_utility.hpp"
 
 #ifdef EASYNC_ENABLE_MQTT_DRIVER
@@ -56,6 +57,7 @@
 #include <thread>
 #include <ctime>
 #include <cstdio>
+#include <functional>
 
 extern "C" {
 
@@ -653,6 +655,28 @@ static bool ensureDriverInitialized(CoreContext* core,
     return true;
 }
 
+static bool syncAdaptiveLayerDrivers(
+    const std::unordered_map<CoreProtocol, std::shared_ptr<drivers::Driver>>& drivers,
+    CoreContext* coreForError)
+{
+    if (!coreForError)
+        return false;
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    if (!adaptive.isInitialized()) {
+        if (!adaptive.init()) {
+            setError(coreForError, "Failed to initialize AdaptiveLayer");
+            return false;
+        }
+    }
+
+    for (const auto& entry : drivers) {
+        adaptive.registerDriver(entry.first, entry.second);
+    }
+
+    return true;
+}
+
 
 
 /**
@@ -738,6 +762,37 @@ static void captureUsageAfterWrite(CoreContext* core,
     recordUsageSampleLocked(core, uuid, refreshed);
 }
 
+static CoreResult runDriverOperationWithReconnect(
+    CoreContext* core,
+    const char* uuid,
+    const std::shared_ptr<drivers::Driver>& driver,
+    const char* operationName,
+    const std::function<bool()>& operation
+) {
+    if (!core || !uuid || !driver) {
+        setError(core, "Driver operation failed: invalid context");
+        return CORE_ERROR;
+    }
+
+    if (operation())
+        return CORE_OK;
+
+    if (!driver->connect(uuid)) {
+        std::ostringstream oss;
+        oss << operationName << " failed and reconnect did not recover device " << uuid;
+        setError(core, oss.str().c_str());
+        return CORE_ERROR;
+    }
+
+    if (operation())
+        return CORE_OK;
+
+    std::ostringstream oss;
+    oss << operationName << " failed after reconnect for device " << uuid;
+    setError(core, oss.str().c_str());
+    return CORE_ERROR;
+}
+
 /**
  * @brief Utility: print device state (for debug).
  *
@@ -812,6 +867,8 @@ void core_destroy(CoreContext* core) {
         core::PayloadUtility::instance().unbindDevice(pair.first);
     }
 
+    core::AdaptiveLayer::instance().shutdown();
+
     core->devices.clear();
     core->drivers.clear();
 
@@ -836,16 +893,29 @@ CoreResult core_init(CoreContext* core) {
         return CORE_INVALID_ARGUMENT;
     }
 
-    std::lock_guard<std::mutex> lock(core->mutex);
+    std::unordered_map<CoreProtocol, std::shared_ptr<drivers::Driver>> driversSnapshot;
 
-    auto mockIt = core->drivers.find(CORE_PROTOCOL_MOCK);
-    if (mockIt != core->drivers.end()) {
-        if (!ensureDriverInitialized(core, CORE_PROTOCOL_MOCK, mockIt->second))
-            return CORE_ERROR;
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        auto mockIt = core->drivers.find(CORE_PROTOCOL_MOCK);
+        if (mockIt != core->drivers.end()) {
+            if (!ensureDriverInitialized(core, CORE_PROTOCOL_MOCK, mockIt->second))
+                return CORE_ERROR;
+        }
+
+        driversSnapshot = core->drivers;
+        core->lastError.clear();
     }
 
-    core->lastError.clear();
-    core->initialized = true;
+    if (!syncAdaptiveLayerDrivers(driversSnapshot, core))
+        return CORE_ERROR;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        core->initialized = true;
+    }
+
     return CORE_OK;
 }
 
@@ -879,25 +949,41 @@ CoreResult core_register_device_ex(CoreContext* core,
                                    const CoreCapability* caps,
                                    uint8_t capCount)
 {
-    if (!core || !uuid || !name || !caps)
+    if (!core || !uuid || !name || !caps) {
+        setError(core, "Invalid parameters to core_register_device_ex");
         return CORE_INVALID_ARGUMENT;
+    }
 
     CoreEvent ev{};
     CoreEventCallback cb = nullptr;
     void* cbUserdata = nullptr;
+    CoreProtocol registeredProtocol = CORE_PROTOCOL_MOCK;
+    std::string registeredUuid;
+    std::unordered_map<CoreProtocol, std::shared_ptr<drivers::Driver>> driversSnapshot;
 
     {
         std::lock_guard<std::mutex> lock(core->mutex);
 
-        if (!core->initialized)
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
             return CORE_NOT_INITIALIZED;
+        }
 
-        if (core->devices.count(uuid))
+        if (core->devices.count(uuid)) {
+            std::ostringstream oss;
+            oss << "Device already exists: " << uuid;
+            setError(core, oss.str().c_str());
             return CORE_ALREADY_EXISTS;
+        }
 
         auto driverIt = core->drivers.find(protocol);
-        if (driverIt == core->drivers.end())
+        if (driverIt == core->drivers.end()) {
+            std::ostringstream oss;
+            oss << "Protocol not supported by current core build: "
+                << protocolToString(protocol);
+            setError(core, oss.str().c_str());
             return CORE_NOT_SUPPORTED;
+        }
 
         InternalDevice dev;
         dev.uuid = uuid;
@@ -908,18 +994,33 @@ CoreResult core_register_device_ex(CoreContext* core,
         dev.capabilities.assign(caps, caps + capCount);
         dev.driver = driverIt->second;
 
-        if (!ensureDriverInitialized(core, protocol, dev.driver))
+        if (!ensureDriverInitialized(core, protocol, dev.driver)) {
+            if (core->lastError.empty()) {
+                std::ostringstream oss;
+                oss << "Protocol driver unavailable: "
+                    << protocolToString(protocol);
+                setError(core, oss.str().c_str());
+            }
             return CORE_PROTOCOL_UNAVAILABLE;
+        }
 
         std::memset(&dev.state, 0, sizeof(CoreDeviceState));
 
         dev.driver->onDeviceRegistered(dev.uuid, dev.brand, dev.model);
 
-        if (!dev.driver->connect(dev.uuid))
+        if (!dev.driver->connect(dev.uuid)) {
+            std::ostringstream oss;
+            oss << "Failed to connect device " << dev.uuid
+                << " via " << protocolToString(protocol);
+            setError(core, oss.str().c_str());
             return CORE_ERROR;
+        }
 
         core->devices[uuid] = dev;
         core::PayloadUtility::instance().bindDevice(dev.uuid, dev.brand, dev.model);
+        registeredUuid = dev.uuid;
+        registeredProtocol = dev.protocol;
+        driversSnapshot = core->drivers;
 
         ev.type = CORE_EVENT_DEVICE_ADDED;
         std::strncpy(ev.uuid, uuid, CORE_MAX_UUID - 1);
@@ -927,10 +1028,20 @@ CoreResult core_register_device_ex(CoreContext* core,
 
         cb = core->callback;
         cbUserdata = core->callbackUserdata;
+        core->lastError.clear();
     }
+
+    if (!syncAdaptiveLayerDrivers(driversSnapshot, core))
+        return CORE_ERROR;
 
     if (cb)
         cb(&ev, cbUserdata);
+
+    // Keep AdaptiveLayer connection model in sync with registered runtime devices.
+    if (!registeredUuid.empty()) {
+        auto& adaptive = core::AdaptiveLayer::instance();
+        (void)adaptive.connect(registeredUuid, registeredProtocol);
+    }
 
     return CORE_OK;
 }
@@ -1014,6 +1125,9 @@ CoreResult core_remove_device(CoreContext* core, const char* uuid)
 
     if (cb)
         cb(&ev, cbUserdata);
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    (void)adaptive.disconnect(uuid);
 
     return CORE_OK;
 }
@@ -1194,8 +1308,18 @@ CoreResult core_get_state(CoreContext* core, const char* uuid, CoreDeviceState* 
         driver = it->second.driver;
     }
 
-    if (!driver->getState(uuid, *out))
-        return CORE_ERROR;
+    const CoreResult readResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_get_state",
+        [&]() {
+            return driver->getState(uuid, *out);
+        }
+    );
+
+    if (readResult != CORE_OK)
+        return readResult;
 
     return CORE_OK;
 }
@@ -1268,8 +1392,18 @@ CoreResult core_set_power(CoreContext* core, const char* uuid, bool value){
         driver = it->second.driver;
     }
 
-    if (!driver->setPower(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_power",
+        [&]() {
+            return driver->setPower(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1312,8 +1446,18 @@ CoreResult core_set_brightness(CoreContext* core, const char* uuid, uint32_t val
         driver = it->second.driver;
     }
 
-    if (!driver->setBrightness(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_brightness",
+        [&]() {
+            return driver->setBrightness(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1352,8 +1496,18 @@ CoreResult core_set_color(CoreContext* core, const char* uuid, uint32_t value){
         driver = it->second.driver;
     }
 
-    if (!driver->setColor(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_color",
+        [&]() {
+            return driver->setColor(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1399,8 +1553,18 @@ CoreResult core_set_temperature(CoreContext* core, const char* uuid, float value
         driver = it->second.driver;
     }
 
-    if (!driver->setTemperature(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_temperature",
+        [&]() {
+            return driver->setTemperature(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1445,8 +1609,18 @@ CoreResult core_set_temperature_fridge(CoreContext* core, const char* uuid, floa
         driver = it->second.driver;
     }
 
-    if (!driver->setTemperatureFridge(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_temperature_fridge",
+        [&]() {
+            return driver->setTemperatureFridge(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1492,8 +1666,18 @@ CoreResult core_set_temperature_freezer(CoreContext* core, const char* uuid, flo
         driver = it->second.driver;
     }
 
-    if (!driver->setTemperatureFreezer(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_temperature_freezer",
+        [&]() {
+            return driver->setTemperatureFreezer(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1531,8 +1715,18 @@ CoreResult core_set_time(CoreContext* core, const char* uuid, uint64_t value){
         driver = it->second.driver;
     }
 
-    if (!driver->setTime(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_time",
+        [&]() {
+            return driver->setTime(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1571,8 +1765,18 @@ CoreResult core_set_color_temperature(CoreContext* core, const char* uuid, uint3
         driver = it->second.driver;
     }
 
-    if (!driver->setColorTemperature(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_color_temperature",
+        [&]() {
+            return driver->setColorTemperature(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1611,8 +1815,18 @@ CoreResult core_set_lock(CoreContext* core, const char* uuid, bool value){
         driver = it->second.driver;
     }
 
-    if (!driver->setLock(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_lock",
+        [&]() {
+            return driver->setLock(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1651,8 +1865,18 @@ CoreResult core_set_mode(CoreContext* core, const char* uuid, uint32_t value){
         driver = it->second.driver;
     }
 
-    if (!driver->setMode(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_mode",
+        [&]() {
+            return driver->setMode(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1691,8 +1915,18 @@ CoreResult core_set_position(CoreContext* core, const char* uuid, float value){
         driver = it->second.driver;
     }
 
-    if (!driver->setPosition(uuid, value))
-        return CORE_ERROR;
+    const CoreResult writeResult = runDriverOperationWithReconnect(
+        core,
+        uuid,
+        driver,
+        "core_set_position",
+        [&]() {
+            return driver->setPosition(uuid, value);
+        }
+    );
+
+    if (writeResult != CORE_OK)
+        return writeResult;
 
     captureUsageAfterWrite(core, uuid, driver);
 
@@ -1710,7 +1944,7 @@ CoreResult core_provision_wifi(
         return CORE_INVALID_ARGUMENT;
     }
 
-    if (std::strlen(ssid) == 0 || std::strlen(password) < 8) {
+    if (std::strlen(ssid) == 0 || std::strlen(password) == 0) {
         setError(core, "Invalid Wi-Fi credentials");
         return CORE_INVALID_ARGUMENT;
     }
@@ -1735,10 +1969,106 @@ CoreResult core_provision_wifi(
         driver = it->second.driver;
     }
 
-    if (!driver || !driver->provisionWifi(uuid, ssid, password)) {
-        setError(core, "Failed to provision Wi-Fi credentials");
+    std::string provisionError;
+    if (!driver || !driver->provisionWifi(uuid, ssid, password, &provisionError)) {
+        if (!provisionError.empty()) {
+            setError(core, provisionError.c_str());
+        } else {
+            setError(core, "Failed to provision Wi-Fi credentials");
+        }
         return CORE_ERROR;
     }
+
+    return CORE_OK;
+}
+
+CoreResult core_set_device_endpoint(
+    CoreContext* core,
+    const char* uuid,
+    const char* endpoint
+){
+    if (!core || !uuid || !endpoint) {
+        setError(core, "Invalid parameters to core_set_device_endpoint");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    if (std::strlen(endpoint) == 0) {
+        setError(core, "Endpoint cannot be empty");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+
+        driver = it->second.driver;
+    }
+
+    if (!driver || !driver->setEndpoint(uuid, endpoint)) {
+        setError(core, "Driver rejected endpoint update");
+        return CORE_ERROR;
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    (void)adaptive.setEndpoint(uuid, endpoint);
+
+    return CORE_OK;
+}
+
+CoreResult core_set_device_credential(
+    CoreContext* core,
+    const char* uuid,
+    const char* key,
+    const char* value
+){
+    if (!core || !uuid || !key || !value) {
+        setError(core, "Invalid parameters to core_set_device_credential");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    if (std::strlen(key) == 0) {
+        setError(core, "Credential key cannot be empty");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    std::shared_ptr<drivers::Driver> driver;
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+
+        driver = it->second.driver;
+    }
+
+    if (!driver || !driver->setCredential(uuid, key, value)) {
+        setError(core, "Driver rejected credential update");
+        return CORE_ERROR;
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    (void)adaptive.setCredential(uuid, key, value);
 
     return CORE_OK;
 }
@@ -2362,4 +2692,209 @@ static void logDriverError(CoreContext* core, const char* driverName, const char
     setError(core, oss.str().c_str());
 }
 
+// ============================================================
+// AdaptiveLayer Integration APIs
+// ============================================================
+
+static const char* connectionStateToLabel(core::ConnectionState state)
+{
+    switch (state) {
+        case core::ConnectionState::Disconnected:
+            return "disconnected";
+        case core::ConnectionState::Connecting:
+            return "connecting";
+        case core::ConnectionState::Connected:
+            return "connected";
+        case core::ConnectionState::Reconnecting:
+            return "reconnecting";
+        case core::ConnectionState::Provisioning:
+            return "provisioning";
+        case core::ConnectionState::Error:
+            return "failed";
+        default:
+            return "unknown";
+    }
 }
+
+CoreResult core_establish_connection(CoreContext* core, const char* uuid)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_establish_connection");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    CoreProtocol protocol = CORE_PROTOCOL_MOCK;
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        auto it = core->devices.find(uuid);
+        if (it == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+
+        protocol = it->second.protocol;
+    }
+
+    // Use AdaptiveLayer singleton
+    auto& adaptive = core::AdaptiveLayer::instance();
+
+    if (!adaptive.connect(uuid, protocol)) {
+        setError(core, "Failed to establish connection");
+        return CORE_ERROR;
+    }
+
+    return CORE_OK;
+}
+
+CoreResult core_ensure_connected(CoreContext* core, const char* uuid)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_ensure_connected");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        if (core->devices.find(uuid) == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+
+    if (!adaptive.ensureConnected(uuid)) {
+        setError(core, "Failed to ensure connection");
+        return CORE_ERROR;
+    }
+
+    return CORE_OK;
+}
+
+CoreResult core_disconnect_device(CoreContext* core, const char* uuid)
+{
+    if (!core || !uuid) {
+        setError(core, "Invalid parameters to core_disconnect_device");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        if (core->devices.find(uuid) == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    (void)adaptive.disconnect(uuid);
+
+    return CORE_OK;
+}
+
+CoreResult core_get_connection_state(CoreContext* core, const char* uuid,
+                                      char* outBuffer, uint32_t bufferSize)
+{
+    if (!core || !uuid || !outBuffer || bufferSize == 0) {
+        setError(core, "Invalid parameters to core_get_connection_state");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+
+        if (core->devices.find(uuid) == core->devices.end()) {
+            setError(core, "Device not found");
+            return CORE_NOT_FOUND;
+        }
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    const char* label = connectionStateToLabel(adaptive.getConnectionState(uuid));
+    const std::string state = label;
+
+    if (state.length() + 1 > bufferSize) {
+        setError(core, "Output buffer too small for connection state");
+        return CORE_ERROR;
+    }
+
+    std::strncpy(outBuffer, state.c_str(), bufferSize - 1);
+    outBuffer[bufferSize - 1] = '\0';
+
+    return CORE_OK;
+}
+
+CoreResult core_discover_devices(CoreContext* core, CoreProtocol protocol,
+                                  int timeoutMs, char* outBuffer,
+                                  uint32_t bufferSize, uint32_t* outWritten)
+{
+    if (!core || !outBuffer || !outWritten || bufferSize == 0) {
+        setError(core, "Invalid parameters to core_discover_devices");
+        return CORE_INVALID_ARGUMENT;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(core->mutex);
+        if (!core->initialized) {
+            setError(core, "Core not initialized");
+            return CORE_NOT_INITIALIZED;
+        }
+    }
+
+    auto& adaptive = core::AdaptiveLayer::instance();
+    auto devices = adaptive.discover(protocol, timeoutMs);
+
+    // Serialize as JSON array
+    std::ostringstream oss;
+    oss << "[";
+    bool first = true;
+    for (const auto& d : devices) {
+        if (!first) oss << ",";
+        first = false;
+        oss << "{"
+            << "\"uuid\":\"" << d.uuid << "\","
+            << "\"name\":\"" << d.name << "\","
+            << "\"host\":\"" << d.host << "\","
+            << "\"port\":" << d.port << ","
+            << "\"protocol\":" << d.protocol << ","
+            << "\"vendor\":\"" << d.vendor << "\","
+            << "\"confidence\":" << d.confidence << ","
+            << "\"hint\":\"" << d.hint << "\""
+            << "}";
+    }
+    oss << "]";
+
+    std::string json = oss.str();
+    if (json.length() + 1 > bufferSize) {
+        setError(core, "Output buffer too small for discovery results");
+        return CORE_ERROR;
+    }
+
+    std::memcpy(outBuffer, json.data(), json.length());
+    outBuffer[json.length()] = '\0';
+    *outWritten = static_cast<uint32_t>(json.length());
+
+    return CORE_OK;
+}
+
+} // extern "C"

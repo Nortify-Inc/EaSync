@@ -125,10 +125,24 @@ llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/ggml-base.dir/ggml-backend.cpp.s"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-backend.cpp -o CMakeFiles/ggml-base.dir/ggml-backend.cpp.s
 
+llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/flags.make
+llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-backend-meta.cpp
+llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o -MF CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o.d -o CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-backend-meta.cpp
+
+llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.i"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-backend-meta.cpp > CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.i
+
+llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.s"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-backend-meta.cpp -o CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.s
+
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/flags.make
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-opt.cpp
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o -MF CMakeFiles/ggml-base.dir/ggml-opt.cpp.o.d -o CMakeFiles/ggml-base.dir/ggml-opt.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-opt.cpp
 
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.i: cmake_force
@@ -142,7 +156,7 @@ llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.s: cmake_force
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/flags.make
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-threading.cpp
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o -MF CMakeFiles/ggml-base.dir/ggml-threading.cpp.o.d -o CMakeFiles/ggml-base.dir/ggml-threading.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-threading.cpp
 
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.i: cmake_force
@@ -156,7 +170,7 @@ llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.s: cmake_force
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/flags.make
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-quants.c
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && ccache /usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o -MF CMakeFiles/ggml-base.dir/ggml-quants.c.o.d -o CMakeFiles/ggml-base.dir/ggml-quants.c.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/ggml-quants.c
 
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.i: cmake_force
@@ -170,7 +184,7 @@ llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.s: cmake_force
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/flags.make
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/gguf.cpp
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o -MF CMakeFiles/ggml-base.dir/gguf.cpp.o.d -o CMakeFiles/ggml-base.dir/gguf.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/ggml/src/gguf.cpp
 
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.i: cmake_force
@@ -187,6 +201,7 @@ ggml__base_OBJECTS = \
 "CMakeFiles/ggml-base.dir/ggml.cpp.o" \
 "CMakeFiles/ggml-base.dir/ggml-alloc.c.o" \
 "CMakeFiles/ggml-base.dir/ggml-backend.cpp.o" \
+"CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o" \
 "CMakeFiles/ggml-base.dir/ggml-opt.cpp.o" \
 "CMakeFiles/ggml-base.dir/ggml-threading.cpp.o" \
 "CMakeFiles/ggml-base.dir/ggml-quants.c.o" \
@@ -195,24 +210,25 @@ ggml__base_OBJECTS = \
 # External object files for target ggml-base
 ggml__base_EXTERNAL_OBJECTS =
 
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make
-bin/libggml-base.so.0.9.10: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX shared library ../../../bin/libggml-base.so"
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml.c.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-alloc.c.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-opt.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-threading.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-quants.c.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/gguf.cpp.o
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make
+bin/libggml-base.so.0.9.11: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX shared library ../../../bin/libggml-base.so"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/ggml-base.dir/link.txt --verbose=$(VERBOSE)
-	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && $(CMAKE_COMMAND) -E cmake_symlink_library ../../../bin/libggml-base.so.0.9.10 ../../../bin/libggml-base.so.0 ../../../bin/libggml-base.so
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/ggml/src && $(CMAKE_COMMAND) -E cmake_symlink_library ../../../bin/libggml-base.so.0.9.11 ../../../bin/libggml-base.so.0 ../../../bin/libggml-base.so
 
-bin/libggml-base.so.0: bin/libggml-base.so.0.9.10
+bin/libggml-base.so.0: bin/libggml-base.so.0.9.11
 	@$(CMAKE_COMMAND) -E touch_nocreate bin/libggml-base.so.0
 
-bin/libggml-base.so: bin/libggml-base.so.0.9.10
+bin/libggml-base.so: bin/libggml-base.so.0.9.11
 	@$(CMAKE_COMMAND) -E touch_nocreate bin/libggml-base.so
 
 # Rule to build all files generated by this target.

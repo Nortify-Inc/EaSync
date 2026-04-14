@@ -10,6 +10,9 @@
 
 import '../handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart' as crypto;
 
 String _loadedCoreLibraryPath = 'libeasync_core.so';
 
@@ -22,7 +25,6 @@ DynamicLibrary _openCoreLibrary() {
   if (Platform.isLinux) {
     final executableDir = File(Platform.resolvedExecutable).parent.path;
     final cwd = Directory.current.path;
-    DynamicLibrary? firstLoadable;
 
     List<String> projectRootCandidates(String from) {
       final out = <String>[];
@@ -59,13 +61,9 @@ DynamicLibrary _openCoreLibrary() {
 
       try {
         final lib = DynamicLibrary.open(path);
-        firstLoadable ??= lib;
+        _loadedCoreLibraryPath = path;
+        return lib;
       } catch (_) {}
-    }
-
-    if (firstLoadable != null) {
-      _loadedCoreLibraryPath = 'fallback-first-loadable';
-      return firstLoadable;
     }
   }
 
@@ -1144,6 +1142,16 @@ typedef _coreProvisionWifiC =
 typedef _coreProvisionWifiDart =
     int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 
+typedef _coreSetDeviceEndpointC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
+typedef _coreSetDeviceEndpointDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
+
+typedef _coreSetDeviceCredentialC =
+  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+typedef _coreSetDeviceCredentialDart =
+  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
 
@@ -1178,6 +1186,46 @@ typedef _coreSetEventCallbackDart =
       Pointer<NativeFunction<_coreEventTrampolineC>>,
       Pointer<Void>,
     );
+
+// AdaptiveLayer FFI bindings
+typedef _coreEstablishConnectionC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreEstablishConnectionDart = int Function(Pointer<Void>, Pointer<Utf8>);
+
+typedef _coreEnsureConnectedC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreEnsureConnectedDart = int Function(Pointer<Void>, Pointer<Utf8>);
+
+typedef _coreDisconnectDeviceC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreDisconnectDeviceDart = int Function(Pointer<Void>, Pointer<Utf8>);
+
+typedef _coreGetConnectionStateC = Int32 Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Int8>,
+  Uint32,
+);
+typedef _coreGetConnectionStateDart = int Function(
+  Pointer<Void>,
+  Pointer<Utf8>,
+  Pointer<Int8>,
+  int,
+);
+
+typedef _coreDiscoverDevicesC = Int32 Function(
+  Pointer<Void>,
+  Int32,
+  Int32,
+  Pointer<Int8>,
+  Uint32,
+  Pointer<Uint32>,
+);
+typedef _coreDiscoverDevicesDart = int Function(
+  Pointer<Void>,
+  int,
+  int,
+  Pointer<Int8>,
+  int,
+  Pointer<Uint32>,
+);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -1282,6 +1330,84 @@ final _coreProvisionWifiDart? _coreProvisionWifi = (() {
     return coreLib.lookupFunction<_coreProvisionWifiC, _coreProvisionWifiDart>(
       'core_provision_wifi',
     );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreSetDeviceEndpointDart? _coreSetDeviceEndpoint = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreSetDeviceEndpointC, _coreSetDeviceEndpointDart>(
+          'core_set_device_endpoint',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreSetDeviceCredentialDart? _coreSetDeviceCredential = (() {
+  try {
+    return coreLib
+        .lookupFunction<_coreSetDeviceCredentialC, _coreSetDeviceCredentialDart>(
+          'core_set_device_credential',
+        );
+  } catch (_) {
+    return null;
+  }
+})();
+
+// AdaptiveLayer bindings
+final _coreEstablishConnectionDart? _coreEstablishConnection = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreEstablishConnectionC,
+      _coreEstablishConnectionDart
+    >('core_establish_connection');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreEnsureConnectedDart? _coreEnsureConnected = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreEnsureConnectedC,
+      _coreEnsureConnectedDart
+    >('core_ensure_connected');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreDisconnectDeviceDart? _coreDisconnectDevice = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreDisconnectDeviceC,
+      _coreDisconnectDeviceDart
+    >('core_disconnect_device');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreGetConnectionStateDart? _coreGetConnectionState = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreGetConnectionStateC,
+      _coreGetConnectionStateDart
+    >('core_get_connection_state');
+  } catch (_) {
+    return null;
+  }
+})();
+
+final _coreDiscoverDevicesDart? _coreDiscoverDevices = (() {
+  try {
+    return coreLib.lookupFunction<
+      _coreDiscoverDevicesC,
+      _coreDiscoverDevicesDart
+    >('core_discover_devices');
   } catch (_) {
     return null;
   }
@@ -1428,6 +1554,7 @@ class DiscoveredDevice {
   final String hint;
   final double confidence;
   final String vendor;
+  final Map<String, dynamic> metadata;
 
   DiscoveredDevice({
     required this.icon,
@@ -1439,6 +1566,7 @@ class DiscoveredDevice {
     required this.hint,
     required this.confidence,
     this.vendor = 'generic',
+    this.metadata = const {},
   });
 }
 
@@ -1486,6 +1614,16 @@ class ProtocolConnectionState {
   static const String failed = 'failed';
 }
 
+class OnboardingStage {
+  static const String unknown = 'unknown';
+  static const String registering = 'registering';
+  static const String configuring = 'configuring';
+  static const String provisioning = 'provisioning';
+  static const String connecting = 'connecting';
+  static const String ready = 'ready';
+  static const String failed = 'failed';
+}
+
 class AiPermissions {
   final bool useLocationData;
   final bool useWeatherData;
@@ -1521,9 +1659,40 @@ String _readFixedString(Array<Int8> array, int maxLen) {
 Never _throwLastError(int code) {
   final err = _coreLastError(Bridge._ctx!);
 
-  final msg = err == nullptr ? 'Unknown error' : err.toDartString();
+  final nativeMsg = err == nullptr ? '' : err.toDartString().trim();
+  final msg = (nativeMsg.isEmpty || nativeMsg.toLowerCase() == 'no error')
+      ? _coreFallbackMessage(code)
+      : nativeMsg;
 
   throw Exception('Core error $code: $msg');
+}
+
+String _coreFallbackMessage(int code) {
+  switch (code) {
+    case CoreResult.CORE_NOT_SUPPORTED:
+    case 5:
+      return 'Protocol not supported by current native core build.';
+    case CoreResult.CORE_PROTOCOL_UNAVAILABLE:
+    case 7:
+      return 'Protocol driver unavailable. Rebuild native core with required drivers.';
+    case CoreResult.CORE_NOT_INITIALIZED:
+    case 6:
+      return 'Core is not initialized.';
+    case CoreResult.CORE_ALREADY_EXISTS:
+    case 3:
+      return 'Device already exists.';
+    case CoreResult.CORE_INVALID_ARGUMENT:
+    case 4:
+      return 'Invalid arguments for this core operation.';
+    case CoreResult.CORE_NOT_FOUND:
+    case 2:
+      return 'Requested device/resource was not found.';
+    case CoreResult.CORE_ERROR:
+    case 1:
+      return 'Generic core operation failure.';
+    default:
+      return 'Unknown core error.';
+  }
 }
 
 class Bridge {
@@ -1543,8 +1712,255 @@ class Bridge {
   static final Map<String, String> _protocolConnectionByDevice = {};
   static final Map<String, int> _protocolByDevice = {};
   static final Map<String, String> _endpointByDevice = {};
+  static final Map<String, String> _onboardingStageByDevice = {};
+  static final Map<String, String> _onboardingErrorByDevice = {};
+  static final Map<String, int> _mideaApplianceIdByHost = {};
+  static final Map<String, String> _mideaTokenByDevice = {};
+  static final Map<String, String> _mideaKeyByDevice = {};
+  static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+
+  static const String _mideaAppId = '1010';
+  static const String _mideaClientType = '1';
+  static const String _mideaFormat = '2';
+  static const String _mideaLanguage = 'en_US';
+  static const String _mideaSrc = '1010';
+  static const String _mideaSignKey = 'xhdiwjnchekd4d512chdjx5d8e4c394D2D7S';
+  static const String _mideaLoginKey = 'ac21b9f9cbfe4ca5a88562ef25e2b768';
+  static const String _mideaApiBase =
+      'https://mp-prod.appsmb.com/mas/v5/app/proxy?alias=';
+
+  static String _mideaStampNow() {
+    final now = DateTime.now().toUtc();
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${now.year}${two(now.month)}${two(now.day)}${two(now.hour)}${two(now.minute)}${two(now.second)}';
+  }
+
+  static String _mideaSign(String endpoint, Map<String, String> payload) {
+    final uri = Uri.parse('$_mideaApiBase$endpoint');
+    final sortedEntries = payload.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    final query = Uri(queryParameters: {
+      for (final e in sortedEntries) e.key: e.value,
+    }).query;
+
+    final decoded = Uri.decodeQueryComponent(query.replaceAll('+', '%20'));
+    final source = '${uri.path}$decoded$_mideaSignKey';
+    return crypto.sha256.convert(utf8.encode(source)).toString();
+  }
+
+  static String _mideaEncryptPassword(String loginId, String password) {
+    final first = crypto.sha256.convert(utf8.encode(password)).toString();
+    final second = '$loginId$first$_mideaLoginKey';
+    return crypto.sha256.convert(utf8.encode(second)).toString();
+  }
+
+  static String _mideaUdpIdFromInt(int id, {required Endian endian}) {
+    final bb = ByteData(8);
+    bb.setUint64(0, id, endian);
+    final bytes = bb.buffer.asUint8List(0, 6);
+
+    final digest = crypto.sha256.convert(bytes).bytes;
+    final out = List<int>.filled(16, 0);
+    for (var i = 0; i < 16; i++) {
+      out[i] = digest[i] ^ digest[i + 16];
+    }
+    final b = StringBuffer();
+    for (final v in out) {
+      b.write(v.toRadixString(16).padLeft(2, '0'));
+    }
+    return b.toString();
+  }
+
+  static Future<Map<String, dynamic>?> _mideaApiRequest(
+    String endpoint,
+    Map<String, String> args, {
+    String? sessionId,
+  }) async {
+    final payload = <String, String>{
+      'appId': _mideaAppId,
+      'format': _mideaFormat,
+      'clientType': _mideaClientType,
+      'language': _mideaLanguage,
+      'src': _mideaSrc,
+      'stamp': _mideaStampNow(),
+      ...args,
+    };
+    if (sessionId != null && sessionId.isNotEmpty) {
+      payload['sessionId'] = sessionId;
+    }
+    payload['sign'] = _mideaSign(endpoint, payload);
+
+    final uri = Uri.parse('$_mideaApiBase$endpoint');
+    final res = await http
+        .post(uri, body: payload)
+        .timeout(const Duration(seconds: 8));
+
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      return null;
+    }
+
+    final decoded = jsonDecode(res.body);
+    if (decoded is! Map<String, dynamic>) return null;
+    return decoded;
+  }
+
+  static Map<String, dynamic>? _unwrapMideaResult(Map<String, dynamic>? root) {
+    if (root == null) return null;
+
+    final data = root['data'];
+    if (data is Map<String, dynamic>) {
+      final result = data['result'];
+      if (result is Map<String, dynamic>) return result;
+      return data;
+    }
+
+    final result = root['result'];
+    if (result is Map<String, dynamic>) return result;
+    return root;
+  }
+
+  static Future<void> _autoAcquireMideaCredentials({
+    required String uuid,
+    required String host,
+    String? brand,
+    String? model,
+  }) async {
+    final b = (brand ?? '').toLowerCase();
+    final m = (model ?? '').toLowerCase();
+    final isMidea = b.contains('midea') || m.contains('midea') || m.contains('nethome');
+    if (!isMidea) return;
+
+    if (_mideaTokenByDevice.containsKey(uuid) && _mideaKeyByDevice.containsKey(uuid)) {
+      setDeviceCredential(uuid: uuid, key: 'token', value: _mideaTokenByDevice[uuid]!);
+      setDeviceCredential(uuid: uuid, key: 'key', value: _mideaKeyByDevice[uuid]!);
+      return;
+    }
+
+    final cachedToken = (await _secureStorage.read(key: 'vendor.midea.$uuid.token'))?.trim() ?? '';
+    final cachedKey = (await _secureStorage.read(key: 'vendor.midea.$uuid.key'))?.trim() ?? '';
+    if (cachedToken.isNotEmpty && cachedKey.isNotEmpty) {
+      _mideaTokenByDevice[uuid] = cachedToken;
+      _mideaKeyByDevice[uuid] = cachedKey;
+      setDeviceCredential(uuid: uuid, key: 'token', value: cachedToken);
+      setDeviceCredential(uuid: uuid, key: 'key', value: cachedKey);
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final email = (prefs.getString('account.auth.email') ?? '').trim();
+    final password = (await _secureStorage.read(key: 'account.password'))?.trim() ?? '';
+    if (email.isEmpty || password.isEmpty) {
+      return;
+    }
+
+    final applianceId = _mideaApplianceIdByHost[host];
+    if (applianceId == null || applianceId <= 0) {
+      return;
+    }
+
+    final loginIdRoot = await _mideaApiRequest(
+      '/v1/user/login/id/get',
+      {'loginAccount': email},
+    );
+    final loginIdData = _unwrapMideaResult(loginIdRoot);
+    final loginId = (loginIdData?['loginId'] ?? '').toString().trim();
+    if (loginId.isEmpty) return;
+
+    final encryptedPassword = _mideaEncryptPassword(loginId, password);
+    final loginRoot = await _mideaApiRequest(
+      '/v1/user/login',
+      {
+        'loginAccount': email,
+        'password': encryptedPassword,
+      },
+    );
+    final loginData = _unwrapMideaResult(loginRoot);
+    final sessionId = (loginData?['sessionId'] ?? '').toString().trim();
+    if (sessionId.isEmpty) return;
+
+    final udpIds = <String>{
+      _mideaUdpIdFromInt(applianceId, endian: Endian.little),
+      _mideaUdpIdFromInt(applianceId, endian: Endian.big),
+    };
+
+    for (final udpId in udpIds) {
+      final tokenRoot = await _mideaApiRequest(
+        '/v1/iot/secure/getToken',
+        {'udpid': udpId},
+        sessionId: sessionId,
+      );
+      final tokenData = _unwrapMideaResult(tokenRoot);
+      final tokenList = tokenData?['tokenlist'];
+      if (tokenList is! List) continue;
+
+      for (final item in tokenList) {
+        if (item is! Map) continue;
+        final token = (item['token'] ?? '').toString().trim();
+        final key = (item['key'] ?? '').toString().trim();
+        if (token.isEmpty || key.isEmpty) continue;
+
+        _mideaTokenByDevice[uuid] = token;
+        _mideaKeyByDevice[uuid] = key;
+        await _secureStorage.write(key: 'vendor.midea.$uuid.token', value: token);
+        await _secureStorage.write(key: 'vendor.midea.$uuid.key', value: key);
+        setDeviceCredential(uuid: uuid, key: 'token', value: token);
+        setDeviceCredential(uuid: uuid, key: 'key', value: key);
+        return;
+      }
+    }
+  }
   static final Map<String, DeviceConnectionHealth> _healthByDevice = {};
   static final List<BridgeDiagnosticEntry> _diagnostics = [];
+
+  static void _setOnboardingStage(
+    String uuid,
+    String stage, {
+    String? error,
+  }) {
+    _onboardingStageByDevice[uuid] = stage;
+    if (error != null && error.trim().isNotEmpty) {
+      _onboardingErrorByDevice[uuid] = error.trim();
+    } else if (stage != OnboardingStage.failed) {
+      _onboardingErrorByDevice.remove(uuid);
+    }
+
+    _observeFrontendLearningEvent(
+      'onboarding_stage',
+      uuid: uuid,
+      payload: {'stage': stage, 'error': _onboardingErrorByDevice[uuid]},
+    );
+    _log('onboarding', 'Stage -> $stage', uuid: uuid);
+  }
+
+  static String onboardingStage(String uuid) {
+    return _onboardingStageByDevice[uuid] ?? OnboardingStage.unknown;
+  }
+
+  static String? onboardingError(String uuid) {
+    final err = _onboardingErrorByDevice[uuid]?.trim() ?? '';
+    return err.isEmpty ? null : err;
+  }
+
+  static String onboardingLabel(String uuid) {
+    switch (onboardingStage(uuid)) {
+      case OnboardingStage.registering:
+        return 'Registering';
+      case OnboardingStage.configuring:
+        return 'Configuring';
+      case OnboardingStage.provisioning:
+        return 'Provisioning';
+      case OnboardingStage.connecting:
+        return 'Connecting';
+      case OnboardingStage.ready:
+        return 'Ready';
+      case OnboardingStage.failed:
+        return 'Failed';
+      case OnboardingStage.unknown:
+      default:
+        return 'Unknown';
+    }
+  }
 
   static final StreamController<String> _stateController =
       StreamController.broadcast();
@@ -1752,6 +2168,8 @@ class Bridge {
     _protocolConnectionByDevice.clear();
     _protocolByDevice.clear();
     _endpointByDevice.clear();
+    _onboardingStageByDevice.clear();
+    _onboardingErrorByDevice.clear();
     _healthByDevice.clear();
 
     if (_ctx != null) {
@@ -1765,6 +2183,30 @@ class Bridge {
   static Future<void> get modelReady async {
     if (_modelReadyCompleter == null) return Future<void>.value();
     return _modelReadyCompleter!.future;
+  }
+
+  static void _seedWifiCredentialsFromEnv({
+    required String uuid,
+    String? brand,
+    String? model,
+  }) {
+    final b = (brand ?? '').toLowerCase();
+    final m = (model ?? '').toLowerCase();
+    final isMidea = b.contains('midea') || m.contains('midea') || m.contains('nethome');
+    if (!isMidea) return;
+
+    final env = Platform.environment;
+    final suffix = uuid.replaceAll(RegExp(r'[^A-Za-z0-9]'), '_').toUpperCase();
+
+    final token = (env['EASYNC_MIDEA_TOKEN_$suffix'] ?? env['EASYNC_MIDEA_TOKEN'] ?? '').trim();
+    final key = (env['EASYNC_MIDEA_KEY_$suffix'] ?? env['EASYNC_MIDEA_KEY'] ?? '').trim();
+
+    if (token.isNotEmpty) {
+      setDeviceCredential(uuid: uuid, key: 'token', value: token);
+    }
+    if (key.isNotEmpty) {
+      setDeviceCredential(uuid: uuid, key: 'key', value: key);
+    }
   }
 
   static void registerDevice({
@@ -1844,6 +2286,10 @@ class Bridge {
     }
 
     if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+      _seedWifiCredentialsFromEnv(uuid: uuid, brand: brand, model: model);
+    }
+
+    if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
       _wifiProvisioningByDevice[uuid] = WifiProvisioningState.unprovisioned;
     }
 
@@ -1879,6 +2325,114 @@ class Bridge {
     _log('device', 'Device registered', uuid: uuid);
   }
 
+  static Future<void> onboardDevice({
+    required String uuid,
+    required String name,
+    required int protocol,
+    required List<int> capabilities,
+    String? brand,
+    String? model,
+    List<String>? modeLabels,
+    Map<String, dynamic>? constraints,
+    String? assetPath,
+    String? endpoint,
+    Map<String, String>? credentials,
+    String? wifiSsid,
+    String? wifiPassword,
+    bool rollbackOnFailure = true,
+  }) async {
+    var registered = false;
+    _setOnboardingStage(uuid, OnboardingStage.registering);
+
+    try {
+      registerDevice(
+        uuid: uuid,
+        name: name,
+        protocol: protocol,
+        capabilities: capabilities,
+        brand: brand,
+        model: model,
+        modeLabels: modeLabels,
+        constraints: constraints,
+        assetPath: assetPath,
+      );
+      registered = true;
+
+      _setOnboardingStage(uuid, OnboardingStage.configuring);
+
+      final endpointValue = endpoint?.trim() ?? '';
+      if (endpointValue.isNotEmpty) {
+        setDeviceEndpoint(uuid, endpointValue);
+      }
+
+      if (credentials != null && credentials.isNotEmpty) {
+        for (final entry in credentials.entries) {
+          final k = entry.key.trim();
+          if (k.isEmpty) continue;
+          setDeviceCredential(uuid: uuid, key: k, value: entry.value);
+        }
+      }
+
+      if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+        final ssid = wifiSsid?.trim() ?? '';
+        final pass = wifiPassword ?? '';
+
+        if (ssid.isNotEmpty && pass.trim().isNotEmpty) {
+          _setOnboardingStage(uuid, OnboardingStage.provisioning);
+          await provisionWifi(uuid: uuid, ssid: ssid, password: pass);
+        }
+
+        _setOnboardingStage(uuid, OnboardingStage.connecting);
+        var connected = false;
+        for (var attempt = 0; attempt < 10; attempt++) {
+          connected = refreshDeviceConnection(uuid);
+          if (!connected) {
+            connected = await _rebindWifiEndpointFromDiscovery(uuid);
+          }
+          if (!connected) {
+            connected = establishProtocolConnection(uuid: uuid, protocol: protocol);
+          }
+          if (connected) break;
+          await Future.delayed(const Duration(milliseconds: 1200));
+        }
+
+        if (!connected) {
+          throw Exception('Device did not come online after Wi-Fi onboarding.');
+        }
+        _setOnboardingStage(uuid, OnboardingStage.ready);
+        return;
+      }
+
+      _setOnboardingStage(uuid, OnboardingStage.connecting);
+      var connected = false;
+      for (var attempt = 0; attempt < 6; attempt++) {
+        connected = establishProtocolConnection(uuid: uuid, protocol: protocol);
+        if (connected) break;
+        await Future.delayed(const Duration(milliseconds: 700));
+      }
+
+      if (!connected) {
+        throw Exception('Protocol connection failed during onboarding.');
+      }
+
+      _setOnboardingStage(uuid, OnboardingStage.ready);
+    } catch (e) {
+      final errorText = e.toString();
+      _setOnboardingStage(uuid, OnboardingStage.failed, error: errorText);
+
+      if (rollbackOnFailure && registered) {
+        try {
+          removeDevice(uuid);
+        } catch (_) {}
+
+        // Preserve last onboarding failure for diagnostics even after rollback.
+        _onboardingStageByDevice[uuid] = OnboardingStage.failed;
+        _onboardingErrorByDevice[uuid] = errorText;
+      }
+      rethrow;
+    }
+  }
+
   static void removeDevice(String uuid) {
     _ensureReady();
     _requireRemoteModifyPermission();
@@ -1903,6 +2457,8 @@ class Bridge {
     _protocolConnectionByDevice.remove(uuid);
     _protocolByDevice.remove(uuid);
     _endpointByDevice.remove(uuid);
+    _onboardingStageByDevice.remove(uuid);
+    _onboardingErrorByDevice.remove(uuid);
     _healthByDevice.remove(uuid);
     _observeFrontendLearningEvent('device_removed', uuid: uuid);
     _log('device', 'Device removed', uuid: uuid);
@@ -2083,6 +2639,158 @@ class Bridge {
     final normalized = endpoint.trim();
     if (normalized.isEmpty) return;
     _endpointByDevice[uuid] = normalized;
+
+    if (_coreSetDeviceEndpoint == null || _ctx == null) {
+      return;
+    }
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final endpointPtr = normalized.toNativeUtf8();
+    try {
+      final res = _coreSetDeviceEndpoint!(_ctx!, uuidPtr, endpointPtr);
+      if (res != 0) {
+        _log('wifi', 'Endpoint update rejected with code $res', uuid: uuid);
+      }
+    } finally {
+      calloc.free(uuidPtr);
+      calloc.free(endpointPtr);
+    }
+
+    final host = normalized.split(':').first.trim();
+    DeviceInfo? info;
+    try {
+      info = listDevices().firstWhere((d) => d.uuid == uuid);
+    } catch (_) {
+      info = null;
+    }
+    final lowerBrand = info?.brand.toLowerCase() ?? '';
+    final lowerModel = info?.model.toLowerCase() ?? '';
+    final mideaLike = lowerBrand.contains('midea') ||
+        lowerModel.contains('midea') ||
+        lowerModel.contains('nethome') ||
+        lowerModel.contains('msmart');
+
+    if (host.isNotEmpty &&
+        info != null &&
+        info.protocol == CoreProtocol.CORE_PROTOCOL_WIFI &&
+        mideaLike) {
+      Future<void>(() async {
+        await _autoAcquireMideaCredentials(
+          uuid: uuid,
+          host: host,
+          brand: info?.brand,
+          model: info?.model,
+        );
+      });
+    }
+  }
+
+  static bool setDeviceCredential({
+    required String uuid,
+    required String key,
+    required String value,
+  }) {
+    final normalizedKey = key.trim();
+    if (normalizedKey.isEmpty) return false;
+
+    if (_coreSetDeviceCredential == null || _ctx == null) {
+      return false;
+    }
+
+    final uuidPtr = uuid.toNativeUtf8();
+    final keyPtr = normalizedKey.toNativeUtf8();
+    final valuePtr = value.trim().toNativeUtf8();
+
+    try {
+      final res = _coreSetDeviceCredential!(_ctx!, uuidPtr, keyPtr, valuePtr);
+      if (res != 0) {
+        _log('wifi', 'Credential update rejected with code $res', uuid: uuid);
+      }
+      return res == 0;
+    } finally {
+      calloc.free(uuidPtr);
+      calloc.free(keyPtr);
+      calloc.free(valuePtr);
+    }
+  }
+
+  static Future<bool> _rebindWifiEndpointFromDiscovery(String uuid) async {
+    final found = await discoverDevices();
+    final wifi = found
+        .where((d) => d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI)
+        .toList();
+
+    if (wifi.isEmpty) return false;
+
+    wifi.sort((a, b) {
+      final aMidea = a.vendor.toLowerCase().contains('midea') ? 1 : 0;
+      final bMidea = b.vendor.toLowerCase().contains('midea') ? 1 : 0;
+      if (aMidea != bMidea) return bMidea.compareTo(aMidea);
+      return b.confidence.compareTo(a.confidence);
+    });
+
+    for (final candidate in wifi.take(6)) {
+      setDeviceEndpoint(uuid, '${candidate.host}:${candidate.port}');
+      if (refreshDeviceConnection(uuid)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  static Future<List<String>> _guessSoftApGateways() async {
+    final out = <String>[];
+    final dynamicFirst = <String>[];
+
+    void addUnique(String value) {
+      final v = value.trim();
+      if (v.isEmpty) return;
+      if (!out.contains(v)) out.add(v);
+    }
+
+    void addDynamic(String value) {
+      final v = value.trim();
+      if (v.isEmpty) return;
+      if (!dynamicFirst.contains(v)) dynamicFirst.add(v);
+    }
+
+    try {
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          final parts = addr.address.split('.');
+          if (parts.length != 4) continue;
+          final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
+
+          // If currently connected to a SoftAP-like private subnet,
+          // prioritize that subnet gateway before generic defaults.
+          if ((parts[0] == '192' && parts[1] == '168') || parts[0] == '10') {
+            addDynamic('$prefix.1');
+            addDynamic('$prefix.254');
+          }
+        }
+      }
+    } catch (_) {}
+
+    for (final v in dynamicFirst) {
+      addUnique(v);
+    }
+
+    // Then append common appliance SoftAP gateways.
+    addUnique('192.168.4.1');
+    addUnique('192.168.8.1');
+    addUnique('192.168.10.1');
+    addUnique('192.168.0.1');
+    addUnique('192.168.1.1');
+    addUnique('10.10.100.254');
+    addUnique('10.0.0.1');
+
+    return out;
   }
 
   static DeviceConnectionHealth health(String uuid) {
@@ -2133,6 +2841,11 @@ class Bridge {
 
     markWifiApConnected(uuid);
 
+    final guessedGateways = await _guessSoftApGateways();
+    if (guessedGateways.isNotEmpty) {
+      setDeviceEndpoint(uuid, guessedGateways.first);
+    }
+
     if (_coreProvisionWifi == null) {
       markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
       _log('wifi', 'Provision API unavailable', uuid: uuid);
@@ -2141,41 +2854,62 @@ class Bridge {
       );
     }
 
+    final provision = _coreProvisionWifi;
+    final ctx = _ctx;
+    if (provision == null || ctx == null || ctx == nullptr) {
+      markWifiFailed(uuid);
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      throw Exception('Core provisioning context unavailable.');
+    }
+
     final uuidPtr = uuid.toNativeUtf8();
     final ssidPtr = ssidTrimmed.toNativeUtf8();
     final passwordPtr = password.toNativeUtf8();
 
-    final res = _coreProvisionWifi!(_ctx!, uuidPtr, ssidPtr, passwordPtr);
-
-    calloc.free(uuidPtr);
-    calloc.free(ssidPtr);
-    calloc.free(passwordPtr);
+    int res = CoreResult.CORE_ERROR;
+    String provisionError = '';
+    try {
+      res = provision(ctx, uuidPtr, ssidPtr, passwordPtr);
+      final errPtr = _coreLastError(ctx);
+      provisionError = errPtr == nullptr ? '' : errPtr.toDartString().trim();
+    } finally {
+      calloc.free(uuidPtr);
+      calloc.free(ssidPtr);
+      calloc.free(passwordPtr);
+    }
 
     if (res != 0) {
       markWifiFailed(uuid);
       _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
       _log('wifi', 'Provision failed with code $res', uuid: uuid);
+      if (provisionError.isNotEmpty &&
+          provisionError.toLowerCase() != 'no error') {
+        throw Exception('Core error $res: $provisionError');
+      }
       _throwLastError(res);
     }
 
     markWifiCredentialsSent(uuid, ssid: ssidTrimmed);
+    _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connecting;
 
     var connected = false;
     for (var i = 0; i < 5; i++) {
       await Future.delayed(const Duration(seconds: 2));
       connected = refreshDeviceConnection(uuid);
+      if (!connected && i >= 1) {
+        connected = await _rebindWifiEndpointFromDiscovery(uuid);
+      }
       if (connected) break;
     }
 
     if (!connected) {
-      markWifiFailed(uuid);
-      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.failed;
+      _protocolConnectionByDevice[uuid] = ProtocolConnectionState.connecting;
       _log(
         'wifi',
-        'Provision submitted but device did not come online',
+        'Provision submitted; waiting for AP->LAN transition',
         uuid: uuid,
       );
-      throw Exception('Provisioning sent, but device is still offline.');
+      return;
     }
 
     markWifiOnline(uuid);
@@ -2248,7 +2982,10 @@ class Bridge {
   static bool refreshDeviceConnection(String uuid) {
     final start = DateTime.now();
     try {
-      final available = isDeviceAvailable(uuid);
+      var available = isDeviceAvailable(uuid);
+      if (!available && _coreEnsureConnected != null) {
+        available = ensureConnected(uuid) && isDeviceAvailable(uuid);
+      }
       _protocolConnectionByDevice[uuid] = available
           ? ProtocolConnectionState.connected
           : ProtocolConnectionState.disconnected;
@@ -2286,6 +3023,9 @@ class Bridge {
     }
 
     if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+      if (d.vendor.toLowerCase().contains('midea')) {
+        return await _checkTcp(d.host, 6444) || await _checkTcp(d.host, 6445);
+      }
       return await _checkHttp(d.host, '/state', port: d.port) ||
           await _checkHttp(d.host, '/provision', port: d.port) ||
           await _checkHttp(d.host, '/', port: d.port);
@@ -2331,14 +3071,162 @@ class Bridge {
     if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
       final provisioned =
           wifiProvisioningState(uuid) == WifiProvisioningState.online;
-      final ok = provisioned && refreshDeviceConnection(uuid);
+      final ok = provisioned && (ensureConnected(uuid) || refreshDeviceConnection(uuid));
       _protocolConnectionByDevice[uuid] = ok
           ? ProtocolConnectionState.connected
           : ProtocolConnectionState.disconnected;
       return ok;
     }
 
-    return refreshDeviceConnection(uuid);
+    if (connectToDevice(uuid)) {
+      return refreshDeviceConnection(uuid);
+    }
+
+    return ensureConnected(uuid) || refreshDeviceConnection(uuid);
+  }
+
+  // ============================================================
+  // AdaptiveLayer Integration
+  // ============================================================
+
+  /// Establish connection to a device using AdaptiveLayer.
+  static bool connectToDevice(String uuid) {
+    final ctx = _ctx;
+    if (ctx == null || _coreEstablishConnection == null) return false;
+
+    final uuidPtr = uuid.toNativeUtf8();
+    try {
+      final rc = _coreEstablishConnection!(ctx, uuidPtr);
+      return rc == 0;
+    } finally {
+      malloc.free(uuidPtr);
+    }
+  }
+
+  /// Ensure device is connected, reconnecting if needed.
+  static bool ensureConnected(String uuid) {
+    final ctx = _ctx;
+    if (ctx == null || _coreEnsureConnected == null) return false;
+
+    final uuidPtr = uuid.toNativeUtf8();
+    try {
+      final rc = _coreEnsureConnected!(ctx, uuidPtr);
+      return rc == 0;
+    } finally {
+      malloc.free(uuidPtr);
+    }
+  }
+
+  /// Disconnect from a device.
+  static bool disconnectDevice(String uuid) {
+    final ctx = _ctx;
+    if (ctx == null || _coreDisconnectDevice == null) return false;
+
+    final uuidPtr = uuid.toNativeUtf8();
+    try {
+      final rc = _coreDisconnectDevice!(ctx, uuidPtr);
+      return rc == 0;
+    } finally {
+      malloc.free(uuidPtr);
+    }
+  }
+
+  /// Get connection state label for a device.
+  static String connectionStateLabel(String uuid) {
+    final ctx = _ctx;
+    if (ctx == null || _coreGetConnectionState == null) {
+      return _protocolConnectionByDevice[uuid] ?? 'unknown';
+    }
+
+    const outLen = 64;
+    final outBuf = malloc.allocate<Int8>(outLen);
+    final uuidPtr = uuid.toNativeUtf8();
+
+    try {
+      final rc = _coreGetConnectionState!(ctx, uuidPtr, outBuf, outLen);
+      if (rc != 0) {
+        return _protocolConnectionByDevice[uuid] ?? 'unknown';
+      }
+      return _readCStringSafe(outBuf, outLen);
+    } finally {
+      malloc.free(uuidPtr);
+      malloc.free(outBuf);
+    }
+  }
+
+  /// Discover devices using native AdaptiveLayer backend.
+  static Future<List<DiscoveredDevice>> discoverDevicesAdaptive({
+    int protocol = CoreProtocol.CORE_PROTOCOL_MOCK,
+    int timeoutMs = 5000,
+  }) async {
+    final ctx = _ctx;
+    if (ctx == null || _coreDiscoverDevices == null) {
+      return [];
+    }
+
+    const outLen = 131072; // 128KB
+    final outBuf = malloc.allocate<Int8>(outLen);
+    final outWrittenPtr = malloc.allocate<Uint32>(sizeOf<Uint32>());
+
+    try {
+      final rc = _coreDiscoverDevices!(
+        ctx,
+        protocol,
+        timeoutMs,
+        outBuf,
+        outLen,
+        outWrittenPtr,
+      );
+
+      if (rc != 0) {
+        return [];
+      }
+
+      final outWritten = outWrittenPtr.value;
+      final jsonStr = _readCStringSafe(outBuf, outWritten);
+
+      try {
+        final decoded = jsonDecode(jsonStr);
+        if (decoded is! List) return [];
+
+        return decoded.whereType<Map>().map((e) {
+          final m = e.cast<String, dynamic>();
+          final host = (m['host'] ?? '').toString();
+          final port = (m['port'] is num) ? (m['port'] as num).toInt() : 0;
+          final proto = (m['protocol'] is num)
+            ? (m['protocol'] as num).toInt()
+            : CoreProtocol.CORE_PROTOCOL_MOCK;
+          return DiscoveredDevice(
+          icon: proto == CoreProtocol.CORE_PROTOCOL_WIFI
+            ? Icons.wifi_rounded
+            : proto == CoreProtocol.CORE_PROTOCOL_BLE
+              ? Icons.bluetooth_rounded
+              : proto == CoreProtocol.CORE_PROTOCOL_ZIGBEE
+                ? Icons.rotate_90_degrees_cw_rounded
+                : Icons.sensors_rounded,
+          id: (m['uuid'] ?? '').toString().isNotEmpty
+            ? (m['uuid'] ?? '').toString()
+            : '$proto:$host:$port',
+          name: (m['name'] ?? 'Discovered Device').toString(),
+          protocol: proto,
+          host: host,
+          port: port,
+          hint: (m['hint'] ?? '').toString(),
+          confidence: (m['confidence'] is num)
+            ? (m['confidence'] as num).toDouble()
+            : 0.5,
+          vendor: (m['vendor'] ?? 'generic').toString(),
+          metadata: const {},
+          );
+        }).toList();
+      } catch (e) {
+        print('[Bridge] discoverDevices JSON parse error: $e');
+        return [];
+      }
+    } finally {
+      malloc.free(outBuf);
+      malloc.free(outWrittenPtr);
+    }
   }
 
   static Future<bool> _checkTcp(String host, int port) async {
@@ -2426,6 +3314,148 @@ class Bridge {
     return hosts.toList();
   }
 
+  static bool _looksLikeMideaDiscoveryPacket(Uint8List payload) {
+    if (payload.length >= 2) {
+      if (payload[0] == 0x5a && payload[1] == 0x5a) return true;
+      if (payload[0] == 0x83 && payload[1] == 0x70) return true;
+    }
+
+    if (payload.length >= 10) {
+      if (payload[8] == 0x5a && payload[9] == 0x5a) return true;
+    }
+
+    return false;
+  }
+
+  static int? _extractMideaApplianceId(Uint8List payload) {
+    if (payload.length < 26) return null;
+
+    int? parseAt(Uint8List bytes, int offset) {
+      if (offset + 6 > bytes.length) return null;
+      final b = bytes.sublist(offset, offset + 6);
+      var id = 0;
+      for (var i = 0; i < 6; i++) {
+        id |= (b[i] & 0xff) << (8 * i);
+      }
+      return id > 0 ? id : null;
+    }
+
+    // V2/V3 discovery usually carries appliance ID at [20..26] LE.
+    final direct = parseAt(payload, 20);
+    if (direct != null) return direct;
+
+    // Some packets prepend 8-byte 8370 framing before the 5A5A body.
+    if (payload.length > 34 && payload[8] == 0x5a && payload[9] == 0x5a) {
+      final sliced = payload.sublist(8);
+      return parseAt(sliced, 20);
+    }
+
+    return null;
+  }
+
+  static Future<Set<String>> _candidateBroadcastAddrs() async {
+    final out = <String>{'255.255.255.255'};
+
+    try {
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+
+      for (final iface in interfaces) {
+        for (final addr in iface.addresses) {
+          final parts = addr.address.split('.');
+          if (parts.length != 4) continue;
+          out.add('${parts[0]}.${parts[1]}.${parts[2]}.255');
+        }
+      }
+    } catch (_) {}
+
+    return out;
+  }
+
+  static Future<List<DiscoveredDevice>> _discoverMideaLanDevices() async {
+    const probe = <int>[
+      0x5a, 0x5a, 0x01, 0x11, 0x48, 0x00, 0x92, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x7f, 0x75, 0xbd, 0x6b, 0x3e, 0x4f, 0x8b, 0x76,
+      0x2e, 0x84, 0x9c, 0x6e, 0x57, 0x8d, 0x65, 0x90,
+      0x03, 0x6e, 0x9d, 0x43, 0x42, 0xa5, 0x0f, 0x1f,
+      0x56, 0x9e, 0xb8, 0xec, 0x91, 0x8e, 0x92, 0xe5,
+    ];
+
+    final found = <String, DiscoveredDevice>{};
+    final broadcasts = await _candidateBroadcastAddrs();
+
+    RawDatagramSocket? socket;
+    StreamSubscription<RawSocketEvent>? sub;
+
+    try {
+      socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        0,
+      ).timeout(const Duration(milliseconds: 450));
+
+      socket.broadcastEnabled = true;
+
+      final done = Completer<void>();
+      sub = socket.listen((event) {
+        if (event != RawSocketEvent.read) return;
+
+        while (true) {
+          final dg = socket?.receive();
+          if (dg == null) break;
+
+          if (!_looksLikeMideaDiscoveryPacket(dg.data)) continue;
+
+          final host = dg.address.address;
+          final applianceId = _extractMideaApplianceId(dg.data);
+          if (applianceId != null) {
+            _mideaApplianceIdByHost[host] = applianceId;
+          }
+          final id = 'wifi-midea:$host:6444';
+          found[id] = DiscoveredDevice(
+            icon: Icons.kitchen_rounded,
+            id: id,
+            name: 'Midea LAN Device ($host)',
+            protocol: CoreProtocol.CORE_PROTOCOL_WIFI,
+            host: host,
+            port: 6444,
+            hint: 'Midea discovery response received (UDP 6445/20086)',
+            confidence: 0.97,
+            vendor: 'midea',
+            metadata: applianceId == null
+                ? const {}
+                : {'mideaApplianceId': applianceId},
+          );
+        }
+      });
+
+      for (final b in broadcasts) {
+        final addr = InternetAddress.tryParse(b);
+        if (addr == null) continue;
+        socket.send(probe, addr, 6445);
+        socket.send(probe, addr, 20086);
+      }
+
+      Future.delayed(const Duration(milliseconds: 900), () {
+        if (!done.isCompleted) done.complete();
+      });
+
+      await done.future;
+    } catch (_) {
+      // Best-effort discovery path.
+    } finally {
+      await sub?.cancel();
+      socket?.close();
+    }
+
+    return found.values.toList();
+  }
+
   static Future<List<T>> _runBatched<T>(
     List<Future<T> Function()> tasks, {
     int batchSize = 18,
@@ -2469,6 +3499,7 @@ class Bridge {
 
     const mqttPorts = [1883, 8883, 1884, 9001];
     const wifiHttpPorts = [80, 8080, 8081];
+    const mideaTcpPorts = [6444, 6445];
     const wifiPaths = [
       '/provision',
       '/wifi/provision',
@@ -2482,6 +3513,26 @@ class Bridge {
     final mqttChecks = await Future.wait(
       mqttPorts.map((p) async => MapEntry(p, await _checkTcp(host, p))),
     );
+
+    final mideaChecks = await Future.wait(
+      mideaTcpPorts.map((p) async => MapEntry(p, await _checkTcp(host, p))),
+    );
+
+    if (mideaChecks.any((e) => e.value)) {
+      results.add(
+        DiscoveredDevice(
+          icon: Icons.kitchen_rounded,
+          id: 'wifi-midea:$host:6444',
+          name: 'Midea LAN Device ($host)',
+          protocol: CoreProtocol.CORE_PROTOCOL_WIFI,
+          host: host,
+          port: 6444,
+          hint: 'Midea LAN service detected (TCP 6444/6445)',
+          confidence: 0.92,
+          vendor: 'midea',
+        ),
+      );
+    }
 
     for (final check in mqttChecks.where((e) => e.value)) {
       final port = check.key;
@@ -2543,7 +3594,9 @@ class Bridge {
           port: port,
           hint: 'HTTP/device endpoint detected',
           confidence: 0.75,
-          vendor: host.contains('midea') ? 'midea' : 'generic',
+          vendor: mideaChecks.any((e) => e.value) || host.contains('midea')
+              ? 'midea'
+              : 'generic',
         ),
       );
     }
@@ -2555,6 +3608,11 @@ class Bridge {
     _log('discovery', 'Starting network discovery');
     final discovered = <DiscoveredDevice>[];
     final seen = <String>{};
+
+    final midea = await _discoverMideaLanDevices();
+    for (final d in midea) {
+      if (seen.add(d.id)) discovered.add(d);
+    }
 
     final hosts = await _candidateLanHosts();
 

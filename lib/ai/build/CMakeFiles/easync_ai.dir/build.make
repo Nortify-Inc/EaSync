@@ -92,10 +92,10 @@ easync_ai_EXTERNAL_OBJECTS =
 
 libeasync_ai.so: CMakeFiles/easync_ai.dir/src/engine.cpp.o
 libeasync_ai.so: CMakeFiles/easync_ai.dir/build.make
-libeasync_ai.so: bin/libllama.so.0.0.8621
-libeasync_ai.so: bin/libggml.so.0.9.10
-libeasync_ai.so: bin/libggml-cpu.so.0.9.10
-libeasync_ai.so: bin/libggml-base.so.0.9.10
+libeasync_ai.so: bin/libllama.so.0.0.8796
+libeasync_ai.so: bin/libggml.so.0.9.11
+libeasync_ai.so: bin/libggml-cpu.so.0.9.11
+libeasync_ai.so: bin/libggml-base.so.0.9.11
 libeasync_ai.so: CMakeFiles/easync_ai.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared library libeasync_ai.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/easync_ai.dir/link.txt --verbose=$(VERBOSE)

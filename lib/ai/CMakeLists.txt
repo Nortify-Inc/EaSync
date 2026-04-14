@@ -61,8 +61,6 @@ if(ANDROID)
     elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
         # armeabi-v7a fails to compile llamafile kernels due to missing FP16 intrinsics.
         set(GGML_LLAMAFILE ${EASYNC_GGML_LLAMAFILE_ARMV7} CACHE BOOL "" FORCE)
-    else()
-        set(GGML_LLAMAFILE OFF CACHE BOOL "" FORCE)
     endif()
 
     message(STATUS "Android ABI: ${CMAKE_ANDROID_ARCH_ABI} | GGML_LLAMAFILE=${GGML_LLAMAFILE}")

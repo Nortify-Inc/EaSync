@@ -21,6 +21,7 @@ set(CORE_SRC
     src/core.cpp
     src/driver.cpp
     src/payload_utility.cpp
+    src/adaptive_layer.cpp
 )
 
 file(GLOB DRIVER_SRC

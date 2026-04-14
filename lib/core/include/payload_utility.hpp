@@ -16,6 +16,8 @@ namespace core {
 struct PayloadCommand {
     std::string topic;
     std::string payload;
+    std::string method;
+    std::string contentType;
 };
 
 class PayloadUtility {

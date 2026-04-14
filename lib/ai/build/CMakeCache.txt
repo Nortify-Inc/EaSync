@@ -400,6 +400,9 @@ GGML_CUDA_FORCE_MMQ:BOOL=OFF
 //ggml: use CUDA graphs (llama.cpp only)
 GGML_CUDA_GRAPHS:BOOL=ON
 
+//ggml: use NVIDIA Collective Comm. Library
+GGML_CUDA_NCCL:BOOL=ON
+
 //ggml: do not use peer to peer copies
 GGML_CUDA_NO_PEER_COPY:BOOL=OFF
 
@@ -438,6 +441,9 @@ GGML_HIP_MMQ_MFMA:BOOL=ON
 
 //ggml: do not try to use HIP VMM
 GGML_HIP_NO_VMM:BOOL=ON
+
+//ggml: use ROCm Collective Comm. Library
+GGML_HIP_RCCL:BOOL=OFF
 
 //ggml: enable rocWMMA for FlashAttention
 GGML_HIP_ROCWMMA_FATTN:BOOL=OFF
@@ -913,7 +919,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=6
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP

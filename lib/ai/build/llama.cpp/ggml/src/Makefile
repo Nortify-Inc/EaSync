@@ -251,6 +251,30 @@ ggml-backend-dl.cpp.s:
 	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml.dir/ggml-backend-dl.cpp.s
 .PHONY : ggml-backend-dl.cpp.s
 
+ggml-backend-meta.o: ggml-backend-meta.cpp.o
+.PHONY : ggml-backend-meta.o
+
+# target to build an object file
+ggml-backend-meta.cpp.o:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.o
+.PHONY : ggml-backend-meta.cpp.o
+
+ggml-backend-meta.i: ggml-backend-meta.cpp.i
+.PHONY : ggml-backend-meta.i
+
+# target to preprocess a source file
+ggml-backend-meta.cpp.i:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.i
+.PHONY : ggml-backend-meta.cpp.i
+
+ggml-backend-meta.s: ggml-backend-meta.cpp.s
+.PHONY : ggml-backend-meta.s
+
+# target to generate assembly for a file
+ggml-backend-meta.cpp.s:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/ggml-backend-meta.cpp.s
+.PHONY : ggml-backend-meta.cpp.s
+
 ggml-backend-reg.o: ggml-backend-reg.cpp.o
 .PHONY : ggml-backend-reg.o
 
@@ -824,6 +848,9 @@ help:
 	@echo "... ggml-backend-dl.o"
 	@echo "... ggml-backend-dl.i"
 	@echo "... ggml-backend-dl.s"
+	@echo "... ggml-backend-meta.o"
+	@echo "... ggml-backend-meta.i"
+	@echo "... ggml-backend-meta.s"
 	@echo "... ggml-backend-reg.o"
 	@echo "... ggml-backend-reg.i"
 	@echo "... ggml-backend-reg.s"

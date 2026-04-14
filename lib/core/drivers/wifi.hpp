@@ -17,6 +17,19 @@
 
 namespace drivers {
 
+enum class WifiTransportKind {
+    Http,
+    Tcp,
+    Udp,
+    Mixed
+};
+
+struct WifiVendorProfile {
+    WifiTransportKind transport = WifiTransportKind::Http;
+    std::vector<uint16_t> ports;
+    bool mideaLike = false;
+};
+
 class WifiDriver : public Driver {
 
 public:
@@ -30,7 +43,8 @@ public:
     bool provisionWifi(
         const std::string& uuid,
         const std::string& ssid,
-        const std::string& password
+        const std::string& password,
+        std::string* outError = nullptr
     ) override;
 
     void onDeviceRegistered(
@@ -40,6 +54,17 @@ public:
     ) override;
 
     void onDeviceRemoved(const std::string& uuid) override;
+
+    bool setEndpoint(
+        const std::string& uuid,
+        const std::string& endpoint
+    ) override;
+
+    bool setCredential(
+        const std::string& uuid,
+        const std::string& key,
+        const std::string& value
+    ) override;
 
     bool setPower(const std::string& uuid, bool value) override;
     bool setBrightness(const std::string& uuid, uint32_t value) override;
@@ -63,9 +88,23 @@ public:
     ) override;
 
 private:
-    std::string resolveIpFromUuid(const std::string& uuid);
+    WifiVendorProfile buildProfile(const std::string& brand,
+                                   const std::string& model) const;
 
-    bool httpPost(const std::string& url, const std::string& body);
+    bool tryVendorTransports(const std::string& uuid,
+                             const std::string& endpoint,
+                             const std::string& payload);
+
+    bool tcpSend(const std::string& host, uint16_t port, const std::string& payload);
+    bool udpSend(const std::string& host, uint16_t port, const std::string& payload);
+
+    bool httpPost(
+        const std::string& url,
+        const std::string& body,
+        const std::string& contentType = "application/json",
+        const std::string& method = "POST",
+        std::string* outTrace = nullptr
+    );
     bool httpGet(const std::string& url, std::string& out);
 
     bool postCapabilityCommand(
@@ -89,9 +128,11 @@ private:
 
 private:
     std::mutex mutex;
-
     std::unordered_map<std::string, CoreDeviceState> states;
     std::unordered_map<std::string, std::string> deviceIps;
+    std::unordered_map<std::string, bool> deviceMideaProfile;
+    std::unordered_map<std::string, WifiVendorProfile> deviceProfiles;
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> deviceCredentials;
 
     DriverEventCallback eventCallback = nullptr;
     void* eventUserData = nullptr;

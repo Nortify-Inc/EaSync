@@ -1663,6 +1663,30 @@ models/gemma3n-iswa.cpp.s:
 	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.s
 .PHONY : models/gemma3n-iswa.cpp.s
 
+models/gemma4-iswa.o: models/gemma4-iswa.cpp.o
+.PHONY : models/gemma4-iswa.o
+
+# target to build an object file
+models/gemma4-iswa.cpp.o:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o
+.PHONY : models/gemma4-iswa.cpp.o
+
+models/gemma4-iswa.i: models/gemma4-iswa.cpp.i
+.PHONY : models/gemma4-iswa.i
+
+# target to preprocess a source file
+models/gemma4-iswa.cpp.i:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.i
+.PHONY : models/gemma4-iswa.cpp.i
+
+models/gemma4-iswa.s: models/gemma4-iswa.cpp.s
+.PHONY : models/gemma4-iswa.s
+
+# target to generate assembly for a file
+models/gemma4-iswa.cpp.s:
+	cd /home/radmann/EaSync/lib/ai/build && $(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.s
+.PHONY : models/gemma4-iswa.cpp.s
+
 models/glm4-moe.o: models/glm4-moe.cpp.o
 .PHONY : models/glm4-moe.o
 
@@ -3710,6 +3734,9 @@ help:
 	@echo "... models/gemma3n-iswa.o"
 	@echo "... models/gemma3n-iswa.i"
 	@echo "... models/gemma3n-iswa.s"
+	@echo "... models/gemma4-iswa.o"
+	@echo "... models/gemma4-iswa.i"
+	@echo "... models/gemma4-iswa.s"
 	@echo "... models/glm4-moe.o"
 	@echo "... models/glm4-moe.i"
 	@echo "... models/glm4-moe.s"

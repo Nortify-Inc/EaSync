@@ -2,7 +2,7 @@ file(REMOVE_RECURSE
   "../../../bin/libggml.pdb"
   "../../../bin/libggml.so"
   "../../../bin/libggml.so.0"
-  "../../../bin/libggml.so.0.9.10"
+  "../../../bin/libggml.so.0.9.11"
   ".0"
   "CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o"
   "CMakeFiles/ggml.dir/ggml-backend-dl.cpp.o.d"

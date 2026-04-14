@@ -965,10 +965,24 @@ llama.cpp/src/CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.s"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gemma3n-iswa.cpp -o CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.s
 
+llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
+llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gemma4-iswa.cpp
+llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o -MF CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o.d -o CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gemma4-iswa.cpp
+
+llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/llama.dir/models/gemma4-iswa.cpp.i"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gemma4-iswa.cpp > CMakeFiles/llama.dir/models/gemma4-iswa.cpp.i
+
+llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/llama.dir/models/gemma4-iswa.cpp.s"
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gemma4-iswa.cpp -o CMakeFiles/llama.dir/models/gemma4-iswa.cpp.s
+
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/glm4-moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_65) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o -MF CMakeFiles/llama.dir/models/glm4-moe.cpp.o.d -o CMakeFiles/llama.dir/models/glm4-moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/glm4-moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.i: cmake_force
@@ -982,7 +996,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/glm4.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_66) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o -MF CMakeFiles/llama.dir/models/glm4.cpp.o.d -o CMakeFiles/llama.dir/models/glm4.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/glm4.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.i: cmake_force
@@ -996,7 +1010,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gpt2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_67) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o -MF CMakeFiles/llama.dir/models/gpt2.cpp.o.d -o CMakeFiles/llama.dir/models/gpt2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gpt2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.i: cmake_force
@@ -1010,7 +1024,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gptneox.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_68) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o -MF CMakeFiles/llama.dir/models/gptneox.cpp.o.d -o CMakeFiles/llama.dir/models/gptneox.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/gptneox.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.i: cmake_force
@@ -1024,7 +1038,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/granite-hybrid.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_69) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_70) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o -MF CMakeFiles/llama.dir/models/granite-hybrid.cpp.o.d -o CMakeFiles/llama.dir/models/granite-hybrid.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/granite-hybrid.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.i: cmake_force
@@ -1038,7 +1052,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/granite.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_70) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_71) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o -MF CMakeFiles/llama.dir/models/granite.cpp.o.d -o CMakeFiles/llama.dir/models/granite.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/granite.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.i: cmake_force
@@ -1052,7 +1066,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/grok.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_71) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_72) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o -MF CMakeFiles/llama.dir/models/grok.cpp.o.d -o CMakeFiles/llama.dir/models/grok.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/grok.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.i: cmake_force
@@ -1066,7 +1080,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/grovemoe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_72) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_73) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o -MF CMakeFiles/llama.dir/models/grovemoe.cpp.o.d -o CMakeFiles/llama.dir/models/grovemoe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/grovemoe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.i: cmake_force
@@ -1080,7 +1094,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/hunyuan-dense.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_73) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_74) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o -MF CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o.d -o CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/hunyuan-dense.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.i: cmake_force
@@ -1094,7 +1108,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/hunyuan-moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_74) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_75) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o -MF CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o.d -o CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/hunyuan-moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.i: cmake_force
@@ -1108,7 +1122,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/internlm2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_75) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_76) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o -MF CMakeFiles/llama.dir/models/internlm2.cpp.o.d -o CMakeFiles/llama.dir/models/internlm2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/internlm2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.i: cmake_force
@@ -1122,7 +1136,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jais.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_76) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_77) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o -MF CMakeFiles/llama.dir/models/jais.cpp.o.d -o CMakeFiles/llama.dir/models/jais.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jais.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.i: cmake_force
@@ -1136,7 +1150,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jais2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_77) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_78) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o -MF CMakeFiles/llama.dir/models/jais2.cpp.o.d -o CMakeFiles/llama.dir/models/jais2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jais2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.i: cmake_force
@@ -1150,7 +1164,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jamba.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_78) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_79) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o -MF CMakeFiles/llama.dir/models/jamba.cpp.o.d -o CMakeFiles/llama.dir/models/jamba.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/jamba.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.i: cmake_force
@@ -1164,7 +1178,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/kimi-linear.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_79) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_80) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o -MF CMakeFiles/llama.dir/models/kimi-linear.cpp.o.d -o CMakeFiles/llama.dir/models/kimi-linear.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/kimi-linear.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.i: cmake_force
@@ -1178,7 +1192,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/lfm2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_80) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_81) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o -MF CMakeFiles/llama.dir/models/lfm2.cpp.o.d -o CMakeFiles/llama.dir/models/lfm2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/lfm2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.i: cmake_force
@@ -1192,7 +1206,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llada-moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_81) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_82) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o -MF CMakeFiles/llama.dir/models/llada-moe.cpp.o.d -o CMakeFiles/llama.dir/models/llada-moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llada-moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.i: cmake_force
@@ -1206,7 +1220,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llada.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_82) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_83) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o -MF CMakeFiles/llama.dir/models/llada.cpp.o.d -o CMakeFiles/llama.dir/models/llada.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llada.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.i: cmake_force
@@ -1220,7 +1234,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llama-iswa.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_83) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_84) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o -MF CMakeFiles/llama.dir/models/llama-iswa.cpp.o.d -o CMakeFiles/llama.dir/models/llama-iswa.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llama-iswa.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.i: cmake_force
@@ -1234,7 +1248,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llama.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_84) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_85) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o -MF CMakeFiles/llama.dir/models/llama.cpp.o.d -o CMakeFiles/llama.dir/models/llama.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/llama.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.i: cmake_force
@@ -1248,7 +1262,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/maincoder.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_85) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_86) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o -MF CMakeFiles/llama.dir/models/maincoder.cpp.o.d -o CMakeFiles/llama.dir/models/maincoder.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/maincoder.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.i: cmake_force
@@ -1262,7 +1276,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mamba-base.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_86) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_87) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o -MF CMakeFiles/llama.dir/models/mamba-base.cpp.o.d -o CMakeFiles/llama.dir/models/mamba-base.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mamba-base.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.i: cmake_force
@@ -1276,7 +1290,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mamba.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_87) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_88) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o -MF CMakeFiles/llama.dir/models/mamba.cpp.o.d -o CMakeFiles/llama.dir/models/mamba.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mamba.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.i: cmake_force
@@ -1290,7 +1304,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mimo2-iswa.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_88) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_89) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o -MF CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o.d -o CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mimo2-iswa.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.i: cmake_force
@@ -1304,7 +1318,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/minicpm3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_89) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_90) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o -MF CMakeFiles/llama.dir/models/minicpm3.cpp.o.d -o CMakeFiles/llama.dir/models/minicpm3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/minicpm3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.i: cmake_force
@@ -1318,7 +1332,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/minimax-m2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_90) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_91) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o -MF CMakeFiles/llama.dir/models/minimax-m2.cpp.o.d -o CMakeFiles/llama.dir/models/minimax-m2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/minimax-m2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.i: cmake_force
@@ -1332,7 +1346,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mistral3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_91) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_92) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o -MF CMakeFiles/llama.dir/models/mistral3.cpp.o.d -o CMakeFiles/llama.dir/models/mistral3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mistral3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.i: cmake_force
@@ -1346,7 +1360,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/modern-bert.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_92) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_93) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o -MF CMakeFiles/llama.dir/models/modern-bert.cpp.o.d -o CMakeFiles/llama.dir/models/modern-bert.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/modern-bert.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.i: cmake_force
@@ -1360,7 +1374,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mpt.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_93) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_94) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o -MF CMakeFiles/llama.dir/models/mpt.cpp.o.d -o CMakeFiles/llama.dir/models/mpt.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/mpt.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.i: cmake_force
@@ -1374,7 +1388,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/nemotron-h.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_94) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_95) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o -MF CMakeFiles/llama.dir/models/nemotron-h.cpp.o.d -o CMakeFiles/llama.dir/models/nemotron-h.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/nemotron-h.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.i: cmake_force
@@ -1388,7 +1402,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/nemotron.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_95) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_96) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o -MF CMakeFiles/llama.dir/models/nemotron.cpp.o.d -o CMakeFiles/llama.dir/models/nemotron.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/nemotron.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.i: cmake_force
@@ -1402,7 +1416,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/neo-bert.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_96) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_97) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o -MF CMakeFiles/llama.dir/models/neo-bert.cpp.o.d -o CMakeFiles/llama.dir/models/neo-bert.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/neo-bert.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.i: cmake_force
@@ -1416,7 +1430,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmo.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_97) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_98) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o -MF CMakeFiles/llama.dir/models/olmo.cpp.o.d -o CMakeFiles/llama.dir/models/olmo.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmo.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.i: cmake_force
@@ -1430,7 +1444,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmo2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_98) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_99) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o -MF CMakeFiles/llama.dir/models/olmo2.cpp.o.d -o CMakeFiles/llama.dir/models/olmo2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmo2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.i: cmake_force
@@ -1444,7 +1458,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmoe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_99) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_100) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o -MF CMakeFiles/llama.dir/models/olmoe.cpp.o.d -o CMakeFiles/llama.dir/models/olmoe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/olmoe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.i: cmake_force
@@ -1458,7 +1472,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/openai-moe-iswa.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_100) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_101) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o -MF CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o.d -o CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/openai-moe-iswa.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.i: cmake_force
@@ -1472,7 +1486,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/openelm.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_101) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_102) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o -MF CMakeFiles/llama.dir/models/openelm.cpp.o.d -o CMakeFiles/llama.dir/models/openelm.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/openelm.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.i: cmake_force
@@ -1486,7 +1500,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/orion.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_102) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_103) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o -MF CMakeFiles/llama.dir/models/orion.cpp.o.d -o CMakeFiles/llama.dir/models/orion.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/orion.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.i: cmake_force
@@ -1500,7 +1514,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/paddleocr.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_103) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_104) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o -MF CMakeFiles/llama.dir/models/paddleocr.cpp.o.d -o CMakeFiles/llama.dir/models/paddleocr.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/paddleocr.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.i: cmake_force
@@ -1514,7 +1528,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/pangu-embedded.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_104) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_105) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o -MF CMakeFiles/llama.dir/models/pangu-embedded.cpp.o.d -o CMakeFiles/llama.dir/models/pangu-embedded.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/pangu-embedded.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.i: cmake_force
@@ -1528,7 +1542,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/phi2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_105) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_106) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o -MF CMakeFiles/llama.dir/models/phi2.cpp.o.d -o CMakeFiles/llama.dir/models/phi2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/phi2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.i: cmake_force
@@ -1542,7 +1556,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/phi3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_106) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_107) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o -MF CMakeFiles/llama.dir/models/phi3.cpp.o.d -o CMakeFiles/llama.dir/models/phi3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/phi3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.i: cmake_force
@@ -1556,7 +1570,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_107) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_108) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o -MF CMakeFiles/llama.dir/models/plamo.cpp.o.d -o CMakeFiles/llama.dir/models/plamo.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.i: cmake_force
@@ -1570,7 +1584,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_108) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_109) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o -MF CMakeFiles/llama.dir/models/plamo2.cpp.o.d -o CMakeFiles/llama.dir/models/plamo2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.i: cmake_force
@@ -1584,7 +1598,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_109) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_110) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o -MF CMakeFiles/llama.dir/models/plamo3.cpp.o.d -o CMakeFiles/llama.dir/models/plamo3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plamo3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.i: cmake_force
@@ -1598,7 +1612,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plm.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_110) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_111) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o -MF CMakeFiles/llama.dir/models/plm.cpp.o.d -o CMakeFiles/llama.dir/models/plm.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/plm.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.i: cmake_force
@@ -1612,7 +1626,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_111) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_112) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o -MF CMakeFiles/llama.dir/models/qwen.cpp.o.d -o CMakeFiles/llama.dir/models/qwen.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.i: cmake_force
@@ -1626,7 +1640,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_112) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_113) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o -MF CMakeFiles/llama.dir/models/qwen2.cpp.o.d -o CMakeFiles/llama.dir/models/qwen2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.i: cmake_force
@@ -1640,7 +1654,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_113) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_114) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o -MF CMakeFiles/llama.dir/models/qwen2moe.cpp.o.d -o CMakeFiles/llama.dir/models/qwen2moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.i: cmake_force
@@ -1654,7 +1668,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2vl.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_114) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_115) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o -MF CMakeFiles/llama.dir/models/qwen2vl.cpp.o.d -o CMakeFiles/llama.dir/models/qwen2vl.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen2vl.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.i: cmake_force
@@ -1668,7 +1682,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_115) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_116) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o -MF CMakeFiles/llama.dir/models/qwen3.cpp.o.d -o CMakeFiles/llama.dir/models/qwen3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.i: cmake_force
@@ -1682,7 +1696,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen35.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_116) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_117) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o -MF CMakeFiles/llama.dir/models/qwen35.cpp.o.d -o CMakeFiles/llama.dir/models/qwen35.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen35.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.i: cmake_force
@@ -1696,7 +1710,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen35moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_117) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_118) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o -MF CMakeFiles/llama.dir/models/qwen35moe.cpp.o.d -o CMakeFiles/llama.dir/models/qwen35moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen35moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.i: cmake_force
@@ -1710,7 +1724,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_118) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_119) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o -MF CMakeFiles/llama.dir/models/qwen3moe.cpp.o.d -o CMakeFiles/llama.dir/models/qwen3moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.i: cmake_force
@@ -1724,7 +1738,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3next.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_119) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_120) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o -MF CMakeFiles/llama.dir/models/qwen3next.cpp.o.d -o CMakeFiles/llama.dir/models/qwen3next.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3next.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.i: cmake_force
@@ -1738,7 +1752,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3vl-moe.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_120) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_121) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o -MF CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o.d -o CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3vl-moe.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.i: cmake_force
@@ -1752,7 +1766,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3vl.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_121) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_122) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o -MF CMakeFiles/llama.dir/models/qwen3vl.cpp.o.d -o CMakeFiles/llama.dir/models/qwen3vl.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/qwen3vl.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.i: cmake_force
@@ -1766,7 +1780,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/refact.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_122) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_123) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o -MF CMakeFiles/llama.dir/models/refact.cpp.o.d -o CMakeFiles/llama.dir/models/refact.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/refact.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.i: cmake_force
@@ -1780,7 +1794,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rnd1.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_123) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_124) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o -MF CMakeFiles/llama.dir/models/rnd1.cpp.o.d -o CMakeFiles/llama.dir/models/rnd1.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rnd1.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.i: cmake_force
@@ -1794,7 +1808,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6-base.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_124) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_125) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o -MF CMakeFiles/llama.dir/models/rwkv6-base.cpp.o.d -o CMakeFiles/llama.dir/models/rwkv6-base.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6-base.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.i: cmake_force
@@ -1808,7 +1822,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_125) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_126) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o -MF CMakeFiles/llama.dir/models/rwkv6.cpp.o.d -o CMakeFiles/llama.dir/models/rwkv6.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.i: cmake_force
@@ -1822,7 +1836,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6qwen2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_126) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_127) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o -MF CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o.d -o CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv6qwen2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.i: cmake_force
@@ -1836,7 +1850,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv7-base.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_127) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_128) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o -MF CMakeFiles/llama.dir/models/rwkv7-base.cpp.o.d -o CMakeFiles/llama.dir/models/rwkv7-base.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv7-base.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.i: cmake_force
@@ -1850,7 +1864,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv7.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_128) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_129) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o -MF CMakeFiles/llama.dir/models/rwkv7.cpp.o.d -o CMakeFiles/llama.dir/models/rwkv7.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/rwkv7.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.i: cmake_force
@@ -1864,7 +1878,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/seed-oss.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_129) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_130) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o -MF CMakeFiles/llama.dir/models/seed-oss.cpp.o.d -o CMakeFiles/llama.dir/models/seed-oss.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/seed-oss.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.i: cmake_force
@@ -1878,7 +1892,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/smallthinker.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_130) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_131) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o -MF CMakeFiles/llama.dir/models/smallthinker.cpp.o.d -o CMakeFiles/llama.dir/models/smallthinker.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/smallthinker.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.i: cmake_force
@@ -1892,7 +1906,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/smollm3.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_131) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_132) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o -MF CMakeFiles/llama.dir/models/smollm3.cpp.o.d -o CMakeFiles/llama.dir/models/smollm3.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/smollm3.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.i: cmake_force
@@ -1906,7 +1920,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/stablelm.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_132) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_133) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o -MF CMakeFiles/llama.dir/models/stablelm.cpp.o.d -o CMakeFiles/llama.dir/models/stablelm.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/stablelm.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.i: cmake_force
@@ -1920,7 +1934,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/starcoder.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_133) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_134) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o -MF CMakeFiles/llama.dir/models/starcoder.cpp.o.d -o CMakeFiles/llama.dir/models/starcoder.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/starcoder.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.i: cmake_force
@@ -1934,7 +1948,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/starcoder2.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_134) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_135) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o -MF CMakeFiles/llama.dir/models/starcoder2.cpp.o.d -o CMakeFiles/llama.dir/models/starcoder2.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/starcoder2.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.i: cmake_force
@@ -1948,7 +1962,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/step35-iswa.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_135) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_136) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o -MF CMakeFiles/llama.dir/models/step35-iswa.cpp.o.d -o CMakeFiles/llama.dir/models/step35-iswa.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/step35-iswa.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.i: cmake_force
@@ -1962,7 +1976,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/t5-dec.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_136) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_137) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o -MF CMakeFiles/llama.dir/models/t5-dec.cpp.o.d -o CMakeFiles/llama.dir/models/t5-dec.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/t5-dec.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.i: cmake_force
@@ -1976,7 +1990,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/t5-enc.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_137) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_138) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o -MF CMakeFiles/llama.dir/models/t5-enc.cpp.o.d -o CMakeFiles/llama.dir/models/t5-enc.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/t5-enc.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.i: cmake_force
@@ -1990,7 +2004,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/wavtokenizer-dec.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_138) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_139) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o -MF CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o.d -o CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/wavtokenizer-dec.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.i: cmake_force
@@ -2004,7 +2018,7 @@ llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.s: cmake_force
 llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/flags.make
 llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o: /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/xverse.cpp
 llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o: llama.cpp/src/CMakeFiles/llama.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_139) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_140) "Building CXX object llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && ccache /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o -MF CMakeFiles/llama.dir/models/xverse.cpp.o.d -o CMakeFiles/llama.dir/models/xverse.cpp.o -c /home/radmann/EaSync/lib/thirdParty/llama.cpp/src/models/xverse.cpp
 
 llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.i: cmake_force
@@ -2081,6 +2095,7 @@ llama_OBJECTS = \
 "CMakeFiles/llama.dir/models/gemma2-iswa.cpp.o" \
 "CMakeFiles/llama.dir/models/gemma3.cpp.o" \
 "CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.o" \
+"CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o" \
 "CMakeFiles/llama.dir/models/glm4-moe.cpp.o" \
 "CMakeFiles/llama.dir/models/glm4.cpp.o" \
 "CMakeFiles/llama.dir/models/gpt2.cpp.o" \
@@ -2160,158 +2175,159 @@ llama_OBJECTS = \
 # External object files for target llama
 llama_EXTERNAL_OBJECTS =
 
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-adapter.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-arch.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-batch.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-chat.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-context.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-cparams.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-grammar.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-graph.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-hparams.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-impl.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-io.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-kv-cache-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-memory.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-hybrid.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-hybrid-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-recurrent.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-mmap.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-model-saver.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-model.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-quant.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-sampler.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/llama-vocab.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/unicode-data.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/unicode.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/afmoe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/apertus.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/arcee.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/arctic.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/arwkv7.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/baichuan.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/bailingmoe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/bailingmoe2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/bert.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/bitnet.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/bloom.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/chameleon.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/chatglm.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/codeshell.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/cogvlm.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/cohere2-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/command-r.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/dbrx.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/deci.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/deepseek.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/deepseek2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/delta-net-base.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/dots1.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/dream.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/ernie4-5-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/ernie4-5.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/eurobert.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/exaone-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/exaone.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/exaone4.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/falcon-h1.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/falcon.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gemma-embedding.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gemma.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gemma2-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gemma3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/build.make
-bin/libllama.so.0.0.8621: bin/libggml.so.0.9.10
-bin/libllama.so.0.0.8621: bin/libggml-cpu.so.0.9.10
-bin/libllama.so.0.0.8621: bin/libggml-base.so.0.9.10
-bin/libllama.so.0.0.8621: llama.cpp/src/CMakeFiles/llama.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_140) "Linking CXX shared library ../../bin/libllama.so"
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-adapter.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-arch.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-batch.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-chat.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-context.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-cparams.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-grammar.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-graph.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-hparams.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-impl.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-io.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-kv-cache-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-memory.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-hybrid.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-hybrid-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-memory-recurrent.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-mmap.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-model-saver.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-model.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-quant.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-sampler.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/llama-vocab.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/unicode-data.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/unicode.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/afmoe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/apertus.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/arcee.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/arctic.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/arwkv7.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/baichuan.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/bailingmoe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/bailingmoe2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/bert.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/bitnet.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/bloom.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/chameleon.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/chatglm.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/codeshell.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/cogvlm.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/cohere2-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/command-r.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/dbrx.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/deci.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/deepseek.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/deepseek2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/delta-net-base.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/dots1.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/dream.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/ernie4-5-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/ernie4-5.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/eurobert.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/exaone-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/exaone.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/exaone4.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/falcon-h1.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/falcon.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma-embedding.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma2-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma3n-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gemma4-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/glm4-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/glm4.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gpt2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/gptneox.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/granite-hybrid.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/granite.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/grok.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/grovemoe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-dense.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/hunyuan-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/internlm2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/jais.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/jais2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/jamba.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/kimi-linear.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/lfm2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/llada-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/llada.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/llama-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/llama.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/maincoder.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/mamba-base.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/mamba.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/mimo2-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/minicpm3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/minimax-m2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/mistral3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/modern-bert.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/mpt.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/nemotron-h.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/nemotron.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/neo-bert.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/olmo.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/olmo2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/olmoe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/openai-moe-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/openelm.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/orion.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/paddleocr.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/pangu-embedded.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/phi2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/phi3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/plamo.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/plamo2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/plamo3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/plm.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen2vl.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen35.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen35moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3next.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl-moe.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/qwen3vl.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/refact.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rnd1.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6-base.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv6qwen2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7-base.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/rwkv7.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/seed-oss.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/smallthinker.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/smollm3.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/stablelm.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/starcoder.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/starcoder2.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/step35-iswa.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/t5-dec.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/t5-enc.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/wavtokenizer-dec.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/models/xverse.cpp.o
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/build.make
+bin/libllama.so.0.0.8796: bin/libggml.so.0.9.11
+bin/libllama.so.0.0.8796: bin/libggml-cpu.so.0.9.11
+bin/libllama.so.0.0.8796: bin/libggml-base.so.0.9.11
+bin/libllama.so.0.0.8796: llama.cpp/src/CMakeFiles/llama.dir/link.txt
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_141) "Linking CXX shared library ../../bin/libllama.so"
 	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/llama.dir/link.txt --verbose=$(VERBOSE)
-	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && $(CMAKE_COMMAND) -E cmake_symlink_library ../../bin/libllama.so.0.0.8621 ../../bin/libllama.so.0 ../../bin/libllama.so
+	cd /home/radmann/EaSync/lib/ai/build/llama.cpp/src && $(CMAKE_COMMAND) -E cmake_symlink_library ../../bin/libllama.so.0.0.8796 ../../bin/libllama.so.0 ../../bin/libllama.so
 
-bin/libllama.so.0: bin/libllama.so.0.0.8621
+bin/libllama.so.0: bin/libllama.so.0.0.8796
 	@$(CMAKE_COMMAND) -E touch_nocreate bin/libllama.so.0
 
-bin/libllama.so: bin/libllama.so.0.0.8621
+bin/libllama.so: bin/libllama.so.0.0.8796
 	@$(CMAKE_COMMAND) -E touch_nocreate bin/libllama.so
 
 # Rule to build all files generated by this target.

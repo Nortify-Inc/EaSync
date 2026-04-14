@@ -294,6 +294,30 @@ drivers/zigbee.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s
 .PHONY : drivers/zigbee.cpp.s
 
+src/adaptive_layer.o: src/adaptive_layer.cpp.o
+.PHONY : src/adaptive_layer.o
+
+# target to build an object file
+src/adaptive_layer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o
+.PHONY : src/adaptive_layer.cpp.o
+
+src/adaptive_layer.i: src/adaptive_layer.cpp.i
+.PHONY : src/adaptive_layer.i
+
+# target to preprocess a source file
+src/adaptive_layer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.i
+.PHONY : src/adaptive_layer.cpp.i
+
+src/adaptive_layer.s: src/adaptive_layer.cpp.s
+.PHONY : src/adaptive_layer.s
+
+# target to generate assembly for a file
+src/adaptive_layer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.s
+.PHONY : src/adaptive_layer.cpp.s
+
 src/core.o: src/core.cpp.o
 .PHONY : src/core.o
 
@@ -394,6 +418,9 @@ help:
 	@echo "... drivers/zigbee.o"
 	@echo "... drivers/zigbee.i"
 	@echo "... drivers/zigbee.s"
+	@echo "... src/adaptive_layer.o"
+	@echo "... src/adaptive_layer.i"
+	@echo "... src/adaptive_layer.s"
 	@echo "... src/core.o"
 	@echo "... src/core.i"
 	@echo "... src/core.s"

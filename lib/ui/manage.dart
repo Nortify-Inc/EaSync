@@ -457,6 +457,49 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
 
     final uuid = 'disc-${DateTime.now().millisecondsSinceEpoch}';
 
+    List<int> inferredCapabilities() {
+      final vendor = d.vendor.toLowerCase();
+      final name = d.name.toLowerCase();
+
+      if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI &&
+          (vendor.contains('midea') || name.contains('fridge'))) {
+        return const [
+          CoreCapability.CORE_CAP_POWER,
+          CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+          CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+          CoreCapability.CORE_CAP_MODE,
+        ];
+      }
+
+      if (d.protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
+        return const [
+          CoreCapability.CORE_CAP_POWER,
+          CoreCapability.CORE_CAP_TEMPERATURE,
+          CoreCapability.CORE_CAP_MODE,
+        ];
+      }
+
+      return const [CoreCapability.CORE_CAP_POWER];
+    }
+
+    String inferredBrand() {
+      final vendor = d.vendor.trim();
+      if (vendor.isEmpty || vendor.toLowerCase() == 'generic') return 'Generic';
+      return vendor[0].toUpperCase() + vendor.substring(1);
+    }
+
+    String inferredModel() {
+      final model = d.metadata['model']?.toString().trim() ?? '';
+      if (model.isNotEmpty) return model;
+
+      if (d.vendor.toLowerCase().contains('midea')) {
+        // Prefer a concrete Wi-Fi fridge template so payload constraints apply.
+        return 'Side by Side 442L';
+      }
+
+      return '${d.host}:${d.port}';
+    }
+
     try {
       final verified = await Bridge.verifyDiscoveredDevice(d);
       if (!verified) {
@@ -472,18 +515,22 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
         return;
       }
 
-      Bridge.registerDevice(
+      final creds = <String, String>{};
+      final applianceId = d.metadata['mideaApplianceId'];
+      if (applianceId != null) {
+        creds['appliance_id'] = applianceId.toString();
+      }
+
+      await Bridge.onboardDevice(
         uuid: uuid,
         name: d.name,
         protocol: d.protocol,
-        capabilities: const [CoreCapability.CORE_CAP_POWER],
-        brand: d.vendor,
-        model: '${d.host}:${d.port}',
+        capabilities: inferredCapabilities(),
+        brand: inferredBrand(),
+        model: inferredModel(),
+        endpoint: '${d.host}:${d.port}',
+        credentials: creds,
       );
-
-      Bridge.setDeviceEndpoint(uuid, '${d.host}:${d.port}');
-
-      Bridge.establishProtocolConnection(uuid: uuid, protocol: d.protocol);
 
       if (mounted) {
         Navigator.pop(context);
@@ -495,7 +542,10 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       _loadDevices();
     } catch (e) {
       if (mounted) {
-        _showTopErrorSnack(e.toString());
+        final stage = Bridge.onboardingLabel(uuid);
+        final detail = Bridge.onboardingError(uuid);
+        final suffix = detail == null ? '' : '\n$detail';
+        _showTopErrorSnack('[$stage] $e$suffix');
       }
     }
   }
@@ -968,7 +1018,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
     ssidController.dispose();
     passwordController.dispose();
 
-    if (ssid.isEmpty || password.length < 8) {
+    if (ssid.isEmpty || password.trim().isEmpty) {
       if (mounted) {
         _showTopErrorSnack(EaI18n.t(context, 'Invalid SSID/password.'));
       }
@@ -1519,11 +1569,11 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         return;
       }
 
-      if (password.trim().isEmpty || password.length < 8) {
+      if (password.trim().isEmpty) {
         _showError(
           EaI18n.t(
             context,
-            'Please enter a Wi-Fi password with at least 8 characters.',
+            'Please enter your Wi-Fi password.',
           ),
         );
         return;
@@ -1543,7 +1593,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
           : null;
       final protocol = _mapProtocol(selectedTemplate!.protocol);
 
-      Bridge.registerDevice(
+      await Bridge.onboardDevice(
         uuid: uuid,
         name: name,
         protocol: protocol,
@@ -1555,32 +1605,20 @@ class _DeviceEditorState extends State<_DeviceEditor> {
         modeLabels: modeLabels,
         constraints: selectedTemplate!.constrains,
         assetPath: selectedTemplate!.asset,
+        wifiSsid: isWifi ? ssid : null,
+        wifiPassword: isWifi ? password : null,
       );
 
       if (isWifi) {
-        await Bridge.provisionWifi(uuid: uuid, ssid: ssid, password: password);
         _persistRememberWifiSettings();
-      } else {
-        final connected = Bridge.establishProtocolConnection(
-          uuid: uuid,
-          protocol: protocol,
-        );
-
-        if (!connected) {
-          if (mounted) {
-            _showBottomSnack(
-              EaI18n.t(
-                context,
-                'Device was added. Connection will be retried automatically in background.',
-              ),
-            );
-          }
-        }
       }
 
       widget.onSaved();
     } catch (e) {
-      _showError(e.toString());
+      final stage = Bridge.onboardingLabel(uuid);
+      final detail = Bridge.onboardingError(uuid);
+      final suffix = detail == null ? '' : '\n$detail';
+      _showError('[$stage] $e$suffix');
     }
   }
 
@@ -1757,30 +1795,6 @@ class _DeviceEditorState extends State<_DeviceEditor> {
     Future.delayed(const Duration(seconds: 3), () {
       entry.remove();
     });
-  }
-
-  void _showBottomSnack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            message,
-            style: EaText.secondary.copyWith(
-              color: EaColor.textPrimary,
-              fontSize: 12,
-            ),
-          ),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          backgroundColor: EaColor.back,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: EaColor.fore),
-          ),
-        ),
-      );
   }
 
   String _generateUuid() {

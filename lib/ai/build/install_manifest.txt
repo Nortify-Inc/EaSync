@@ -1,7 +1,7 @@
-/usr/local/lib/libggml-cpu.so.0.9.10
+/usr/local/lib/libggml-cpu.so.0.9.11
 /usr/local/lib/libggml-cpu.so.0
 /usr/local/lib/libggml-cpu.so
-/usr/local/lib/libggml.so.0.9.10
+/usr/local/lib/libggml.so.0.9.11
 /usr/local/lib/libggml.so.0
 /usr/local/lib/libggml.so
 /usr/local/include/ggml.h
@@ -22,12 +22,12 @@
 /usr/local/include/ggml-zendnn.h
 /usr/local/include/ggml-openvino.h
 /usr/local/include/gguf.h
-/usr/local/lib/libggml-base.so.0.9.10
+/usr/local/lib/libggml-base.so.0.9.11
 /usr/local/lib/libggml-base.so.0
 /usr/local/lib/libggml-base.so
 /usr/local/lib/cmake/ggml/ggml-config.cmake
 /usr/local/lib/cmake/ggml/ggml-version.cmake
-/usr/local/lib/libllama.so.0.0.8621
+/usr/local/lib/libllama.so.0.0.8796
 /usr/local/lib/libllama.so.0
 /usr/local/lib/libllama.so
 /usr/local/include/llama.h

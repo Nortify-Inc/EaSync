@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/easync_core.dir/drivers/wifi.cpp.o.d"
   "CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o"
   "CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o.d"
+  "CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o"
+  "CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o.d"
   "CMakeFiles/easync_core.dir/src/core.cpp.o"
   "CMakeFiles/easync_core.dir/src/core.cpp.o.d"
   "CMakeFiles/easync_core.dir/src/driver.cpp.o"

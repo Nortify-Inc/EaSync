@@ -35,7 +35,6 @@ android {
             cmake {
                 arguments += listOf(
                     "-DANDROID_STL=c++_shared",
-                    "-DORT_ROOT=${rootDir}/../../lib/thirdParty/onnxruntime-android-1.20.1"
                 )
             }
         }
@@ -50,15 +49,6 @@ android {
     externalNativeBuild {
         cmake {
             path = file("../../lib/CMakeLists.txt")
-        }
-    }
-
-    // Inclui libonnxruntime.so no APK para que o app encontre em runtime
-    sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs(
-                listOf("../../lib/thirdParty/onnxruntime-android-1.20.1/jni")
-            )
         }
     }
 }

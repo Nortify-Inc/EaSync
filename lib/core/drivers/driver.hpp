@@ -65,11 +65,14 @@ public:
     virtual bool provisionWifi(
         const std::string& uuid,
         const std::string& ssid,
-        const std::string& password
+        const std::string& password,
+        std::string* outError = nullptr
     ) {
         (void)uuid;
         (void)ssid;
         (void)password;
+        if (outError)
+            *outError = "Wi-Fi provisioning not supported by this driver";
         return false;
     }
 
@@ -93,6 +96,32 @@ public:
      */
     virtual void onDeviceRemoved(const std::string& uuid) {
         (void)uuid;
+    }
+
+    /**
+     * @brief Optional hook to update a device endpoint at runtime.
+     */
+    virtual bool setEndpoint(
+        const std::string& uuid,
+        const std::string& endpoint
+    ) {
+        (void)uuid;
+        (void)endpoint;
+        return false;
+    }
+
+    /**
+     * @brief Optional hook to set per-device dynamic credentials/properties.
+     */
+    virtual bool setCredential(
+        const std::string& uuid,
+        const std::string& key,
+        const std::string& value
+    ) {
+        (void)uuid;
+        (void)key;
+        (void)value;
+        return false;
     }
 
 

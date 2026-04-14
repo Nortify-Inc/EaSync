@@ -31,6 +31,8 @@ struct DeviceProfile {
 struct PayloadTemplate {
     std::string topic;
     std::string payloadTemplate;
+    std::string method;
+    std::string contentType;
 };
 
 std::mutex gMutex;
@@ -347,12 +349,16 @@ void loadTemplatesLocked() {
 
                 std::string tpl = extractFieldObject(capObj, "template");
                 std::string topic = extractFieldString(capObj, "topic");
+                std::string method = extractFieldString(capObj, "method");
+                std::string contentType = extractFieldString(capObj, "contentType");
                 if (tpl.empty() && topic.empty())
                     continue;
 
                 PayloadTemplate entry;
                 entry.topic = topic;
                 entry.payloadTemplate = tpl;
+                entry.method = method;
+                entry.contentType = contentType;
 
                 gTemplates[makeTemplateKey(brand, model, cap)] = entry;
             }
@@ -384,6 +390,18 @@ PayloadTemplate findTemplateEntry(const std::string& brand,
         const std::string suffix = "|" + modelNorm + "|" + capNorm;
         if (pair.first.size() >= suffix.size() &&
             pair.first.compare(pair.first.size() - suffix.size(), suffix.size(), suffix) == 0)
+        {
+            return pair.second;
+        }
+    }
+
+    const std::string brandNorm = normalize(brand);
+    const std::string prefix = brandNorm + "|";
+    const std::string capSuffix = "|" + capNorm;
+    for (const auto& pair : gTemplates) {
+        if (pair.first.rfind(prefix, 0) == 0 &&
+            pair.first.size() >= capSuffix.size() &&
+            pair.first.compare(pair.first.size() - capSuffix.size(), capSuffix.size(), capSuffix) == 0)
         {
             return pair.second;
         }
@@ -428,6 +446,8 @@ core::PayloadCommand resolveCommand(PayloadTemplate entry,
     core::PayloadCommand out;
     out.topic = entry.topic;
     out.payload = entry.payloadTemplate;
+    out.method = entry.method;
+    out.contentType = entry.contentType;
     return out;
 }
 

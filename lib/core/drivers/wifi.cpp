@@ -16,6 +16,20 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <chrono>
+#include <unordered_set>
+#include <array>
+#include <fstream>
+
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 namespace {
 
@@ -26,6 +40,22 @@ static std::string trim(const std::string& v) {
 
     const auto end = v.find_last_not_of(" \t\r\n");
     return v.substr(begin, end - begin + 1);
+}
+
+static bool isLikelyHostToken(const std::string& value) {
+    if (value.empty())
+        return false;
+
+    for (const unsigned char c : value) {
+        if (std::isspace(c))
+            return false;
+
+        const bool ok = std::isalnum(c) || c == '.' || c == ':' || c == '-' || c == '_';
+        if (!ok)
+            return false;
+    }
+
+    return true;
 }
 
 static std::string normalizeEndpoint(std::string raw) {
@@ -44,7 +74,11 @@ static std::string normalizeEndpoint(std::string raw) {
     if (slash != std::string::npos)
         raw = raw.substr(0, slash);
 
-    return trim(raw);
+    raw = trim(raw);
+    if (!isLikelyHostToken(raw))
+        return "";
+
+    return raw;
 }
 
 static std::string toLower(std::string value) {
@@ -52,6 +86,322 @@ static std::string toLower(std::string value) {
         return static_cast<char>(std::tolower(c));
     });
     return value;
+}
+
+static bool isMideaLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("midea") != std::string::npos ||
+           lower.find("msmart") != std::string::npos ||
+           lower.find("nethome") != std::string::npos ||
+           lower.find("net_ac") != std::string::npos;
+}
+
+static bool parseUint32Safe(const std::string& raw, uint32_t& outValue) {
+    try {
+        const unsigned long parsed = std::stoul(trim(raw));
+        if (parsed > static_cast<unsigned long>(UINT32_MAX))
+            return false;
+        outValue = static_cast<uint32_t>(parsed);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool parseUint64Safe(const std::string& raw, uint64_t& outValue) {
+    try {
+        outValue = static_cast<uint64_t>(std::stoull(trim(raw)));
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool parseFloatSafe(const std::string& raw, float& outValue) {
+    try {
+        outValue = std::stof(trim(raw));
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool looksLikeMideaDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    if (packet.size() >= 2) {
+        if (packet[0] == 0x5a && packet[1] == 0x5a)
+            return true;
+        if (packet[0] == 0x83 && packet[1] == 0x70)
+            return true;
+    }
+
+    if (packet.size() >= 10) {
+        if (packet[8] == 0x5a && packet[9] == 0x5a)
+            return true;
+    }
+
+    return false;
+}
+
+static bool probeMideaDiscoveryAt(const std::string& host) {
+    const std::array<uint8_t, 72> kMideaBroadcastMsg = {
+        0x5a, 0x5a, 0x01, 0x11, 0x48, 0x00, 0x92, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x7f, 0x75, 0xbd, 0x6b, 0x3e, 0x4f, 0x8b, 0x76,
+        0x2e, 0x84, 0x9c, 0x6e, 0x57, 0x8d, 0x65, 0x90,
+        0x03, 0x6e, 0x9d, 0x43, 0x42, 0xa5, 0x0f, 0x1f,
+        0x56, 0x9e, 0xb8, 0xec, 0x91, 0x8e, 0x92, 0xe5,
+    };
+
+    sockaddr_in dstAddr{};
+    dstAddr.sin_family = AF_INET;
+    if (inet_pton(AF_INET, host.c_str(), &dstAddr.sin_addr) != 1)
+        return false;
+
+    const std::array<int, 2> ports = {6445, 20086};
+    for (int port : ports) {
+        const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sock < 0)
+            continue;
+
+        timeval timeout{};
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 180000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+        dstAddr.sin_port = htons(static_cast<uint16_t>(port));
+        const auto sent = sendto(
+            sock,
+            reinterpret_cast<const char*>(kMideaBroadcastMsg.data()),
+            kMideaBroadcastMsg.size(),
+            0,
+            reinterpret_cast<sockaddr*>(&dstAddr),
+            sizeof(dstAddr)
+        );
+
+        if (sent >= 0) {
+            std::vector<uint8_t> recvBuf(512);
+            sockaddr_in srcAddr{};
+            socklen_t srcLen = sizeof(srcAddr);
+
+            const auto received = recvfrom(
+                sock,
+                reinterpret_cast<char*>(recvBuf.data()),
+                recvBuf.size(),
+                0,
+                reinterpret_cast<sockaddr*>(&srcAddr),
+                &srcLen
+            );
+
+            close(sock);
+
+            if (received > 0) {
+                recvBuf.resize(static_cast<size_t>(received));
+                if (looksLikeMideaDiscoveryResponse(recvBuf))
+                    return true;
+            }
+        } else {
+            close(sock);
+        }
+    }
+
+    return false;
+}
+
+static bool isPrivateIPv4Octets(uint8_t o1, uint8_t o2) {
+
+    if (o1 == 10)
+        return true;
+    if (o1 == 172 && o2 >= 16 && o2 <= 31)
+        return true;
+    if (o1 == 192 && o2 == 168)
+        return true;
+    return false;
+}
+
+static std::string routeWordToIPv4String(uint32_t routeWord) {
+    const uint8_t o1 = static_cast<uint8_t>(routeWord & 0xFF);
+    const uint8_t o2 = static_cast<uint8_t>((routeWord >> 8) & 0xFF);
+    const uint8_t o3 = static_cast<uint8_t>((routeWord >> 16) & 0xFF);
+    const uint8_t o4 = static_cast<uint8_t>((routeWord >> 24) & 0xFF);
+
+    std::ostringstream ss;
+    ss << static_cast<int>(o1) << "."
+       << static_cast<int>(o2) << "."
+       << static_cast<int>(o3) << "."
+       << static_cast<int>(o4);
+    return ss.str();
+}
+
+static std::vector<std::string> lookupProvisionCandidatesFromRoutes() {
+    std::vector<std::string> out;
+
+    std::ifstream routeFile("/proc/net/route");
+    if (routeFile) {
+        std::string line;
+        std::getline(routeFile, line); // header
+
+        while (std::getline(routeFile, line)) {
+            std::istringstream iss(line);
+
+            std::string iface;
+            std::string destinationHex;
+            std::string gatewayHex;
+            std::string flagsHex;
+
+            if (!(iss >> iface >> destinationHex >> gatewayHex >> flagsHex))
+                continue;
+
+            if (destinationHex != "00000000")
+                continue;
+
+            unsigned long gateway = 0;
+            unsigned long flags = 0;
+            try {
+                gateway = std::stoul(gatewayHex, nullptr, 16);
+                flags = std::stoul(flagsHex, nullptr, 16);
+            } catch (...) {
+                continue;
+            }
+
+            if ((flags & 0x2UL) == 0) // RTF_GATEWAY
+                continue;
+            if (gateway == 0)
+                continue;
+
+            const uint32_t gatewayRouteWord = static_cast<uint32_t>(gateway);
+            const uint8_t gwO1 = static_cast<uint8_t>(gatewayRouteWord & 0xFF);
+            const uint8_t gwO2 = static_cast<uint8_t>((gatewayRouteWord >> 8) & 0xFF);
+            if (!isPrivateIPv4Octets(gwO1, gwO2))
+                continue;
+
+            out.push_back(routeWordToIPv4String(gatewayRouteWord));
+        }
+    }
+
+    ifaddrs* ifaddr = nullptr;
+    if (getifaddrs(&ifaddr) == 0 && ifaddr != nullptr) {
+        for (ifaddrs* cur = ifaddr; cur != nullptr; cur = cur->ifa_next) {
+            if (!cur->ifa_addr)
+                continue;
+            if (cur->ifa_addr->sa_family != AF_INET)
+                continue;
+            if ((cur->ifa_flags & IFF_LOOPBACK) != 0)
+                continue;
+
+            const sockaddr_in* sin = reinterpret_cast<const sockaddr_in*>(cur->ifa_addr);
+            const uint32_t ip = ntohl(sin->sin_addr.s_addr);
+
+            const uint8_t o1 = static_cast<uint8_t>((ip >> 24) & 0xFF);
+            const uint8_t o2 = static_cast<uint8_t>((ip >> 16) & 0xFF);
+            const uint8_t o3 = static_cast<uint8_t>((ip >> 8) & 0xFF);
+
+            if (!isPrivateIPv4Octets(o1, o2))
+                continue;
+
+            std::ostringstream gw1;
+            gw1 << static_cast<int>(o1) << "."
+                << static_cast<int>(o2) << "."
+                << static_cast<int>(o3) << ".1";
+            out.push_back(gw1.str());
+
+            std::ostringstream gw254;
+            gw254 << static_cast<int>(o1) << "."
+                  << static_cast<int>(o2) << "."
+                  << static_cast<int>(o3) << ".254";
+            out.push_back(gw254.str());
+        }
+
+        freeifaddrs(ifaddr);
+    }
+
+    return out;
+}
+
+static bool tcpPortReachable(const std::string& host, uint16_t port, int timeoutMs) {
+    const int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0)
+        return false;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+        close(sock);
+        return false;
+    }
+
+    const int flags = fcntl(sock, F_GETFL, 0);
+    if (flags >= 0)
+        fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+
+    const int connectRes = ::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    if (connectRes == 0) {
+        close(sock);
+        return true;
+    }
+
+    if (errno != EINPROGRESS) {
+        close(sock);
+        return false;
+    }
+
+    fd_set writeSet;
+    FD_ZERO(&writeSet);
+    FD_SET(sock, &writeSet);
+
+    timeval tv{};
+    tv.tv_sec = timeoutMs / 1000;
+    tv.tv_usec = (timeoutMs % 1000) * 1000;
+
+    const int sel = select(sock + 1, nullptr, &writeSet, nullptr, &tv);
+    if (sel <= 0) {
+        close(sock);
+        return false;
+    }
+
+    int soError = 0;
+    socklen_t len = sizeof(soError);
+    getsockopt(sock, SOL_SOCKET, SO_ERROR, &soError, &len);
+    close(sock);
+
+    return soError == 0;
+}
+
+static std::string uuidToEnvSuffix(const std::string& uuid) {
+    std::string out;
+    out.reserve(uuid.size());
+    for (const unsigned char c : uuid) {
+        if (std::isalnum(c)) {
+            out.push_back(static_cast<char>(std::toupper(c)));
+        } else {
+            out.push_back('_');
+        }
+    }
+    return out;
+}
+
+static std::string readEnv(const std::string& key) {
+    if (const char* v = std::getenv(key.c_str())) {
+        return trim(v);
+    }
+    return "";
+}
+
+static std::string makeMideaCredentialEnvelope(const std::string& payload,
+                                               const std::string& token,
+                                               const std::string& key)
+{
+    std::stringstream ss;
+    ss << "{"
+       << "\"protocol\":\"midea_lan_v3\"," 
+       << "\"token\":\"" << token << "\"," 
+       << "\"key\":\"" << key << "\"," 
+       << "\"payload\":" << payload
+       << "}";
+    return ss.str();
 }
 
 static bool extractRawValue(const std::string& payload,
@@ -191,14 +541,6 @@ void WifiDriver::setEventCallback(
     eventUserData = userData;
 }
 
-std::string WifiDriver::resolveIpFromUuid(const std::string& uuid) {
-    std::hash<std::string> hasher;
-    size_t h = hasher(uuid);
-
-    uint32_t lastOctet = 10 + (h % 200);
-    return "192.168.1." + std::to_string(lastOctet);
-}
-
 bool WifiDriver::connect(const std::string& uuid) {
 
     std::lock_guard<std::mutex> lock(mutex);
@@ -214,9 +556,6 @@ bool WifiDriver::connect(const std::string& uuid) {
         ip = normalizeEndpoint(env);
     }
 
-    if (ip.empty())
-        ip = resolveIpFromUuid(uuid);
-
     deviceIps[uuid] = ip;
     states.emplace(uuid, CoreDeviceState{});
 
@@ -228,20 +567,56 @@ void WifiDriver::onDeviceRegistered(
     const std::string& brand,
     const std::string& model
 ) {
-    (void)brand;
-
+    const bool isMidea = isMideaLike(brand) || isMideaLike(model);
+    const WifiVendorProfile profile = buildProfile(brand, model);
     const std::string endpoint = normalizeEndpoint(model);
-    if (endpoint.empty())
-        return;
-
     std::lock_guard<std::mutex> lock(mutex);
-    deviceIps[uuid] = endpoint;
+    deviceMideaProfile[uuid] = isMidea;
+    deviceProfiles[uuid] = profile;
+    if (!endpoint.empty())
+        deviceIps[uuid] = endpoint;
 }
 
 void WifiDriver::onDeviceRemoved(const std::string& uuid) {
     std::lock_guard<std::mutex> lock(mutex);
     deviceIps.erase(uuid);
     states.erase(uuid);
+    deviceMideaProfile.erase(uuid);
+    deviceProfiles.erase(uuid);
+    deviceCredentials.erase(uuid);
+}
+
+bool WifiDriver::setEndpoint(
+    const std::string& uuid,
+    const std::string& endpoint
+) {
+    const std::string normalized = normalizeEndpoint(endpoint);
+    if (normalized.empty())
+        return false;
+
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    deviceIps[uuid] = normalized;
+    return true;
+}
+
+bool WifiDriver::setCredential(
+    const std::string& uuid,
+    const std::string& key,
+    const std::string& value
+) {
+    const std::string k = toLower(trim(key));
+    if (k.empty())
+        return false;
+
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!states.count(uuid))
+        return false;
+
+    deviceCredentials[uuid][k] = trim(value);
+    return true;
 }
 
 bool WifiDriver::disconnect(const std::string& uuid) {
@@ -250,40 +625,487 @@ bool WifiDriver::disconnect(const std::string& uuid) {
 
     states.erase(uuid);
     deviceIps.erase(uuid);
+    deviceMideaProfile.erase(uuid);
+    deviceProfiles.erase(uuid);
+    deviceCredentials.erase(uuid);
 
     return true;
+}
+
+WifiVendorProfile WifiDriver::buildProfile(const std::string& brand,
+                                           const std::string& model) const
+{
+    WifiVendorProfile profile;
+
+    const std::string b = toLower(brand);
+    const std::string m = toLower(model);
+
+    auto setHttp = [&profile](std::initializer_list<uint16_t> ports = {80, 8080, 8081}) {
+        profile.transport = WifiTransportKind::Http;
+        profile.ports.assign(ports.begin(), ports.end());
+    };
+
+    setHttp();
+
+    if (isMideaLike(brand) || isMideaLike(model)) {
+        profile.transport = WifiTransportKind::Mixed;
+        profile.ports = {6444, 6445, 20086, 80, 8080};
+        profile.mideaLike = true;
+        return profile;
+    }
+
+    if (b.find("lifx") != std::string::npos) {
+        profile.transport = WifiTransportKind::Udp;
+        profile.ports = {56700};
+        return profile;
+    }
+
+    if (b.find("tuya") != std::string::npos) {
+        profile.transport = WifiTransportKind::Mixed;
+        profile.ports = {6668, 6669, 80, 443};
+        return profile;
+    }
+
+    if (b.find("nuki") != std::string::npos ||
+        b.find("august") != std::string::npos ||
+        b.find("schlage") != std::string::npos ||
+        b.find("warmup") != std::string::npos ||
+        b.find("heatmiser") != std::string::npos ||
+        b.find("devi") != std::string::npos ||
+        b.find("netatmo") != std::string::npos ||
+        b.find("google nest") != std::string::npos ||
+        b.find("samsung") != std::string::npos ||
+        b.find("lg") != std::string::npos ||
+        b.find("daikin") != std::string::npos ||
+        b.find("mitsubishi") != std::string::npos ||
+        b.find("gree") != std::string::npos ||
+        b.find("panasonic") != std::string::npos ||
+        b.find("bosch") != std::string::npos ||
+        b.find("electrolux") != std::string::npos ||
+        b.find("whirlpool") != std::string::npos ||
+        b.find("tp-link") != std::string::npos ||
+        b.find("yeelight") != std::string::npos ||
+        b.find("eve") != std::string::npos ||
+        b.find("somfy") != std::string::npos ||
+        m.find("thermostat") != std::string::npos) {
+        profile.transport = WifiTransportKind::Mixed;
+        profile.ports = {80, 8080, 8081, 443};
+        return profile;
+    }
+
+    return profile;
+}
+
+bool WifiDriver::tcpSend(const std::string& host, uint16_t port, const std::string& payload) {
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0)
+        return false;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+        close(sock);
+        return false;
+    }
+
+    timeval timeout{};
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 450000;
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+    if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+        close(sock);
+        return false;
+    }
+
+    const ssize_t sent = send(sock, payload.data(), payload.size(), 0);
+    close(sock);
+    return sent == static_cast<ssize_t>(payload.size());
+}
+
+bool WifiDriver::udpSend(const std::string& host, uint16_t port, const std::string& payload) {
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0)
+        return false;
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+        close(sock);
+        return false;
+    }
+
+    const ssize_t sent = sendto(
+        sock,
+        payload.data(),
+        payload.size(),
+        0,
+        reinterpret_cast<sockaddr*>(&addr),
+        sizeof(addr)
+    );
+    close(sock);
+    return sent == static_cast<ssize_t>(payload.size());
+}
+
+bool WifiDriver::tryVendorTransports(const std::string& uuid,
+                                     const std::string& endpoint,
+                                     const std::string& payload)
+{
+    WifiVendorProfile profile;
+    std::unordered_map<std::string, std::string> credentials;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto it = deviceProfiles.find(uuid);
+        if (it == deviceProfiles.end())
+            return false;
+        profile = it->second;
+
+        auto credIt = deviceCredentials.find(uuid);
+        if (credIt != deviceCredentials.end())
+            credentials = credIt->second;
+    }
+
+    const std::string host = normalizeEndpoint(endpoint);
+    if (host.empty())
+        return false;
+
+    if (profile.ports.empty())
+        return false;
+
+    if (profile.mideaLike) {
+        std::string token;
+        std::string key;
+
+        auto itToken = credentials.find("token");
+        auto itKey = credentials.find("key");
+        if (itToken != credentials.end()) token = trim(itToken->second);
+        if (itKey != credentials.end()) key = trim(itKey->second);
+
+        const std::string uuidSuffix = uuidToEnvSuffix(uuid);
+        if (token.empty()) token = readEnv("EASYNC_MIDEA_TOKEN_" + uuidSuffix);
+        if (key.empty()) key = readEnv("EASYNC_MIDEA_KEY_" + uuidSuffix);
+        if (token.empty()) token = readEnv("EASYNC_MIDEA_TOKEN");
+        if (key.empty()) key = readEnv("EASYNC_MIDEA_KEY");
+
+        if (!token.empty() && !key.empty()) {
+            const std::string enveloped = makeMideaCredentialEnvelope(payload, token, key);
+            if (tcpSend(host, 6444, enveloped) || tcpSend(host, 6445, enveloped))
+                return true;
+        }
+    }
+
+    const auto tryTcpPorts = [&]() {
+        for (const auto port : profile.ports) {
+            if (tcpSend(host, port, payload))
+                return true;
+        }
+        return false;
+    };
+
+    const auto tryUdpPorts = [&]() {
+        for (const auto port : profile.ports) {
+            if (udpSend(host, port, payload))
+                return true;
+        }
+        return false;
+    };
+
+    switch (profile.transport) {
+        case WifiTransportKind::Tcp:
+            return tryTcpPorts();
+        case WifiTransportKind::Udp:
+            return tryUdpPorts();
+        case WifiTransportKind::Mixed:
+            return tryTcpPorts() || tryUdpPorts();
+        case WifiTransportKind::Http:
+        default:
+            return false;
+    }
 }
 
 bool WifiDriver::provisionWifi(
     const std::string& uuid,
     const std::string& ssid,
-    const std::string& password
+    const std::string& password,
+    std::string* outError
 ) {
-    if (ssid.empty() || password.empty())
+    if (ssid.empty() || password.empty()) {
+        if (outError)
+            *outError = "SSID or password is empty";
         return false;
+    }
 
     std::vector<std::string> ips;
+    bool mideaProfile = false;
 
     {
         std::lock_guard<std::mutex> lock(mutex);
-        if (deviceIps.count(uuid) && !deviceIps[uuid].empty())
-            ips.push_back(deviceIps[uuid]);
+        if (deviceIps.count(uuid) && !deviceIps[uuid].empty()) {
+            const std::string normalized = normalizeEndpoint(deviceIps[uuid]);
+            if (!normalized.empty())
+                ips.push_back(normalized);
+        }
+        mideaProfile = deviceMideaProfile.count(uuid) ? deviceMideaProfile[uuid] : false;
     }
 
-    // Common SoftAP/default provisioning gateway addresses.
+    if (const char* env = std::getenv("EASYNC_WIFI_PROVISION_ENDPOINT")) {
+        const std::string normalized = normalizeEndpoint(env);
+        if (!normalized.empty())
+            ips.push_back(normalized);
+    }
+
+    const auto routeCandidates = lookupProvisionCandidatesFromRoutes();
+    ips.insert(ips.end(), routeCandidates.begin(), routeCandidates.end());
+
+    // Keep known SoftAP defaults as low-priority fallback candidates even when route lookup succeeds.
     ips.push_back("192.168.4.1");
+    ips.push_back("192.168.8.1");
+    ips.push_back("192.168.10.1");
     ips.push_back("192.168.0.1");
     ips.push_back("192.168.1.1");
+    ips.push_back("10.0.0.1");
+    ips.push_back("10.10.100.254");
 
-    std::stringstream ss;
-    ss << "{ \"ssid\": \"" << ssid << "\", \"password\": \"" << password << "\" }";
+    std::vector<std::string> orderedIps;
+    orderedIps.reserve(ips.size());
+    std::unordered_set<std::string> seenIps;
 
     for (const auto& ip : ips) {
-        if (httpPost("http://" + ip + "/provision", ss.str()))
-            return true;
+        if (ip.empty())
+            continue;
+        if (seenIps.insert(ip).second)
+            orderedIps.push_back(ip);
+    }
 
-        if (httpPost("http://" + ip + "/wifi/provision", ss.str()))
-            return true;
+    ips = std::move(orderedIps);
+
+    if (mideaProfile) {
+        std::vector<std::string> responsive;
+        std::vector<std::string> others;
+        responsive.reserve(ips.size());
+        others.reserve(ips.size());
+
+        for (const auto& ip : ips) {
+            if (probeMideaDiscoveryAt(ip))
+                responsive.push_back(ip);
+            else
+                others.push_back(ip);
+        }
+
+        if (!responsive.empty()) {
+            responsive.insert(responsive.end(), others.begin(), others.end());
+            ips = std::move(responsive);
+        }
+    }
+
+    const std::vector<std::string> routes = {
+        "/provision",
+        "/wifi/provision",
+        "/wifi",
+        "/wifi_config",
+        "/config/wifi",
+        "/network",
+        "/network/config",
+        "/goform/DeviceConfig",
+        "/cgi-bin/luci",
+    };
+
+    std::vector<std::string> payloads;
+    {
+        std::stringstream ss;
+        ss << "{ \"ssid\": \"" << ssid << "\", \"password\": \"" << password << "\" }";
+        payloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "{ \"ssid\": \"" << ssid << "\", \"pass\": \"" << password << "\" }";
+        payloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "{ \"wifi_ssid\": \"" << ssid << "\", \"wifi_password\": \"" << password << "\" }";
+        payloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "{ \"network\": { \"ssid\": \"" << ssid
+           << "\", \"password\": \"" << password << "\" } }";
+        payloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "{ \"sta_ssid\": \"" << ssid << "\", \"sta_password\": \"" << password << "\" }";
+        payloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "{ \"ap\": { \"ssid\": \"" << ssid
+           << "\", \"password\": \"" << password << "\" } }";
+        payloads.push_back(ss.str());
+    }
+
+    std::vector<std::string> formPayloads;
+    {
+        std::stringstream ss;
+        ss << "ssid=" << ssid << "&password=" << password;
+        formPayloads.push_back(ss.str());
+    }
+    {
+        std::stringstream ss;
+        ss << "wifi_ssid=" << ssid << "&wifi_password=" << password;
+        formPayloads.push_back(ss.str());
+    }
+
+    std::string lastAttempt;
+    std::vector<std::string> attemptedEndpoints;
+    attemptedEndpoints.reserve(ips.size());
+    const auto start = std::chrono::steady_clock::now();
+    const auto deadline = start + std::chrono::seconds(8);
+    int globalBudget = 40;
+    bool globalExhausted = false;
+
+    for (const auto& ip : ips) {
+        const std::string baseUrl = endpointToBaseUrl(ip);
+        if (baseUrl.empty())
+            continue;
+
+        attemptedEndpoints.push_back(ip);
+
+        const bool endpointReachable =
+            tcpPortReachable(ip, 80, 450) ||
+            tcpPortReachable(ip, 8080, 450) ||
+            tcpPortReachable(ip, 443, 450);
+
+        int endpointBudget = endpointReachable ? 12 : 4;
+        bool endpointExhausted = false;
+
+        for (const auto& route : routes) {
+            const std::string url = composeHttpUrl(baseUrl, route);
+            if (url.empty())
+                continue;
+
+            for (const auto& payload : payloads) {
+                if (std::chrono::steady_clock::now() >= deadline || globalBudget <= 0) {
+                    globalExhausted = true;
+                    break;
+                }
+                if (endpointBudget <= 0) {
+                    endpointExhausted = true;
+                    break;
+                }
+                globalBudget--;
+                endpointBudget--;
+
+                lastAttempt = "POST " + url + " (json)";
+                std::string trace;
+                if (httpPost(url, payload, "application/json", "POST", &trace))
+                    return true;
+                if (!trace.empty())
+                    lastAttempt += " -> " + trace;
+
+                if (std::chrono::steady_clock::now() >= deadline || globalBudget <= 0) {
+                    globalExhausted = true;
+                    break;
+                }
+                if (endpointBudget <= 0) {
+                    endpointExhausted = true;
+                    break;
+                }
+                globalBudget--;
+                endpointBudget--;
+
+                lastAttempt = "PUT " + url + " (json)";
+                trace.clear();
+                if (httpPost(url, payload, "application/json", "PUT", &trace))
+                    return true;
+                if (!trace.empty())
+                    lastAttempt += " -> " + trace;
+            }
+
+            if (globalExhausted || endpointExhausted)
+                break;
+
+            for (const auto& payload : formPayloads) {
+                if (std::chrono::steady_clock::now() >= deadline || globalBudget <= 0) {
+                    globalExhausted = true;
+                    break;
+                }
+                if (endpointBudget <= 0) {
+                    endpointExhausted = true;
+                    break;
+                }
+                globalBudget--;
+                endpointBudget--;
+
+                lastAttempt = "POST " + url + " (form)";
+                std::string trace;
+                if (httpPost(
+                        url,
+                        payload,
+                        "application/x-www-form-urlencoded",
+                        "POST",
+                        &trace
+                    )) {
+                    return true;
+                }
+                if (!trace.empty())
+                    lastAttempt += " -> " + trace;
+
+                if (std::chrono::steady_clock::now() >= deadline || globalBudget <= 0) {
+                    globalExhausted = true;
+                    break;
+                }
+                if (endpointBudget <= 0) {
+                    endpointExhausted = true;
+                    break;
+                }
+                globalBudget--;
+                endpointBudget--;
+
+                lastAttempt = "PUT " + url + " (form)";
+                trace.clear();
+                if (httpPost(
+                        url,
+                        payload,
+                        "application/x-www-form-urlencoded",
+                        "PUT",
+                        &trace
+                    )) {
+                    return true;
+                }
+                if (!trace.empty())
+                    lastAttempt += " -> " + trace;
+            }
+
+            if (globalExhausted || endpointExhausted)
+                break;
+        }
+
+        if (globalExhausted)
+            break;
+    }
+
+    if (outError) {
+        if (globalExhausted)
+            *outError = "Provisioning attempt budget exceeded. Last attempt: " + lastAttempt;
+        else if (!lastAttempt.empty())
+            *outError = "No provisioning endpoint accepted credentials. Last attempt: " + lastAttempt;
+        else {
+            std::ostringstream ss;
+            ss << "No valid provisioning endpoint candidate found";
+            if (!attemptedEndpoints.empty()) {
+                ss << ". Candidates: ";
+                for (size_t i = 0; i < attemptedEndpoints.size(); ++i) {
+                    if (i != 0)
+                        ss << ", ";
+                    ss << attemptedEndpoints[i];
+                }
+            }
+            *outError = ss.str();
+        }
     }
 
     return false;
@@ -655,10 +1477,14 @@ bool WifiDriver::postCapabilityCommand(
     auto command = buildCommandFromTemplate(uuid, capability, valueJson, fallbackJson);
 
     std::string payload = command.payload.empty() ? fallbackJson : command.payload;
+    const std::string method = command.method.empty() ? "POST" : command.method;
+    const std::string contentType = command.contentType.empty()
+        ? "application/json"
+        : command.contentType;
 
     if (!command.topic.empty()) {
         const std::string url = composeHttpUrl(baseUrl, command.topic);
-        if (!url.empty() && httpPost(url, payload))
+        if (!url.empty() && httpPost(url, payload, contentType, method))
             return true;
     }
 
@@ -668,31 +1494,66 @@ bool WifiDriver::postCapabilityCommand(
             return true;
     }
 
+    if (tryVendorTransports(uuid, endpoint, payload))
+        return true;
+
     return false;
 }
 
 bool WifiDriver::httpPost(
     const std::string& url,
-    const std::string& body
+    const std::string& body,
+    const std::string& contentType,
+    const std::string& method,
+    std::string* outTrace
 ) {
     CURL* curl = curl_easy_init();
     if (!curl)
         return false;
 
     struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
+    const std::string contentTypeHeader = "Content-Type: " + contentType;
+    headers = curl_slist_append(headers, contentTypeHeader.c_str());
+    headers = curl_slist_append(headers, "Accept: application/json, text/plain, */*");
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "EaSync/1.0 (Provisioning)");
+    if (!method.empty() && method != "POST")
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, method.c_str());
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 350L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 1200L);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+    char errorBuffer[CURL_ERROR_SIZE];
+    errorBuffer[0] = '\0';
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
 
     CURLcode res = curl_easy_perform(curl);
+
+    long statusCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &statusCode);
 
     curl_slist_free_all(headers);
     curl_easy_cleanup(curl);
 
-    return res == CURLE_OK;
+    if (res != CURLE_OK) {
+        if (outTrace) {
+            if (errorBuffer[0] != '\0')
+                *outTrace = std::string("curl=") + errorBuffer;
+            else
+                *outTrace = std::string("curl=") + curl_easy_strerror(res);
+        }
+        return false;
+    }
+
+    if (outTrace) {
+        *outTrace = "http=" + std::to_string(statusCode);
+    }
+
+    return statusCode >= 200 && statusCode < 300;
 }
 
 bool WifiDriver::httpGet(
@@ -706,13 +1567,21 @@ bool WifiDriver::httpGet(
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &out);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 3L);
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 350L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 900L);
 
     CURLcode res = curl_easy_perform(curl);
 
+    long statusCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &statusCode);
+
     curl_easy_cleanup(curl);
 
-    return res == CURLE_OK;
+    if (res != CURLE_OK)
+        return false;
+
+    return statusCode >= 200 && statusCode < 500;
 }
 
 void WifiDriver::parseState(
@@ -741,26 +1610,47 @@ void WifiDriver::parseState(
                 newState.power = parsed;
         }
 
-        if (extractRawValue(json, {"brightness"}, raw))
-            newState.brightness = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(json, {"brightness"}, raw)) {
+            uint32_t parsed = 0;
+            if (parseUint32Safe(raw, parsed))
+                newState.brightness = parsed;
+        }
 
-        if (extractRawValue(json, {"color"}, raw))
-            newState.color = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(json, {"color"}, raw)) {
+            uint32_t parsed = 0;
+            if (parseUint32Safe(raw, parsed))
+                newState.color = parsed;
+        }
 
-        if (extractRawValue(json, {"temperature"}, raw))
-            newState.temperature = std::stof(raw);
+        if (extractRawValue(json, {"temperature"}, raw)) {
+            float parsed = 0.0f;
+            if (parseFloatSafe(raw, parsed))
+                newState.temperature = parsed;
+        }
 
-        if (extractRawValue(json, {"temperature_fridge", "temperatureFridge"}, raw))
-            newState.temperatureFridge = std::stof(raw);
+        if (extractRawValue(json, {"temperature_fridge", "temperatureFridge"}, raw)) {
+            float parsed = 0.0f;
+            if (parseFloatSafe(raw, parsed))
+                newState.temperatureFridge = parsed;
+        }
 
-        if (extractRawValue(json, {"temperature_freezer", "temperatureFreezer"}, raw))
-            newState.temperatureFreezer = std::stof(raw);
+        if (extractRawValue(json, {"temperature_freezer", "temperatureFreezer"}, raw)) {
+            float parsed = 0.0f;
+            if (parseFloatSafe(raw, parsed))
+                newState.temperatureFreezer = parsed;
+        }
 
-        if (extractRawValue(json, {"timestamp", "time"}, raw))
-            newState.timestamp = static_cast<uint64_t>(std::stoull(raw));
+        if (extractRawValue(json, {"timestamp", "time"}, raw)) {
+            uint64_t parsed = 0;
+            if (parseUint64Safe(raw, parsed))
+                newState.timestamp = parsed;
+        }
 
-        if (extractRawValue(json, {"colorTemperature", "color_temperature"}, raw))
-            newState.colorTemperature = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(json, {"colorTemperature", "color_temperature"}, raw)) {
+            uint32_t parsed = 0;
+            if (parseUint32Safe(raw, parsed))
+                newState.colorTemperature = parsed;
+        }
 
         if (extractRawValue(json, {"lock"}, raw)) {
             bool parsed = false;
@@ -772,13 +1662,7 @@ void WifiDriver::parseState(
             const auto options = core::PayloadUtility::instance().modeOptionsForDevice(uuid);
             const std::string lowered = toLower(trim(raw));
 
-            bool parsedNumeric = false;
-            try {
-                newState.mode = static_cast<uint32_t>(std::stoul(lowered));
-                parsedNumeric = true;
-            } catch (...) {
-                parsedNumeric = false;
-            }
+            bool parsedNumeric = parseUint32Safe(lowered, newState.mode);
 
             if (!parsedNumeric) {
                 for (size_t i = 0; i < options.size(); ++i) {
@@ -790,8 +1674,11 @@ void WifiDriver::parseState(
             }
         }
 
-        if (extractRawValue(json, {"position"}, raw))
-            newState.position = std::stof(raw);
+        if (extractRawValue(json, {"position"}, raw)) {
+            float parsed = 0.0f;
+            if (parseFloatSafe(raw, parsed))
+                newState.position = parsed;
+        }
 
         bool changed =
             newState.power != oldState.power ||

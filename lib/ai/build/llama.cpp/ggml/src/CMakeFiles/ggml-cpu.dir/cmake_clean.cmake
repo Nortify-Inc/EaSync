@@ -2,7 +2,7 @@ file(REMOVE_RECURSE
   "../../../bin/libggml-cpu.pdb"
   "../../../bin/libggml-cpu.so"
   "../../../bin/libggml-cpu.so.0"
-  "../../../bin/libggml-cpu.so.0.9.10"
+  "../../../bin/libggml-cpu.so.0.9.11"
   ".0"
   "CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o"
   "CMakeFiles/ggml-cpu.dir/ggml-cpu/amx/amx.cpp.o.d"

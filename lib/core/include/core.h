@@ -494,6 +494,71 @@ CoreResult core_provision_wifi(
 );
 
 /**
+ * @brief Update device endpoint (host[:port]) for protocol drivers.
+ */
+CoreResult core_set_device_endpoint(
+    CoreContext* core,
+    const char* uuid,
+    const char* endpoint
+);
+
+/**
+ * @brief Set a dynamic per-device credential/property (e.g. token/key).
+ */
+CoreResult core_set_device_credential(
+    CoreContext* core,
+    const char* uuid,
+    const char* key,
+    const char* value
+);
+
+/**
+ * @brief Establish connection to a device (via AdaptiveLayer).
+ */
+CoreResult core_establish_connection(
+    CoreContext* core,
+    const char* uuid
+);
+
+/**
+ * @brief Ensure device is connected, reconnecting if needed.
+ */
+CoreResult core_ensure_connected(
+    CoreContext* core,
+    const char* uuid
+);
+
+/**
+ * @brief Disconnect from a device.
+ */
+CoreResult core_disconnect_device(
+    CoreContext* core,
+    const char* uuid
+);
+
+/**
+ * @brief Get device connection state label.
+ */
+CoreResult core_get_connection_state(
+    CoreContext* core,
+    const char* uuid,
+    char* outBuffer,
+    uint32_t bufferSize
+);
+
+/**
+ * @brief Discover devices on the network.
+ */
+CoreResult core_discover_devices(
+    CoreContext* core,
+    CoreProtocol protocol,
+    int timeoutMs,
+    char* outBuffer,
+    uint32_t bufferSize,
+    uint32_t* outWritten
+);
+
+/**
  * @brief Simulate external state changes for all devices.
  *
  * Generates random values for supported capabilities and dispatches
