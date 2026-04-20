@@ -108,12 +108,21 @@ static std::string readEnv(const std::string& key) {
 // -------------------------------------------------------------
 
 static std::string getDeviceDbusPath(const std::string& mac) {
+#ifdef __ANDROID__
+    (void)mac;
+    return "";
+#else
     std::string safeMac = mac;
     std::replace(safeMac.begin(), safeMac.end(), ':', '_');
     return "/org/bluez/hci0/dev_" + safeMac;
+#endif
 }
 
 static std::string getCharacteristicDbusPath(const std::string& devPath, const std::string& charUuid) {
+#ifdef __ANDROID__
+    (void)devPath; (void)charUuid;
+    return "";
+#else
     // Query bluez for all characteristics of this device and find the matching UUID
     std::string cmd = "busctl tree org.bluez | grep " + devPath + " | grep char";
     std::string tree = execCommand(cmd.c_str());
@@ -132,9 +141,14 @@ static std::string getCharacteristicDbusPath(const std::string& devPath, const s
         }
     }
     return "";
+#endif
 }
 
 static bool executeBleWrite(const std::string& mac, const std::string& charUuid, const std::vector<uint8_t>& data) {
+#ifdef __ANDROID__
+    (void)mac; (void)charUuid; (void)data;
+    return false;
+#else
     std::string devPath = getDeviceDbusPath(mac);
     
     // Ensure connected
@@ -153,6 +167,7 @@ static bool executeBleWrite(const std::string& mac, const std::string& charUuid,
     
     std::string res = execCommand(cmd.str().c_str());
     return res.empty() || res.find("Error") == std::string::npos;
+#endif
 }
 
 // -------------------------------------------------------------
@@ -207,9 +222,13 @@ static std::vector<uint8_t> buildMideaBlePayload(const std::string& jsonPayload,
 namespace drivers {
 
 bool BleDriver::init() {
+#ifdef __ANDROID__
+    adapterAvailable = true; // Assume available for now, actual check needed later
+#else
     // Check if D-Bus system bus is reachable and BlueZ is active
     adapterAvailable = std::filesystem::exists("/sys/class/bluetooth") && 
                        execCommand("busctl status org.bluez").find("org.bluez") != std::string::npos;
+#endif
     return adapterAvailable;
 }
 

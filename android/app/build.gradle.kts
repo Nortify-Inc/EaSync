@@ -58,4 +58,33 @@ flutter {
     target = "lib/ui/main.dart"
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+android.applicationVariants.configureEach {
+    val abiList = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+
+    abiList.forEach { abi ->
+        val abiName = abi.replace("-", "").replaceFirstChar { c -> c.uppercase() }
+        val variantName = name.replaceFirstChar { c -> c.uppercase() }
+
+        val buildDepsTask = tasks.register(
+            "buildNativeDepsFor${abiName}${variantName}",
+            Exec::class
+        ) {
+            group = "build"
+            description = "Build native dependencies for $abi"
+            workingDir = file("../../lib")
+            commandLine = listOf("bash", "build.sh", "android", abi)
+        }
+
+        tasks.named("externalNativeBuild${variantName}").configure {
+            dependsOn(buildDepsTask)
+        }
+    }
+}
+
 dependencies {}

@@ -64,7 +64,6 @@ CMAKE_BINARY_DIR = /home/radmann/EaSync/lib/ai/build
 
 # The main recursive "all" target.
 all: CMakeFiles/easync_ai.dir/all
-all: CMakeFiles/easync_ai_chat.dir/all
 all: llama.cpp/all
 .PHONY : all
 
@@ -74,7 +73,6 @@ preinstall: llama.cpp/preinstall
 
 # The main recursive "clean" target.
 clean: CMakeFiles/easync_ai.dir/clean
-clean: CMakeFiles/easync_ai_chat.dir/clean
 clean: llama.cpp/clean
 .PHONY : clean
 
@@ -177,7 +175,7 @@ CMakeFiles/easync_ai.dir/all: llama.cpp/src/CMakeFiles/llama.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/easync_ai.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 99
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 100
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/easync_ai.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
 .PHONY : CMakeFiles/easync_ai.dir/rule
@@ -192,44 +190,18 @@ CMakeFiles/easync_ai.dir/clean:
 .PHONY : CMakeFiles/easync_ai.dir/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/easync_ai_chat.dir
-
-# All Build rule for target.
-CMakeFiles/easync_ai_chat.dir/all: CMakeFiles/easync_ai.dir/all
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=2 "Built target easync_ai_chat"
-.PHONY : CMakeFiles/easync_ai_chat.dir/all
-
-# Build rule for subdir invocation for target.
-CMakeFiles/easync_ai_chat.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 100
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/easync_ai_chat.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
-.PHONY : CMakeFiles/easync_ai_chat.dir/rule
-
-# Convenience name for target.
-easync_ai_chat: CMakeFiles/easync_ai_chat.dir/rule
-.PHONY : easync_ai_chat
-
-# clean rule for target.
-CMakeFiles/easync_ai_chat.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/clean
-.PHONY : CMakeFiles/easync_ai_chat.dir/clean
-
-#=============================================================================
 # Target rules for target llama.cpp/ggml/src/CMakeFiles/ggml-base.dir
 
 # All Build rule for target.
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/all:
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/depend
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=5,6,7,8,9 "Built target ggml-base"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=3,4,5,6,7,8 "Built target ggml-base"
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/all
 
 # Build rule for subdir invocation for target.
 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 5
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 6
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/rule
@@ -251,12 +223,12 @@ llama.cpp/ggml/src/CMakeFiles/ggml.dir/all: llama.cpp/ggml/src/CMakeFiles/ggml-b
 llama.cpp/ggml/src/CMakeFiles/ggml.dir/all: llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/all
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml.dir/depend
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=3,4 "Built target ggml"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=2 "Built target ggml"
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml.dir/all
 
 # Build rule for subdir invocation for target.
 llama.cpp/ggml/src/CMakeFiles/ggml.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 16
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 17
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 llama.cpp/ggml/src/CMakeFiles/ggml.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml.dir/rule
@@ -277,12 +249,12 @@ llama.cpp/ggml/src/CMakeFiles/ggml.dir/clean:
 llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/all: llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/all
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/depend
 	$(MAKE) $(MAKESILENT) -f llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/build.make llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18 "Built target ggml-cpu"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/radmann/EaSync/lib/ai/build/CMakeFiles --progress-num=9,10,11,12,13,14,15,16,17,18 "Built target ggml-cpu"
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/all
 
 # Build rule for subdir invocation for target.
 llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 14
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 16
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
 .PHONY : llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/rule
@@ -310,7 +282,7 @@ llama.cpp/src/CMakeFiles/llama.dir/all: llama.cpp/ggml/src/CMakeFiles/ggml-cpu.d
 
 # Build rule for subdir invocation for target.
 llama.cpp/src/CMakeFiles/llama.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 98
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 99
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 llama.cpp/src/CMakeFiles/llama.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/radmann/EaSync/lib/ai/build/CMakeFiles 0
 .PHONY : llama.cpp/src/CMakeFiles/llama.dir/rule

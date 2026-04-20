@@ -33,6 +33,8 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/FILE.h \
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar2.h \
  /usr/include/c++/13/type_traits /usr/include/c++/13/compare \
  /usr/include/c++/13/concepts /usr/include/c++/13/bits/stl_construct.h \
  /usr/include/c++/13/new /usr/include/c++/13/bits/exception.h \
@@ -99,22 +101,28 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h \
+ /usr/include/x86_64-linux-gnu/bits/select2.h \
+ /usr/include/x86_64-linux-gnu/bits/select-decl.h \
  /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
  /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
  /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
  /usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h \
  /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
  /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h /usr/include/alloca.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
  /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h \
  /usr/include/c++/13/bits/std_abs.h /usr/include/c++/13/cstdio \
  /usr/include/stdio.h /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h \
  /usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h \
  /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
- /usr/include/c++/13/cerrno /usr/include/errno.h \
- /usr/include/x86_64-linux-gnu/bits/errno.h /usr/include/linux/errno.h \
- /usr/include/x86_64-linux-gnu/asm/errno.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio.h \
+ /usr/include/x86_64-linux-gnu/bits/stdio2.h /usr/include/c++/13/cerrno \
+ /usr/include/errno.h /usr/include/x86_64-linux-gnu/bits/errno.h \
+ /usr/include/linux/errno.h /usr/include/x86_64-linux-gnu/asm/errno.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
  /usr/include/x86_64-linux-gnu/bits/types/error_t.h \
  /usr/include/c++/13/bits/charconv.h \
@@ -128,9 +136,9 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
  /home/radmann/EaSync/lib/core/include/core.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
- /usr/local/include/mqtt/async_client.h /usr/include/c++/13/functional \
- /usr/include/c++/13/bits/std_function.h /usr/include/c++/13/typeinfo \
- /usr/include/c++/13/unordered_map \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/async_client.h \
+ /usr/include/c++/13/functional /usr/include/c++/13/bits/std_function.h \
+ /usr/include/c++/13/typeinfo /usr/include/c++/13/unordered_map \
  /usr/include/c++/13/bits/unordered_map.h \
  /usr/include/c++/13/bits/hashtable.h \
  /usr/include/c++/13/bits/hashtable_policy.h \
@@ -207,6 +215,8 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/confname.h \
  /usr/include/x86_64-linux-gnu/bits/getopt_posix.h \
  /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
+ /usr/include/x86_64-linux-gnu/bits/unistd.h \
+ /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
  /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
  /usr/include/linux/close_range.h /usr/include/syscall.h \
  /usr/include/x86_64-linux-gnu/sys/syscall.h \
@@ -218,17 +228,23 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/c++/13/bits/ranges_uninitialized.h \
  /usr/include/c++/13/bits/ranges_algobase.h \
  /usr/include/c++/13/pstl/glue_memory_defs.h \
- /usr/include/c++/13/pstl/execution_defs.h /usr/local/include/MQTTAsync.h \
- /usr/local/include/MQTTExportDeclarations.h \
- /usr/local/include/MQTTProperties.h /usr/local/include/MQTTReasonCodes.h \
- /usr/local/include/MQTTSubscribeOpts.h \
- /usr/local/include/MQTTClientPersistence.h \
- /usr/local/include/mqtt/callback.h \
- /usr/local/include/mqtt/delivery_token.h \
- /usr/local/include/mqtt/message.h /usr/local/include/mqtt/buffer_ref.h \
+ /usr/include/c++/13/pstl/execution_defs.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTAsync.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTExportDeclarations.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTReasonCodes.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTClientPersistence.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/callback.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/delivery_token.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/message.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_ref.h \
  /usr/include/c++/13/cstring /usr/include/string.h /usr/include/strings.h \
+ /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
+ /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/istream \
- /usr/include/c++/13/bits/istream.tcc /usr/local/include/mqtt/types.h \
+ /usr/include/c++/13/bits/istream.tcc \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/types.h \
  /usr/include/c++/13/chrono /usr/include/c++/13/bits/chrono.h \
  /usr/include/c++/13/ratio /usr/include/c++/13/limits \
  /usr/include/c++/13/ctime /usr/include/c++/13/bits/parse_numbers.h \
@@ -244,12 +260,16 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/c++/13/bits/quoted_string.h /usr/include/c++/13/format \
  /usr/include/c++/13/charconv /usr/include/c++/13/optional \
  /usr/include/c++/13/span /usr/include/c++/13/variant \
- /usr/local/include/mqtt/reason_code.h \
- /usr/local/include/mqtt/exception.h /usr/local/include/mqtt/platform.h \
- /usr/local/include/mqtt/export.h /usr/local/include/mqtt/properties.h \
- /usr/local/include/MQTTProperties.h /usr/include/c++/13/map \
- /usr/include/c++/13/bits/stl_tree.h /usr/include/c++/13/bits/stl_map.h \
- /usr/include/c++/13/bits/stl_multimap.h /usr/local/include/mqtt/token.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/reason_code.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/exception.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/platform.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/export.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/properties.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h \
+ /usr/include/c++/13/map /usr/include/c++/13/bits/stl_tree.h \
+ /usr/include/c++/13/bits/stl_map.h \
+ /usr/include/c++/13/bits/stl_multimap.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/token.h \
  /usr/include/c++/13/condition_variable \
  /usr/include/c++/13/bits/unique_lock.h /usr/include/c++/13/stop_token \
  /usr/include/c++/13/atomic /usr/include/c++/13/bits/std_thread.h \
@@ -258,21 +278,24 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/semaphore.h \
  /usr/include/x86_64-linux-gnu/bits/semaphore.h /usr/include/c++/13/mutex \
- /usr/include/c++/13/thread /usr/local/include/mqtt/iaction_listener.h \
- /usr/local/include/mqtt/server_response.h \
- /usr/local/include/mqtt/string_collection.h \
- /usr/local/include/mqtt/create_options.h \
- /usr/local/include/mqtt/iclient_persistence.h \
- /usr/local/include/mqtt/buffer_view.h /usr/local/include/mqtt/event.h \
- /usr/local/include/mqtt/iasync_client.h \
- /usr/local/include/mqtt/connect_options.h \
- /usr/local/include/mqtt/ssl_options.h /usr/local/include/mqtt/topic.h \
- /usr/local/include/mqtt/subscribe_options.h \
- /usr/local/include/MQTTSubscribeOpts.h \
- /usr/local/include/mqtt/will_options.h \
- /usr/local/include/mqtt/disconnect_options.h \
- /usr/local/include/mqtt/thread_queue.h /usr/include/c++/13/algorithm \
- /usr/include/c++/13/bits/ranges_algo.h \
+ /usr/include/c++/13/thread \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iaction_listener.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/server_response.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/string_collection.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/create_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iclient_persistence.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_view.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/event.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iasync_client.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/connect_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/ssl_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/topic.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/subscribe_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/will_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/disconnect_options.h \
+ /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/thread_queue.h \
+ /usr/include/c++/13/algorithm /usr/include/c++/13/bits/ranges_algo.h \
  /usr/include/c++/13/pstl/glue_algorithm_defs.h /usr/include/c++/13/deque \
  /usr/include/c++/13/bits/stl_deque.h /usr/include/c++/13/bits/deque.tcc \
  /usr/include/c++/13/queue /usr/include/c++/13/bits/stl_queue.h \

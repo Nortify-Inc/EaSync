@@ -90,7 +90,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/easync_ai.dir/DependInfo.cmake"
-  "CMakeFiles/easync_ai_chat.dir/DependInfo.cmake"
   "llama.cpp/ggml/src/CMakeFiles/ggml-base.dir/DependInfo.cmake"
   "llama.cpp/ggml/src/CMakeFiles/ggml.dir/DependInfo.cmake"
   "llama.cpp/ggml/src/CMakeFiles/ggml-cpu.dir/DependInfo.cmake"

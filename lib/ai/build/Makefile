@@ -175,19 +175,6 @@ easync_ai/fast:
 .PHONY : easync_ai/fast
 
 #=============================================================================
-# Target rules for targets named easync_ai_chat
-
-# Build rule for target.
-easync_ai_chat: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 easync_ai_chat
-.PHONY : easync_ai_chat
-
-# fast build rule for target.
-easync_ai_chat/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/build
-.PHONY : easync_ai_chat/fast
-
-#=============================================================================
 # Target rules for targets named ggml-base
 
 # Build rule for target.
@@ -239,30 +226,6 @@ llama/fast:
 	$(MAKE) $(MAKESILENT) -f llama.cpp/src/CMakeFiles/llama.dir/build.make llama.cpp/src/CMakeFiles/llama.dir/build
 .PHONY : llama/fast
 
-src/chat.o: src/chat.cpp.o
-.PHONY : src/chat.o
-
-# target to build an object file
-src/chat.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.o
-.PHONY : src/chat.cpp.o
-
-src/chat.i: src/chat.cpp.i
-.PHONY : src/chat.i
-
-# target to preprocess a source file
-src/chat.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.i
-.PHONY : src/chat.cpp.i
-
-src/chat.s: src/chat.cpp.s
-.PHONY : src/chat.s
-
-# target to generate assembly for a file
-src/chat.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_ai_chat.dir/build.make CMakeFiles/easync_ai_chat.dir/src/chat.cpp.s
-.PHONY : src/chat.cpp.s
-
 src/engine.o: src/engine.cpp.o
 .PHONY : src/engine.o
 
@@ -300,14 +263,10 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... easync_ai"
-	@echo "... easync_ai_chat"
 	@echo "... ggml"
 	@echo "... ggml-base"
 	@echo "... ggml-cpu"
 	@echo "... llama"
-	@echo "... src/chat.o"
-	@echo "... src/chat.i"
-	@echo "... src/chat.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"

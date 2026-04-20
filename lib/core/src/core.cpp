@@ -838,8 +838,10 @@ CoreContext* core_create(void) {
             std::make_shared<drivers::ZigBeeDriver>();
         #endif
 
+        #ifdef EASYNC_ENABLE_BLE_DRIVER
         context->drivers[CORE_PROTOCOL_BLE] =
             std::make_shared<drivers::BleDriver>();
+        #endif
 
         return context;
 

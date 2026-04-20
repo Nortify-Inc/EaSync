@@ -1,5 +1,4 @@
 /home/radmann/EaSync/lib/ai/build/CMakeFiles/easync_ai.dir
-/home/radmann/EaSync/lib/ai/build/CMakeFiles/easync_ai_chat.dir
 /home/radmann/EaSync/lib/ai/build/CMakeFiles/edit_cache.dir
 /home/radmann/EaSync/lib/ai/build/CMakeFiles/rebuild_cache.dir
 /home/radmann/EaSync/lib/ai/build/CMakeFiles/list_install_components.dir

@@ -22,7 +22,7 @@ CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=
+CMAKE_BUILD_TYPE:STRING=Release
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -188,6 +188,18 @@ CMAKE_TAPI:FILEPATH=CMAKE_TAPI-NOTFOUND
 // during the make.  This is useful for debugging only. With Visual
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
+
+//Path to a library.
+CURL_LIB:FILEPATH=/home/radmann/EaSync/lib/thirdParty/curl/install/lib/libcurl.a
+
+//No help, variable specified on the command line.
+EASYNC_THIRD_PARTY_DIR:UNINITIALIZED=/home/radmann/EaSync/lib/thirdParty
+
+//Path to a library.
+PAHO_CPP_LIB:FILEPATH=/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/lib/libpaho-mqttpp3.a
+
+//Path to a library.
+PAHO_C_LIB:FILEPATH=/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/lib/libpaho-mqtt3as.a
 
 //Value Computed by CMake
 easync_core_BINARY_DIR:STATIC=/home/radmann/EaSync/lib/core/build

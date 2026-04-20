@@ -7,3 +7,15 @@
 [submodule "lib/thirdParty/piper1-gpl"]
 	path = lib/thirdParty/piper1-gpl
 	url = https://github.com/OHF-Voice/piper1-gpl
+[submodule "lib/thirdParty/openssl"]
+	path = lib/thirdParty/openssl
+	url = https://github.com/openssl/openssl
+[submodule "lib/thirdParty/paho.mqtt.c"]
+	path = lib/thirdParty/paho.mqtt.c
+	url = https://github.com/eclipse/paho.mqtt.c
+[submodule "lib/thirdParty/paho.mqtt.cpp"]
+	path = lib/thirdParty/paho.mqtt.cpp
+	url = https://github.com/eclipse/paho.mqtt.cpp
+[submodule "lib/thirdParty/curl"]
+	path = lib/thirdParty/curl
+	url = https://github.com/curl/curl

@@ -93,19 +93,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 if(NOT ANDROID)
-    add_executable(easync_ai_chat
-        src/chat.cpp
-    )
-
-    target_include_directories(easync_ai_chat PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-    )
-
-    target_link_libraries(easync_ai_chat PRIVATE
-        easync_ai
-        Threads::Threads
-    )
-
     install(TARGETS easync_ai
         LIBRARY DESTINATION /usr/lib
     )

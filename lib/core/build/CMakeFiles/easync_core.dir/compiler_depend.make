@@ -6,6 +6,33 @@ CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/driv
   /home/radmann/EaSync/lib/core/drivers/driver.hpp \
   /home/radmann/EaSync/lib/core/include/core.h \
   /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1err.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bio.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bioerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bn.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bnerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/configuration.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core_dispatch.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/crypto.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr_legacy.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/e_os2.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evp.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evperr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/indicator.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/macros.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/obj_mac.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objects.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objectserr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslconf.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslv.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/params.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/safestack.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/stack.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/symhacks.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/types.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -181,30 +208,6 @@ CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/driv
   /usr/include/linux/errno.h \
   /usr/include/linux/limits.h \
   /usr/include/locale.h \
-  /usr/include/openssl/asn1.h \
-  /usr/include/openssl/asn1err.h \
-  /usr/include/openssl/bio.h \
-  /usr/include/openssl/bioerr.h \
-  /usr/include/openssl/bn.h \
-  /usr/include/openssl/bnerr.h \
-  /usr/include/openssl/core.h \
-  /usr/include/openssl/core_dispatch.h \
-  /usr/include/openssl/crypto.h \
-  /usr/include/openssl/cryptoerr.h \
-  /usr/include/openssl/cryptoerr_legacy.h \
-  /usr/include/openssl/e_os2.h \
-  /usr/include/openssl/evp.h \
-  /usr/include/openssl/evperr.h \
-  /usr/include/openssl/macros.h \
-  /usr/include/openssl/obj_mac.h \
-  /usr/include/openssl/objects.h \
-  /usr/include/openssl/objectserr.h \
-  /usr/include/openssl/opensslv.h \
-  /usr/include/openssl/params.h \
-  /usr/include/openssl/safestack.h \
-  /usr/include/openssl/stack.h \
-  /usr/include/openssl/symhacks.h \
-  /usr/include/openssl/types.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -242,13 +245,20 @@ CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/driv
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -285,10 +295,14 @@ CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/driv
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -307,8 +321,6 @@ CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/driv
   /usr/include/x86_64-linux-gnu/c++/13/bits/time_members.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
-  /usr/include/x86_64-linux-gnu/openssl/configuration.h \
-  /usr/include/x86_64-linux-gnu/openssl/opensslconf.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
@@ -559,14 +571,21 @@ CMakeFiles/easync_core.dir/drivers/mock.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/semaphore.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -603,10 +622,14 @@ CMakeFiles/easync_core.dir/drivers/mock.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -643,6 +666,39 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/EaSync/lib/core/dri
   /home/radmann/EaSync/lib/core/drivers/mqtt.hpp \
   /home/radmann/EaSync/lib/core/include/core.h \
   /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTAsync.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTClientPersistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTExportDeclarations.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTReasonCodes.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/async_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_ref.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_view.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/callback.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/connect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/create_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/delivery_token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/disconnect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/event.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/exception.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/export.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iaction_listener.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iasync_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iclient_persistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/message.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/platform.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/properties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/reason_code.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/server_response.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/ssl_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/string_collection.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/subscribe_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/thread_queue.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/topic.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/types.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/will_options.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -882,14 +938,23 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/semaphore.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -926,10 +991,14 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -959,46 +1028,50 @@ CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h \
-  /usr/local/include/MQTTAsync.h \
-  /usr/local/include/MQTTClientPersistence.h \
-  /usr/local/include/MQTTExportDeclarations.h \
-  /usr/local/include/MQTTProperties.h \
-  /usr/local/include/MQTTReasonCodes.h \
-  /usr/local/include/MQTTSubscribeOpts.h \
-  /usr/local/include/mqtt/async_client.h \
-  /usr/local/include/mqtt/buffer_ref.h \
-  /usr/local/include/mqtt/buffer_view.h \
-  /usr/local/include/mqtt/callback.h \
-  /usr/local/include/mqtt/connect_options.h \
-  /usr/local/include/mqtt/create_options.h \
-  /usr/local/include/mqtt/delivery_token.h \
-  /usr/local/include/mqtt/disconnect_options.h \
-  /usr/local/include/mqtt/event.h \
-  /usr/local/include/mqtt/exception.h \
-  /usr/local/include/mqtt/export.h \
-  /usr/local/include/mqtt/iaction_listener.h \
-  /usr/local/include/mqtt/iasync_client.h \
-  /usr/local/include/mqtt/iclient_persistence.h \
-  /usr/local/include/mqtt/message.h \
-  /usr/local/include/mqtt/platform.h \
-  /usr/local/include/mqtt/properties.h \
-  /usr/local/include/mqtt/reason_code.h \
-  /usr/local/include/mqtt/server_response.h \
-  /usr/local/include/mqtt/ssl_options.h \
-  /usr/local/include/mqtt/string_collection.h \
-  /usr/local/include/mqtt/subscribe_options.h \
-  /usr/local/include/mqtt/thread_queue.h \
-  /usr/local/include/mqtt/token.h \
-  /usr/local/include/mqtt/topic.h \
-  /usr/local/include/mqtt/types.h \
-  /usr/local/include/mqtt/will_options.h
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h
 
 CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/drivers/wifi.cpp \
   /home/radmann/EaSync/lib/core/drivers/driver.hpp \
   /home/radmann/EaSync/lib/core/drivers/wifi.hpp \
   /home/radmann/EaSync/lib/core/include/core.h \
   /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/curl.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/curlver.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/easy.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/header.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/mprintf.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/multi.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/options.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/system.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/urlapi.h \
+  /home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/websockets.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1err.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bio.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bioerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bn.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bnerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/configuration.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core_dispatch.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/crypto.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr_legacy.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/e_os2.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evp.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evperr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/indicator.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/macros.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/obj_mac.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objects.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objectserr.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslconf.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslv.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/params.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/safestack.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/stack.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/symhacks.h \
+  /home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/types.h \
   /usr/include/alloca.h \
   /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
@@ -1183,30 +1256,6 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/net/if.h \
   /usr/include/netinet/in.h \
   /usr/include/netinet/tcp.h \
-  /usr/include/openssl/asn1.h \
-  /usr/include/openssl/asn1err.h \
-  /usr/include/openssl/bio.h \
-  /usr/include/openssl/bioerr.h \
-  /usr/include/openssl/bn.h \
-  /usr/include/openssl/bnerr.h \
-  /usr/include/openssl/core.h \
-  /usr/include/openssl/core_dispatch.h \
-  /usr/include/openssl/crypto.h \
-  /usr/include/openssl/cryptoerr.h \
-  /usr/include/openssl/cryptoerr_legacy.h \
-  /usr/include/openssl/e_os2.h \
-  /usr/include/openssl/evp.h \
-  /usr/include/openssl/evperr.h \
-  /usr/include/openssl/macros.h \
-  /usr/include/openssl/obj_mac.h \
-  /usr/include/openssl/objects.h \
-  /usr/include/openssl/objectserr.h \
-  /usr/include/openssl/opensslv.h \
-  /usr/include/openssl/params.h \
-  /usr/include/openssl/safestack.h \
-  /usr/include/openssl/stack.h \
-  /usr/include/openssl/symhacks.h \
-  /usr/include/openssl/types.h \
   /usr/include/pthread.h \
   /usr/include/sched.h \
   /usr/include/stdc-predef.h \
@@ -1233,6 +1282,7 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/errno.h \
   /usr/include/x86_64-linux-gnu/bits/fcntl-linux.h \
   /usr/include/x86_64-linux-gnu/bits/fcntl.h \
+  /usr/include/x86_64-linux-gnu/bits/fcntl2.h \
   /usr/include/x86_64-linux-gnu/bits/floatn-common.h \
   /usr/include/x86_64-linux-gnu/bits/floatn.h \
   /usr/include/x86_64-linux-gnu/bits/getopt_core.h \
@@ -1249,17 +1299,25 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/sockaddr.h \
   /usr/include/x86_64-linux-gnu/bits/socket.h \
+  /usr/include/x86_64-linux-gnu/bits/socket2.h \
   /usr/include/x86_64-linux-gnu/bits/socket_type.h \
   /usr/include/x86_64-linux-gnu/bits/stat.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/struct_stat.h \
@@ -1298,10 +1356,14 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -1320,20 +1382,8 @@ CMakeFiles/easync_core.dir/drivers/wifi.cpp.o: /home/radmann/EaSync/lib/core/dri
   /usr/include/x86_64-linux-gnu/c++/13/bits/messages_members.h \
   /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h \
   /usr/include/x86_64-linux-gnu/c++/13/bits/time_members.h \
-  /usr/include/x86_64-linux-gnu/curl/curl.h \
-  /usr/include/x86_64-linux-gnu/curl/curlver.h \
-  /usr/include/x86_64-linux-gnu/curl/easy.h \
-  /usr/include/x86_64-linux-gnu/curl/header.h \
-  /usr/include/x86_64-linux-gnu/curl/mprintf.h \
-  /usr/include/x86_64-linux-gnu/curl/multi.h \
-  /usr/include/x86_64-linux-gnu/curl/options.h \
-  /usr/include/x86_64-linux-gnu/curl/system.h \
-  /usr/include/x86_64-linux-gnu/curl/urlapi.h \
-  /usr/include/x86_64-linux-gnu/curl/websockets.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
   /usr/include/x86_64-linux-gnu/gnu/stubs.h \
-  /usr/include/x86_64-linux-gnu/openssl/configuration.h \
-  /usr/include/x86_64-linux-gnu/openssl/opensslconf.h \
   /usr/include/x86_64-linux-gnu/sys/cdefs.h \
   /usr/include/x86_64-linux-gnu/sys/select.h \
   /usr/include/x86_64-linux-gnu/sys/single_threaded.h \
@@ -1352,6 +1402,39 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/EaSync/lib/core/d
   /home/radmann/EaSync/lib/core/drivers/zigbee.hpp \
   /home/radmann/EaSync/lib/core/include/core.h \
   /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTAsync.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTClientPersistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTExportDeclarations.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTReasonCodes.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/async_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_ref.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_view.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/callback.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/connect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/create_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/delivery_token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/disconnect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/event.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/exception.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/export.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iaction_listener.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iasync_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iclient_persistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/message.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/platform.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/properties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/reason_code.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/server_response.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/ssl_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/string_collection.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/subscribe_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/thread_queue.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/topic.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/types.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/will_options.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -1591,14 +1674,23 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/EaSync/lib/core/d
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/semaphore.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -1635,10 +1727,14 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/EaSync/lib/core/d
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -1668,40 +1764,7 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o: /home/radmann/EaSync/lib/core/d
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h \
-  /usr/local/include/MQTTAsync.h \
-  /usr/local/include/MQTTClientPersistence.h \
-  /usr/local/include/MQTTExportDeclarations.h \
-  /usr/local/include/MQTTProperties.h \
-  /usr/local/include/MQTTReasonCodes.h \
-  /usr/local/include/MQTTSubscribeOpts.h \
-  /usr/local/include/mqtt/async_client.h \
-  /usr/local/include/mqtt/buffer_ref.h \
-  /usr/local/include/mqtt/buffer_view.h \
-  /usr/local/include/mqtt/callback.h \
-  /usr/local/include/mqtt/connect_options.h \
-  /usr/local/include/mqtt/create_options.h \
-  /usr/local/include/mqtt/delivery_token.h \
-  /usr/local/include/mqtt/disconnect_options.h \
-  /usr/local/include/mqtt/event.h \
-  /usr/local/include/mqtt/exception.h \
-  /usr/local/include/mqtt/export.h \
-  /usr/local/include/mqtt/iaction_listener.h \
-  /usr/local/include/mqtt/iasync_client.h \
-  /usr/local/include/mqtt/iclient_persistence.h \
-  /usr/local/include/mqtt/message.h \
-  /usr/local/include/mqtt/platform.h \
-  /usr/local/include/mqtt/properties.h \
-  /usr/local/include/mqtt/reason_code.h \
-  /usr/local/include/mqtt/server_response.h \
-  /usr/local/include/mqtt/ssl_options.h \
-  /usr/local/include/mqtt/string_collection.h \
-  /usr/local/include/mqtt/subscribe_options.h \
-  /usr/local/include/mqtt/thread_queue.h \
-  /usr/local/include/mqtt/token.h \
-  /usr/local/include/mqtt/topic.h \
-  /usr/local/include/mqtt/types.h \
-  /usr/local/include/mqtt/will_options.h
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h
 
 CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: /home/radmann/EaSync/lib/core/src/adaptiveLayer.cpp \
   /home/radmann/EaSync/lib/core/drivers/driver.hpp \
@@ -1962,14 +2025,23 @@ CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: /home/radmann/EaSync/lib/cor
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/semaphore.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -2006,10 +2078,14 @@ CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: /home/radmann/EaSync/lib/cor
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -2052,6 +2128,39 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/EaSync/lib/core/src/cor
   /home/radmann/EaSync/lib/core/include/adaptiveLayer.hpp \
   /home/radmann/EaSync/lib/core/include/core.h \
   /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTAsync.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTClientPersistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTExportDeclarations.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTReasonCodes.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/async_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_ref.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_view.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/callback.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/connect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/create_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/delivery_token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/disconnect_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/event.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/exception.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/export.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iaction_listener.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iasync_client.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iclient_persistence.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/message.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/platform.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/properties.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/reason_code.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/server_response.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/ssl_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/string_collection.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/subscribe_options.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/thread_queue.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/token.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/topic.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/types.h \
+  /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/will_options.h \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -2323,14 +2432,23 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/EaSync/lib/core/src/cor
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/semaphore.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+  /usr/include/x86_64-linux-gnu/bits/string_fortified.h \
+  /usr/include/x86_64-linux-gnu/bits/strings_fortified.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -2367,10 +2485,14 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/EaSync/lib/core/src/cor
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -2401,40 +2523,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: /home/radmann/EaSync/lib/core/src/cor
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
   /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h \
-  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h \
-  /usr/local/include/MQTTAsync.h \
-  /usr/local/include/MQTTClientPersistence.h \
-  /usr/local/include/MQTTExportDeclarations.h \
-  /usr/local/include/MQTTProperties.h \
-  /usr/local/include/MQTTReasonCodes.h \
-  /usr/local/include/MQTTSubscribeOpts.h \
-  /usr/local/include/mqtt/async_client.h \
-  /usr/local/include/mqtt/buffer_ref.h \
-  /usr/local/include/mqtt/buffer_view.h \
-  /usr/local/include/mqtt/callback.h \
-  /usr/local/include/mqtt/connect_options.h \
-  /usr/local/include/mqtt/create_options.h \
-  /usr/local/include/mqtt/delivery_token.h \
-  /usr/local/include/mqtt/disconnect_options.h \
-  /usr/local/include/mqtt/event.h \
-  /usr/local/include/mqtt/exception.h \
-  /usr/local/include/mqtt/export.h \
-  /usr/local/include/mqtt/iaction_listener.h \
-  /usr/local/include/mqtt/iasync_client.h \
-  /usr/local/include/mqtt/iclient_persistence.h \
-  /usr/local/include/mqtt/message.h \
-  /usr/local/include/mqtt/platform.h \
-  /usr/local/include/mqtt/properties.h \
-  /usr/local/include/mqtt/reason_code.h \
-  /usr/local/include/mqtt/server_response.h \
-  /usr/local/include/mqtt/ssl_options.h \
-  /usr/local/include/mqtt/string_collection.h \
-  /usr/local/include/mqtt/subscribe_options.h \
-  /usr/local/include/mqtt/thread_queue.h \
-  /usr/local/include/mqtt/token.h \
-  /usr/local/include/mqtt/topic.h \
-  /usr/local/include/mqtt/types.h \
-  /usr/local/include/mqtt/will_options.h
+  /usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h
 
 CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/EaSync/lib/core/src/driver.cpp \
   /home/radmann/EaSync/lib/core/drivers/driver.hpp \
@@ -2619,13 +2708,20 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/EaSync/lib/core/src/d
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/syscall.h \
@@ -2662,10 +2758,14 @@ CMakeFiles/easync_core.dir/src/driver.cpp.o: /home/radmann/EaSync/lib/core/src/d
   /usr/include/x86_64-linux-gnu/bits/typesizes.h \
   /usr/include/x86_64-linux-gnu/bits/uintn-identity.h \
   /usr/include/x86_64-linux-gnu/bits/uio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/unistd.h \
   /usr/include/x86_64-linux-gnu/bits/unistd_ext.h \
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/bits/xopen_lim.h \
@@ -2885,13 +2985,20 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h \
   /usr/include/x86_64-linux-gnu/bits/pthreadtypes.h \
   /usr/include/x86_64-linux-gnu/bits/sched.h \
+  /usr/include/x86_64-linux-gnu/bits/select-decl.h \
   /usr/include/x86_64-linux-gnu/bits/select.h \
+  /usr/include/x86_64-linux-gnu/bits/select2.h \
   /usr/include/x86_64-linux-gnu/bits/setjmp.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-least.h \
   /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/stdio2.h \
   /usr/include/x86_64-linux-gnu/bits/stdio_lim.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
   /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+  /usr/include/x86_64-linux-gnu/bits/stdlib.h \
   /usr/include/x86_64-linux-gnu/bits/struct_mutex.h \
   /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h \
   /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h \
@@ -2929,6 +3036,8 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
   /usr/include/x86_64-linux-gnu/bits/waitflags.h \
   /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
   /usr/include/x86_64-linux-gnu/bits/wchar.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2-decl.h \
+  /usr/include/x86_64-linux-gnu/bits/wchar2.h \
   /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h \
   /usr/include/x86_64-linux-gnu/bits/wordsize.h \
   /usr/include/x86_64-linux-gnu/c++/13/bits/atomic_word.h \
@@ -2963,8 +3072,6 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /home/radmann/EaSync/lib/core/src/driver.cpp:
 
-/usr/include/x86_64-linux-gnu/c++/13/bits/opt_random.h:
-
 /usr/include/c++/13/random:
 
 /usr/include/c++/13/pstl/glue_numeric_defs.h:
@@ -2975,27 +3082,13 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/c++/13/bits/random.h:
 
-/usr/include/x86_64-linux-gnu/curl/websockets.h:
-
-/usr/include/x86_64-linux-gnu/curl/urlapi.h:
-
-/usr/include/x86_64-linux-gnu/curl/system.h:
-
-/usr/include/x86_64-linux-gnu/curl/options.h:
-
-/usr/include/x86_64-linux-gnu/curl/multi.h:
-
-/usr/include/x86_64-linux-gnu/curl/mprintf.h:
-
-/usr/include/x86_64-linux-gnu/curl/header.h:
-
-/usr/include/x86_64-linux-gnu/curl/easy.h:
-
 /usr/include/x86_64-linux-gnu/sys/socket.h:
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h:
 
 /usr/include/x86_64-linux-gnu/bits/socket_type.h:
+
+/usr/include/x86_64-linux-gnu/bits/socket2.h:
 
 /usr/include/x86_64-linux-gnu/bits/socket.h:
 
@@ -3011,83 +3104,65 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/asm/posix_types.h:
 
+/usr/include/x86_64-linux-gnu/bits/fcntl2.h:
+
 /usr/include/x86_64-linux-gnu/asm/bitsperlong.h:
 
 /usr/include/netinet/tcp.h:
 
-/usr/include/netinet/in.h:
-
 /usr/include/linux/stddef.h:
+
+/usr/include/linux/posix_types.h:
 
 /usr/include/linux/falloc.h:
 
 /usr/include/c++/13/unordered_set:
 
-/usr/include/c++/13/bits/unordered_set.h:
-
 /usr/include/asm-generic/sockios.h:
 
 /usr/include/arpa/inet.h:
 
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/websockets.h:
+
+/usr/include/c++/13/bits/unordered_set.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/urlapi.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/options.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/multi.h:
+
 /home/radmann/EaSync/lib/core/drivers/wifi.cpp:
 
-/usr/local/include/mqtt/types.h:
+/usr/include/x86_64-linux-gnu/bits/string_fortified.h:
 
-/usr/local/include/mqtt/topic.h:
+/usr/include/strings.h:
 
-/usr/local/include/mqtt/token.h:
+/usr/include/c++/13/queue:
 
-/usr/local/include/mqtt/subscribe_options.h:
+/usr/include/c++/13/list:
 
-/usr/local/include/mqtt/ssl_options.h:
+/usr/include/c++/13/functional:
 
-/usr/local/include/mqtt/will_options.h:
+/usr/include/c++/13/cstring:
 
-/usr/include/openssl/evp.h:
-
-/usr/include/openssl/cryptoerr.h:
-
-/usr/include/openssl/crypto.h:
-
-/usr/include/limits.h:
-
-/usr/include/openssl/core_dispatch.h:
-
-/usr/include/c++/13/fstream:
-
-/usr/include/wchar.h:
-
-/usr/include/openssl/asn1err.h:
-
-/usr/include/c++/13/bits/chrono.h:
-
-/usr/include/features.h:
-
-/usr/include/features-time64.h:
-
-/usr/include/openssl/stack.h:
-
-/usr/include/openssl/objectserr.h:
-
-/usr/local/include/mqtt/disconnect_options.h:
-
-/usr/include/openssl/objects.h:
-
-/usr/include/c++/13/atomic:
-
-/usr/include/c++/13/unordered_map:
-
-/usr/include/c++/13/bits/semaphore_base.h:
+/usr/include/c++/13/bits/stl_tree.h:
 
 /usr/include/c++/13/bits/stl_deque.h:
+
+/usr/include/c++/13/bits/deque.tcc:
+
+/usr/include/c++/13/bits/semaphore_base.h:
 
 /usr/include/c++/13/typeinfo:
 
 /usr/include/c++/13/type_traits:
 
-/usr/include/asm-generic/errno-base.h:
+/usr/include/c++/13/stdexcept:
 
 /usr/include/c++/13/iomanip:
+
+/usr/include/asm-generic/errno-base.h:
 
 /home/radmann/EaSync/lib/core/include/adaptiveLayer.hpp:
 
@@ -3098,10 +3173,6 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 /usr/include/c++/13/pstl/glue_memory_defs.h:
 
 /usr/include/c++/13/ostream:
-
-/usr/local/include/mqtt/string_collection.h:
-
-/usr/local/include/mqtt/delivery_token.h:
 
 /usr/include/c++/13/mutex:
 
@@ -3123,47 +3194,37 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/c++/13/ios:
 
-/usr/include/c++/13/filesystem:
+/usr/include/c++/13/bits/std_function.h:
 
-/usr/include/x86_64-linux-gnu/bits/fp-fast.h:
+/usr/include/c++/13/chrono:
 
 /usr/include/x86_64-linux-gnu/bits/struct_stat.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
 
-/usr/include/c++/13/streambuf:
-
-/usr/include/c++/13/ext/alloc_traits.h:
-
 /usr/include/c++/13/ext/aligned_buffer.h:
 
 /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h:
-
-/usr/include/c++/13/exception:
 
 /usr/include/c++/13/backward/auto_ptr.h:
 
 /usr/include/x86_64-linux-gnu/bits/local_lim.h:
 
-/usr/include/c++/13/string:
-
-/usr/include/c++/13/debug/assertions.h:
-
-/usr/include/x86_64-linux-gnu/bits/fp-logb.h:
-
 /usr/include/c++/13/cstdio:
 
-/usr/include/c++/13/pstl/pstl_config.h:
-
-/usr/include/c++/13/compare:
-
 /usr/include/c++/13/codecvt:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/safestack.h:
 
 /home/radmann/EaSync/lib/core/drivers/driver.hpp:
 
 /usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
 
 /usr/include/c++/13/climits:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/curlver.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
 
 /usr/include/c++/13/bits/uniform_int_dist.h:
 
@@ -3173,33 +3234,19 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/syscall.h:
 
-/usr/include/locale.h:
-
-/usr/include/c++/13/locale:
-
-/usr/include/c++/13/semaphore:
-
 /usr/include/c++/13/cstddef:
 
 /usr/include/x86_64-linux-gnu/bits/xopen_lim.h:
 
-/usr/local/include/mqtt/thread_queue.h:
-
 /usr/include/c++/13/bits/string_view.tcc:
 
-/usr/include/c++/13/bits/cxxabi_init_exception.h:
+/usr/include/x86_64-linux-gnu/bits/wchar2-decl.h:
 
-/usr/include/x86_64-linux-gnu/curl/curl.h:
+/usr/include/c++/13/bits/cxxabi_init_exception.h:
 
 /usr/include/x86_64-linux-gnu/bits/iscanonical.h:
 
 /usr/include/c++/13/bits/stl_vector.h:
-
-/usr/include/openssl/bio.h:
-
-/usr/include/x86_64-linux-gnu/bits/in.h:
-
-/usr/include/c++/13/bits/ranges_base.h:
 
 /usr/include/c++/13/new:
 
@@ -3207,123 +3254,219 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/pthreadtypes-arch.h:
 
-/usr/include/c++/13/array:
+/usr/include/c++/13/bits/stl_list.h:
 
-/usr/include/c++/13/bits/basic_ios.tcc:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/ssl_options.h:
 
-/usr/include/c++/13/bits/hash_bytes.h:
+/usr/include/asm-generic/socket.h:
 
-/usr/include/c++/13/ext/concurrence.h:
+/usr/include/c++/13/bits/ostream.tcc:
 
-/usr/local/include/MQTTSubscribeOpts.h:
+/usr/include/c++/13/bits/vector.tcc:
 
-/usr/include/c++/13/bits/exception_ptr.h:
+/usr/include/c++/13/bits/stl_raw_storage_iter.h:
 
-/usr/include/c++/13/bits/ranges_algobase.h:
+/usr/include/c++/13/bits/streambuf_iterator.h:
 
-/usr/include/c++/13/bits/concept_check.h:
-
-/usr/include/c++/13/system_error:
-
-/usr/include/c++/13/bits/max_size_type.h:
-
-/usr/include/c++/13/bits/erase_if.h:
-
-/usr/include/c++/13/bits/node_handle.h:
-
-/usr/include/c++/13/memory:
-
-/usr/include/c++/13/iostream:
-
-/usr/include/c++/13/bits/codecvt.h:
-
-/usr/include/c++/13/bits/charconv.h:
-
-/usr/include/c++/13/bits/fs_path.h:
+/usr/include/c++/13/concepts:
 
 /usr/include/c++/13/bits/stl_algo.h:
 
-/usr/include/c++/13/bits/cxxabi_forced.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslconf.h:
 
-/usr/include/x86_64-linux-gnu/bits/timesize.h:
-
-/usr/include/c++/13/bits/move.h:
-
-/usr/include/c++/13/cerrno:
-
-/usr/include/openssl/core.h:
-
-/usr/include/c++/13/vector:
-
-/usr/include/c++/13/tr1/modified_bessel_func.tcc:
-
-/usr/include/c++/13/bits/basic_string.h:
-
-/usr/include/c++/13/bits/stl_iterator_base_funcs.h:
-
-/usr/include/c++/13/bits/uses_allocator_args.h:
-
-/usr/local/include/mqtt/create_options.h:
-
-/usr/include/c++/13/bits/allocator.h:
-
-/usr/include/linux/limits.h:
-
-/usr/include/c++/13/cstdlib:
-
-/usr/include/wctype.h:
-
-/usr/include/c++/13/bits/char_traits.h:
-
-/usr/include/c++/13/algorithm:
-
-/usr/local/include/mqtt/iaction_listener.h:
-
-/usr/include/c++/13/bits/hashtable_policy.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h:
-
-/usr/include/c++/13/cwctype:
-
-/usr/include/c++/13/bits/specfun.h:
+/usr/include/x86_64-linux-gnu/bits/select2.h:
 
 /usr/include/x86_64-linux-gnu/bits/time.h:
 
 /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h:
 
+/usr/include/c++/13/iostream:
+
+/usr/include/c++/13/memory:
+
+/usr/include/c++/13/ext/atomicity.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/crypto.h:
+
+/usr/include/c++/13/bits/fs_ops.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/callback.h:
+
+/usr/include/x86_64-linux-gnu/bits/in.h:
+
+/usr/include/c++/13/bits/ranges_base.h:
+
+/usr/include/c++/13/bits/ranges_algobase.h:
+
+/usr/include/c++/13/bits/exception_ptr.h:
+
+/usr/include/c++/13/condition_variable:
+
+/usr/include/c++/13/bits/ranges_algo.h:
+
+/usr/include/c++/13/bits/quoted_string.h:
+
+/usr/include/c++/13/bits/uses_allocator.h:
+
+/usr/include/ctype.h:
+
+/usr/include/c++/13/bits/ptr_traits.h:
+
+/usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/curl.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:
+
+/usr/include/c++/13/bits/postypes.h:
+
+/usr/include/c++/13/algorithm:
+
+/usr/include/c++/13/bits/hashtable_policy.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/__mbstate_t.h:
+
 /usr/include/libintl.h:
 
 /usr/include/c++/13/tr1/exp_integral.tcc:
 
-/home/radmann/EaSync/lib/core/drivers/ble.cpp:
+/usr/include/c++/13/cstdlib:
 
-/usr/include/c++/13/stdexcept:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/types.h:
 
-/usr/include/openssl/cryptoerr_legacy.h:
+/usr/include/x86_64-linux-gnu/asm/unistd.h:
 
-/usr/include/c++/13/ext/atomicity.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/opensslv.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
+/usr/include/c++/13/bits/node_handle.h:
 
-/usr/include/c++/13/bits/atomic_wait.h:
+/usr/include/c++/13/bits/nested_exception.h:
 
-/usr/include/c++/13/initializer_list:
+/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
 
-/usr/include/x86_64-linux-gnu/openssl/configuration.h:
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/token.h:
 
-/usr/include/c++/13/bits/localefwd.h:
+/usr/include/c++/13/bits/predefined_ops.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/params.h:
 
-/usr/include/c++/13/bits/functexcept.h:
+/usr/include/c++/13/bits/stl_iterator_base_funcs.h:
+
+/usr/include/c++/13/bits/uses_allocator_args.h:
+
+/usr/include/c++/13/bits/allocator.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/mbstate_t.h:
 
 /usr/include/c++/13/bits/invoke.h:
 
-/usr/include/x86_64-linux-gnu/asm/unistd.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core.h:
+
+/usr/include/c++/13/bits/stl_algobase.h:
+
+/usr/include/c++/13/bits/basic_ios.tcc:
+
+/usr/include/c++/13/array:
+
+/usr/include/c++/13/string:
+
+/usr/include/c++/13/debug/assertions.h:
+
+/usr/include/x86_64-linux-gnu/bits/fp-logb.h:
+
+/usr/include/netinet/in.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bio.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
+
+/usr/include/c++/13/bits/locale_conv.h:
+
+/usr/include/c++/13/bits/hash_bytes.h:
+
+/usr/include/c++/13/exception:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/disconnect_options.h:
+
+/usr/include/c++/13/bits/stl_multimap.h:
+
+/usr/include/c++/13/bit:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/stack.h:
+
+/usr/include/c++/13/bits/erase_if.h:
+
+/usr/include/c++/13/bits/atomic_base.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evperr.h:
+
+/usr/include/c++/13/bits/memoryfwd.h:
+
+/usr/include/c++/13/bits/ranges_cmp.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/thread_queue.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/indicator.h:
+
+/usr/include/c++/13/ext/alloc_traits.h:
+
+/usr/include/c++/13/streambuf:
+
+/usr/include/x86_64-linux-gnu/bits/floatn.h:
+
+/usr/include/c++/13/ctime:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/configuration.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/async_client.h:
+
+/usr/include/c++/13/pstl/execution_defs.h:
+
+/usr/include/c++/13/bits/functional_hash.h:
+
+/usr/include/c++/13/bits/range_access.h:
+
+/usr/include/c++/13/bits/basic_ios.h:
+
+/usr/include/c++/13/cwctype:
+
+/usr/include/c++/13/bits/specfun.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bioerr.h:
+
+/usr/include/x86_64-linux-gnu/bits/fp-fast.h:
+
+/usr/include/x86_64-linux-gnu/c++/13/bits/opt_random.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr_legacy.h:
+
+/usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
+
+/usr/include/asm-generic/bitsperlong.h:
+
+/usr/include/c++/13/bits/unordered_map.h:
+
+/usr/include/c++/13/bits/stl_uninitialized.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/easy.h:
+
+/home/radmann/EaSync/lib/core/include/payloadUtility.hpp:
+
+/usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
+
+/home/radmann/EaSync/lib/core/include/core.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1err.h:
+
+/usr/include/c++/13/map:
+
+/usr/include/c++/13/debug/debug.h:
+
+/usr/include/c++/13/clocale:
+
+/usr/include/c++/13/atomic:
 
 /usr/include/c++/13/string_view:
 
@@ -3339,43 +3482,13 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timeval.h:
 
-/usr/include/c++/13/bits/cpp_type_traits.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bn.h:
 
-/usr/include/openssl/safestack.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/bnerr.h:
 
-/usr/include/x86_64-linux-gnu/bits/setjmp.h:
+/usr/include/c++/13/bits/stl_bvector.h:
 
-/usr/include/openssl/bioerr.h:
-
-/usr/local/include/mqtt/iclient_persistence.h:
-
-/usr/include/openssl/macros.h:
-
-/usr/include/x86_64-linux-gnu/bits/environments.h:
-
-/usr/include/alloca.h:
-
-/usr/include/x86_64-linux-gnu/bits/syscall.h:
-
-/usr/include/c++/13/pstl/execution_defs.h:
-
-/usr/include/c++/13/bits/functional_hash.h:
-
-/usr/local/include/mqtt/exception.h:
-
-/usr/include/c++/13/functional:
-
-/usr/include/c++/13/bits/exception_defines.h:
-
-/usr/include/c++/13/bits/unique_lock.h:
-
-/usr/include/c++/13/bits/ranges_util.h:
-
-/home/radmann/EaSync/lib/core/drivers/ble.hpp:
-
-/usr/include/c++/13/concepts:
-
-/usr/include/c++/13/bits/fs_ops.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/core_dispatch.h:
 
 /usr/include/c++/13/bits/atomic_lockfree_defines.h:
 
@@ -3383,33 +3496,103 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/pthread.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/__fpos64_t.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/asn1.h:
 
-/home/radmann/EaSync/lib/core/include/core.h:
+/usr/include/c++/13/initializer_list:
 
-/usr/include/linux/posix_types.h:
+/usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h:
 
-/usr/include/openssl/asn1.h:
+/usr/include/c++/13/bits/localefwd.h:
 
-/home/radmann/EaSync/lib/core/include/payloadUtility.hpp:
+/usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
 
-/usr/include/c++/13/bits/atomic_base.h:
+/usr/include/c++/13/bits/functexcept.h:
 
-/usr/include/c++/13/bit:
+/usr/include/x86_64-linux-gnu/bits/wchar2.h:
 
-/usr/include/c++/13/bits/stl_multimap.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/delivery_token.h:
 
-/usr/include/c++/13/bits/memoryfwd.h:
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/cryptoerr.h:
 
-/usr/include/c++/13/bits/predefined_ops.h:
+/usr/include/c++/13/bits/alloc_traits.h:
 
-/usr/include/errno.h:
+/usr/include/c++/13/bits/sstream.tcc:
 
-/usr/include/c++/13/bits/utility.h:
+/usr/include/c++/13/bits/fs_path.h:
 
-/usr/include/x86_64-linux-gnu/bits/getopt_posix.h:
+/usr/include/c++/13/bits/charconv.h:
 
-/usr/local/include/MQTTReasonCodes.h:
+/usr/include/c++/13/unordered_map:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/symhacks.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/macros.h:
+
+/usr/include/c++/13/utility:
+
+/usr/include/linux/close_range.h:
+
+/usr/include/c++/13/bits/atomic_wait.h:
+
+/usr/include/c++/13/vector:
+
+/usr/include/c++/13/tr1/modified_bessel_func.tcc:
+
+/usr/include/c++/13/bits/basic_string.h:
+
+/usr/include/c++/13/bits/memory_resource.h:
+
+/usr/include/c++/13/bits/stl_heap.h:
+
+/usr/include/c++/13/bits/cxxabi_forced.h:
+
+/usr/include/x86_64-linux-gnu/bits/timesize.h:
+
+/usr/include/c++/13/bits/move.h:
+
+/usr/include/c++/13/cerrno:
+
+/usr/include/wctype.h:
+
+/usr/include/c++/13/bits/char_traits.h:
+
+/usr/include/c++/13/bits/chrono.h:
+
+/usr/include/c++/13/bits/concept_check.h:
+
+/usr/include/c++/13/ext/concurrence.h:
+
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/mprintf.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/evp.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/types.h:
+
+/usr/include/c++/13/system_error:
+
+/usr/include/c++/13/bits/max_size_type.h:
+
+/usr/include/c++/13/bits/codecvt.h:
+
+/usr/include/c++/13/bits/cpp_type_traits.h:
+
+/usr/include/x86_64-linux-gnu/bits/setjmp.h:
+
+/usr/include/c++/13/bits/exception.h:
+
+/usr/include/c++/13/bits/ranges_util.h:
+
+/usr/include/c++/13/bits/unique_lock.h:
+
+/home/radmann/EaSync/lib/core/drivers/ble.hpp:
+
+/usr/include/c++/13/bits/exception_defines.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-least.h:
+
+/usr/include/c++/13/pstl/glue_algorithm_defs.h:
+
+/usr/include/unistd.h:
 
 /usr/include/c++/13/bits/ios_base.h:
 
@@ -3419,39 +3602,17 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/c++/13/tr1/bessel_function.tcc:
 
-/usr/include/c++/13/bits/uses_allocator.h:
+/usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
 
-/usr/include/ctype.h:
-
-/usr/include/c++/13/bits/ptr_traits.h:
-
-/usr/include/x86_64-linux-gnu/bits/struct_mutex.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_FILE.h:
-
-/usr/local/include/mqtt/reason_code.h:
+/usr/include/c++/13/bits/istream.tcc:
 
 /usr/include/endian.h:
 
 /usr/include/c++/13/bits/iterator_concepts.h:
 
-/usr/include/openssl/evperr.h:
-
 /usr/include/c++/13/bits/locale_classes.h:
 
-/usr/include/c++/13/bits/alloc_traits.h:
-
-/usr/include/c++/13/bits/sstream.tcc:
-
-/usr/include/c++/13/bits/vector.tcc:
-
-/usr/include/c++/13/bits/stl_raw_storage_iter.h:
-
-/usr/include/c++/13/bits/streambuf_iterator.h:
-
-/usr/include/c++/13/bits/stl_function.h:
-
-/usr/include/c++/13/bits/stl_tree.h:
+/usr/include/c++/13/bits/locale_facets.h:
 
 /usr/include/asm-generic/posix_types.h:
 
@@ -3469,15 +3630,13 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/c++/13/bits/stl_tempbuf.h:
 
+/usr/include/c++/13/bits/stl_function.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/obj_mac.h:
+
+/usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h:
+
 /usr/include/c++/13/bits/locale_facets_nonio.tcc:
-
-/usr/include/c++/13/bits/nested_exception.h:
-
-/usr/include/openssl/e_os2.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/struct_itimerspec.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h:
 
 /usr/include/c++/13/bits/new_allocator.h:
 
@@ -3485,83 +3644,47 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/c++/13/bits/parse_numbers.h:
 
-/usr/include/c++/13/bits/postypes.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/event.h:
 
-/usr/include/c++/13/bits/quoted_string.h:
+/usr/include/errno.h:
 
-/usr/include/openssl/obj_mac.h:
+/usr/include/c++/13/bits/utility.h:
 
-/usr/include/c++/13/bits/requires_hosted.h:
+/usr/include/x86_64-linux-gnu/bits/getopt_posix.h:
+
+/usr/include/net/if.h:
+
+/usr/include/string.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTAsync.h:
+
+/usr/include/features-time64.h:
+
+/usr/include/features.h:
+
+/usr/include/limits.h:
 
 /usr/include/c++/13/bits/streambuf.tcc:
 
-/usr/include/linux/errno.h:
-
 /usr/lib/gcc/x86_64-linux-gnu/13/include/stdarg.h:
 
-/usr/include/x86_64-linux-gnu/bits/stdint-least.h:
+/usr/include/linux/errno.h:
 
-/usr/include/unistd.h:
+/usr/include/x86_64-linux-gnu/bits/stdio2-decl.h:
 
-/usr/include/c++/13/pstl/glue_algorithm_defs.h:
+/usr/include/linux/limits.h:
 
-/usr/include/x86_64-linux-gnu/bits/floatn.h:
+/usr/include/c++/13/locale:
 
-/usr/include/openssl/bn.h:
+/usr/include/c++/13/semaphore:
 
-/usr/include/c++/13/ctime:
+/usr/include/locale.h:
 
-/usr/include/asm-generic/socket.h:
+/usr/include/sched.h:
 
-/usr/include/c++/13/bits/ostream.tcc:
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/header.h:
 
-/usr/include/c++/13/bits/istream.tcc:
-
-/usr/include/x86_64-linux-gnu/c++/13/bits/c++allocator.h:
-
-/usr/include/c++/13/bits/exception.h:
-
-/usr/include/openssl/bnerr.h:
-
-/home/radmann/EaSync/lib/core/drivers/wifi.hpp:
-
-/usr/include/x86_64-linux-gnu/asm/unistd_64.h:
-
-/usr/include/c++/13/bits/std_abs.h:
-
-/usr/include/c++/13/bits/basic_ios.h:
-
-/usr/include/c++/13/bits/range_access.h:
-
-/usr/include/c++/13/bits/stl_bvector.h:
-
-/usr/include/c++/13/bits/memory_resource.h:
-
-/usr/include/c++/13/bits/stl_heap.h:
-
-/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
-
-/usr/include/c++/13/bits/locale_conv.h:
-
-/usr/include/openssl/opensslv.h:
-
-/usr/include/openssl/params.h:
-
-/usr/include/c++/13/bits/locale_facets.h:
-
-/usr/include/openssl/symhacks.h:
-
-/usr/include/c++/13/bits/shared_ptr.h:
-
-/home/radmann/EaSync/lib/core/drivers/mqtt.hpp:
-
-/usr/include/c++/13/cctype:
-
-/usr/include/openssl/types.h:
-
-/usr/include/c++/13/bits/ranges_cmp.h:
-
-/usr/local/include/mqtt/export.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/export.h:
 
 /usr/include/c++/13/bits/basic_string.tcc:
 
@@ -3575,13 +3698,21 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/stdlib.h:
 
-/usr/local/include/mqtt/buffer_ref.h:
+/usr/include/time.h:
+
+/usr/include/c++/13/fstream:
+
+/usr/include/wchar.h:
 
 /usr/include/x86_64-linux-gnu/asm/errno.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct___jmp_buf_tag.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h:
+/home/radmann/EaSync/lib/core/drivers/wifi.hpp:
+
+/usr/include/x86_64-linux-gnu/asm/unistd_64.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/will_options.h:
 
 /usr/include/c++/13/bits/std_mutex.h:
 
@@ -3605,9 +3736,17 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h:
 
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objects.h:
+
 /usr/include/c++/13/numbers:
 
 /usr/include/x86_64-linux-gnu/bits/endianness.h:
+
+/usr/include/x86_64-linux-gnu/bits/environments.h:
+
+/usr/include/alloca.h:
+
+/usr/include/x86_64-linux-gnu/bits/syscall.h:
 
 /usr/include/c++/13/bits/refwrap.h:
 
@@ -3623,9 +3762,9 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/posix1_lim.h:
 
-/usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/properties.h:
 
-/usr/local/include/mqtt/buffer_view.h:
+/usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
 
 /usr/include/c++/13/bits/locale_classes.tcc:
 
@@ -3641,7 +3780,17 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/sched.h:
 
+/usr/include/x86_64-linux-gnu/bits/types/cookie_io_functions_t.h:
+
+/usr/include/x86_64-linux-gnu/bits/select-decl.h:
+
 /usr/include/x86_64-linux-gnu/bits/select.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h:
 
@@ -3655,6 +3804,14 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/sys/select.h:
 
+/usr/include/x86_64-linux-gnu/bits/stdlib.h:
+
+/usr/include/c++/13/pstl/pstl_config.h:
+
+/usr/include/c++/13/compare:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/platform.h:
+
 /usr/include/x86_64-linux-gnu/bits/semaphore.h:
 
 /usr/include/c++/13/bits/shared_ptr_atomic.h:
@@ -3663,17 +3820,21 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/timex.h:
 
+/usr/include/c++/13/deque:
+
+/usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTSubscribeOpts.h:
+
 /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h:
 
-/usr/include/c++/13/bits/stl_iterator_base_types.h:
-
 /usr/include/c++/13/bits/stl_map.h:
+
+/usr/include/c++/13/bits/stl_iterator_base_types.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__sigset_t.h:
 
 /usr/include/x86_64-linux-gnu/sys/single_threaded.h:
-
-/usr/include/x86_64-linux-gnu/bits/types/clock_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/error_t.h:
 
@@ -3683,6 +3844,8 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/types/sigset_t.h:
 
+/home/radmann/EaSync/lib/thirdParty/curl/install/include/curl/system.h:
+
 /usr/include/x86_64-linux-gnu/bits/math-vector.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_sched_param.h:
@@ -3691,19 +3854,29 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/types/wint_t.h:
 
-/usr/local/include/mqtt/callback.h:
-
 /usr/include/x86_64-linux-gnu/bits/typesizes.h:
 
 /usr/include/x86_64-linux-gnu/bits/uio_lim.h:
 
+/usr/include/x86_64-linux-gnu/bits/unistd-decl.h:
+
+/usr/include/x86_64-linux-gnu/bits/unistd.h:
+
 /usr/include/x86_64-linux-gnu/bits/unistd_ext.h:
+
+/usr/include/x86_64-linux-gnu/bits/strings_fortified.h:
+
+/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitflags.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTReasonCodes.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/e_os2.h:
 
 /usr/include/x86_64-linux-gnu/bits/wchar.h:
 
-/usr/include/time.h:
-
-/usr/local/include/MQTTProperties.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTExportDeclarations.h:
 
 /usr/include/x86_64-linux-gnu/bits/wctype-wchar.h:
 
@@ -3739,13 +3912,19 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/os_defines.h:
 
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/subscribe_options.h:
+
 /usr/include/x86_64-linux-gnu/bits/struct_rwlock.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_timespec.h:
 
 /usr/include/x86_64-linux-gnu/c++/13/bits/time_members.h:
 
-/usr/include/x86_64-linux-gnu/openssl/opensslconf.h:
+/usr/include/c++/13/bits/stl_queue.h:
+
+/usr/include/c++/13/bits/allocated_ptr.h:
+
+/usr/include/x86_64-linux-gnu/gnu/stubs.h:
 
 /usr/include/x86_64-linux-gnu/sys/syscall.h:
 
@@ -3754,12 +3933,6 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 /home/radmann/EaSync/lib/core/drivers/mock.hpp:
 
 /usr/lib/gcc/x86_64-linux-gnu/13/include/limits.h:
-
-/usr/include/sched.h:
-
-/usr/local/include/mqtt/async_client.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/13/include/syslimits.h:
 
 /usr/include/c++/13/bits/stl_construct.h:
 
@@ -3781,12 +3954,6 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/math.h:
 
-/usr/include/c++/13/bits/deque.tcc:
-
-/usr/include/net/if.h:
-
-/usr/include/string.h:
-
 /usr/include/c++/13/cmath:
 
 /usr/include/c++/13/format:
@@ -3796,6 +3963,10 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 /usr/include/c++/13/span:
 
 /usr/include/c++/13/tr1/beta_function.tcc:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/message.h:
+
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/topic.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
 
@@ -3807,37 +3978,21 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /usr/include/x86_64-linux-gnu/bits/thread-shared-types.h:
 
-/usr/local/include/mqtt/connect_options.h:
-
 /usr/include/c++/13/bits/ranges_uninitialized.h:
 
 /usr/include/c++/13/tr1/poly_hermite.tcc:
-
-/usr/include/x86_64-linux-gnu/curl/curlver.h:
-
-/usr/include/x86_64-linux-gnu/bits/atomic_wide_counter.h:
-
-/usr/include/x86_64-linux-gnu/bits/waitflags.h:
-
-/usr/local/include/MQTTClientPersistence.h:
 
 /usr/include/c++/13/tr1/poly_laguerre.tcc:
 
 /usr/include/c++/13/numeric:
 
-/usr/include/c++/13/istream:
-
 /usr/include/c++/13/bits/stl_iterator.h:
+
+/usr/include/c++/13/istream:
 
 /usr/include/c++/13/tr1/special_function_util.h:
 
-/usr/include/strings.h:
-
 /usr/include/c++/13/variant:
-
-/usr/include/c++/13/chrono:
-
-/usr/include/c++/13/bits/std_function.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h:
 
@@ -3846,6 +4001,8 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 /usr/include/c++/13/bits/stl_pair.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/struct_tm.h:
+
+/home/radmann/EaSync/lib/thirdParty/openssl/install/include/openssl/objectserr.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/__fpos_t.h:
 
@@ -3857,60 +4014,44 @@ CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/co
 
 /home/radmann/EaSync/lib/core/drivers/mqtt.cpp:
 
-/usr/include/c++/13/bits/stl_list.h:
+/usr/include/c++/13/bits/shared_ptr.h:
 
-/usr/local/include/mqtt/properties.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/exception.h:
 
-/usr/include/c++/13/bits/allocated_ptr.h:
+/home/radmann/EaSync/lib/core/drivers/mqtt.hpp:
 
-/usr/include/x86_64-linux-gnu/gnu/stubs.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/reason_code.h:
 
-/usr/include/c++/13/bits/stl_queue.h:
+/usr/lib/gcc/x86_64-linux-gnu/13/include/stdbool.h:
 
-/usr/include/c++/13/bits/ranges_algo.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTClientPersistence.h:
 
-/usr/include/c++/13/condition_variable:
+/usr/include/c++/13/cctype:
 
-/usr/include/c++/13/cstring:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iasync_client.h:
 
-/usr/include/x86_64-linux-gnu/bits/types/__FILE.h:
+/home/radmann/EaSync/lib/core/drivers/ble.cpp:
 
-/usr/include/c++/13/deque:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/include/MQTTProperties.h:
 
-/usr/include/c++/13/list:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_ref.h:
 
-/usr/include/c++/13/clocale:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/buffer_view.h:
 
-/usr/include/c++/13/debug/debug.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/connect_options.h:
 
-/usr/include/c++/13/map:
+/usr/include/c++/13/filesystem:
 
-/usr/include/c++/13/queue:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/create_options.h:
 
-/usr/local/include/MQTTAsync.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iaction_listener.h:
 
-/usr/include/c++/13/bits/stl_algobase.h:
+/usr/include/c++/13/bits/std_abs.h:
 
-/usr/local/include/MQTTExportDeclarations.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/iclient_persistence.h:
 
-/usr/local/include/mqtt/platform.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/server_response.h:
 
-/usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h:
+/usr/include/c++/13/bits/requires_hosted.h:
 
-/usr/local/include/mqtt/event.h:
-
-/usr/include/asm-generic/bitsperlong.h:
-
-/usr/include/c++/13/bits/unordered_map.h:
-
-/usr/include/c++/13/bits/stl_uninitialized.h:
-
-/usr/local/include/mqtt/iasync_client.h:
-
-/usr/local/include/mqtt/message.h:
-
-/usr/include/c++/13/utility:
-
-/usr/include/linux/close_range.h:
-
-/usr/local/include/mqtt/server_response.h:
+/home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/include/mqtt/string_collection.h:

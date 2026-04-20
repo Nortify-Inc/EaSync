@@ -51,7 +51,7 @@ CMAKE_ASM_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
 // MinSizeRel ...
-CMAKE_BUILD_TYPE:STRING=
+CMAKE_BUILD_TYPE:STRING=Release
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -711,7 +711,10 @@ LLAMA_WASM_MEM64:BOOL=ON
 MATH_LIBRARY:FILEPATH=/usr/lib/x86_64-linux-gnu/libm.so
 
 //No help, variable specified on the command line.
-ORT_ROOT:UNINITIALIZED=/home/radmann/EaSync/lib/thirdParty/onnxruntime-linux-x64-1.20.1
+OPENSSL_INCLUDE_DIR:UNINITIALIZED=/home/radmann/EaSync/lib/thirdParty/openssl/include
+
+//No help, variable specified on the command line.
+OPENSSL_ROOT_DIR:UNINITIALIZED=/home/radmann/EaSync/lib/thirdParty/openssl
 
 //CXX compiler flags for OpenMP parallelization
 OpenMP_CXX_FLAGS:STRING=-fopenmp

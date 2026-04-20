@@ -220,6 +220,11 @@ libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/wifi.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/zigbee.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/build.make
+libeasync_core.so: /home/radmann/EaSync/lib/thirdParty/paho.mqtt.cpp/install/lib/libpaho-mqttpp3.a
+libeasync_core.so: /home/radmann/EaSync/lib/thirdParty/paho.mqtt.c/install/lib/libpaho-mqtt3as.a
+libeasync_core.so: /home/radmann/EaSync/lib/thirdParty/curl/install/lib/libcurl.a
+libeasync_core.so: /home/radmann/EaSync/lib/thirdParty/openssl/install/lib64/libssl.a
+libeasync_core.so: /home/radmann/EaSync/lib/thirdParty/openssl/install/lib64/libcrypto.a
 libeasync_core.so: CMakeFiles/easync_core.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/radmann/EaSync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX shared library libeasync_core.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/easync_core.dir/link.txt --verbose=$(VERBOSE)
