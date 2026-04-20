@@ -26,7 +26,8 @@ class OAuthService {
   GoogleSignIn _createGoogleSignIn() {
     return GoogleSignIn(
       scopes: const ['openid', 'email', 'profile'],
-      clientId: (!kIsWeb &&
+      clientId:
+          (!kIsWeb &&
               Platform.isIOS &&
               OAuthConfig.googleIosClientId.trim().isNotEmpty)
           ? OAuthConfig.googleIosClientId

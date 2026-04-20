@@ -9,6 +9,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:app_settings/app_settings.dart';
@@ -1182,26 +1183,82 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
 
     if (devices.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.add_circle_outline, size: 36, color: EaColor.fore),
-            const SizedBox(height: 8),
-            Text(
-              EaI18n.t(context, 'Add your first device'),
-              style: EaText.primary.copyWith(
-                color: EaAdaptiveColor.bodyText(context),
-              ),
+        child: EaFadeSlideIn(
+          duration: const Duration(milliseconds: 1000),
+          child: GestureDetector(
+            onTap: () {
+              if (!_ensureCanAddDevice()) return;
+              _openEditor();
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Outer Glow
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            const Color(0xFFB155FF).withValues(alpha: 0.2),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                    // The Orb
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [EaColor.fore, Color(0xFFB155FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFB155FF).withValues(alpha: 0.4),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.add_rounded, size: 42, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  EaI18n.t(context, 'Add your first device'),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 60),
+                  child: Text(
+                    EaI18n.t(context, 'Let EaSync to discover him or add manually.'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              EaI18n.t(context, 'Let EaSync to discover him or add manually.'),
-              style: EaText.secondary.copyWith(
-                color: EaAdaptiveColor.secondaryText(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       );
     }
@@ -1570,12 +1627,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
       }
 
       if (password.trim().isEmpty) {
-        _showError(
-          EaI18n.t(
-            context,
-            'Please enter your Wi-Fi password.',
-          ),
-        );
+        _showError(EaI18n.t(context, 'Please enter your Wi-Fi password.'));
         return;
       }
     }
@@ -2148,7 +2200,10 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     style: EaButtonStyle.gradientFilled(
                       context: context,
                       borderRadius: BorderRadius.circular(14),
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 10,
+                      ),
                     ),
                     onPressed: _save,
                     child: Text(

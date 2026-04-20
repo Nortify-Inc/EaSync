@@ -21,8 +21,8 @@
 #include "driver.hpp"
 #include "mock.hpp"
 #include "ble.hpp"
-#include "adaptive_layer.hpp"
-#include "payload_utility.hpp"
+#include "adaptiveLayer.hpp"
+#include "payloadUtility.hpp"
 
 #ifdef EASYNC_ENABLE_MQTT_DRIVER
 #include "mqtt.hpp"
@@ -1169,7 +1169,7 @@ CoreResult core_get_device(CoreContext* core, const char* uuid, CoreDeviceInfo* 
     std::memset(outInfo, 0, sizeof(CoreDeviceInfo));
     std::strncpy(outInfo->uuid, dev.uuid.c_str(), CORE_MAX_UUID - 1);
     std::strncpy(outInfo->name, dev.name.c_str(), CORE_MAX_NAME - 1);
-    std::strncpy(outInfo->band, dev.brand.c_str(), CORE_MAX_BRAND - 1);
+    std::strncpy(outInfo->brand, dev.brand.c_str(), CORE_MAX_BRAND - 1);
     std::strncpy(outInfo->model, dev.model.c_str(), CORE_MAX_MODEL - 1);
 
     outInfo->protocol = dev.protocol;
@@ -1220,7 +1220,7 @@ CoreResult core_list_devices(CoreContext* core,
 
             std::strncpy(info.uuid, dev.uuid.c_str(), CORE_MAX_UUID - 1);
             std::strncpy(info.name, dev.name.c_str(), CORE_MAX_NAME - 1);
-            std::strncpy(info.band, dev.brand.c_str(), CORE_MAX_BRAND - 1);
+            std::strncpy(info.brand, dev.brand.c_str(), CORE_MAX_BRAND - 1);
             std::strncpy(info.model, dev.model.c_str(), CORE_MAX_MODEL - 1);
 
             info.protocol = dev.protocol;

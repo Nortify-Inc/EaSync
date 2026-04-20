@@ -300,8 +300,9 @@ final aiSetSystemPrompt = (() {
 })();
 
 const String _kAiSystemPrompt =
-    "You are Agent, an AI assistant created by Nortify Inc. "
-    "Be quick and concise. Don't invent info.";
+    "Your name is Agent, an personal assistant by Nortify Inc. "
+    "Always reply in 1-3 short sentences. Never use lists, headers, or long explanations. "
+    "Be direct and concise. Stop after answering the question.";
 
 void _configureAiSystemPrompt() {
   if (aiSetSystemPrompt == null) return;
@@ -1143,14 +1144,14 @@ typedef _coreProvisionWifiDart =
     int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 
 typedef _coreSetDeviceEndpointC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
 typedef _coreSetDeviceEndpointDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>);
 
 typedef _coreSetDeviceCredentialC =
-  Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 typedef _coreSetDeviceCredentialDart =
-  int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>, Pointer<Utf8>);
 
 typedef _coreSimulateC = Int32 Function(Pointer<Void>);
 typedef _coreSimulateDart = int Function(Pointer<Void>);
@@ -1188,8 +1189,10 @@ typedef _coreSetEventCallbackDart =
     );
 
 // AdaptiveLayer FFI bindings
-typedef _coreEstablishConnectionC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
-typedef _coreEstablishConnectionDart = int Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreEstablishConnectionC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>);
+typedef _coreEstablishConnectionDart =
+    int Function(Pointer<Void>, Pointer<Utf8>);
 
 typedef _coreEnsureConnectedC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreEnsureConnectedDart = int Function(Pointer<Void>, Pointer<Utf8>);
@@ -1197,35 +1200,22 @@ typedef _coreEnsureConnectedDart = int Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreDisconnectDeviceC = Int32 Function(Pointer<Void>, Pointer<Utf8>);
 typedef _coreDisconnectDeviceDart = int Function(Pointer<Void>, Pointer<Utf8>);
 
-typedef _coreGetConnectionStateC = Int32 Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Int8>,
-  Uint32,
-);
-typedef _coreGetConnectionStateDart = int Function(
-  Pointer<Void>,
-  Pointer<Utf8>,
-  Pointer<Int8>,
-  int,
-);
+typedef _coreGetConnectionStateC =
+    Int32 Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, Uint32);
+typedef _coreGetConnectionStateDart =
+    int Function(Pointer<Void>, Pointer<Utf8>, Pointer<Int8>, int);
 
-typedef _coreDiscoverDevicesC = Int32 Function(
-  Pointer<Void>,
-  Int32,
-  Int32,
-  Pointer<Int8>,
-  Uint32,
-  Pointer<Uint32>,
-);
-typedef _coreDiscoverDevicesDart = int Function(
-  Pointer<Void>,
-  int,
-  int,
-  Pointer<Int8>,
-  int,
-  Pointer<Uint32>,
-);
+typedef _coreDiscoverDevicesC =
+    Int32 Function(
+      Pointer<Void>,
+      Int32,
+      Int32,
+      Pointer<Int8>,
+      Uint32,
+      Pointer<Uint32>,
+    );
+typedef _coreDiscoverDevicesDart =
+    int Function(Pointer<Void>, int, int, Pointer<Int8>, int, Pointer<Uint32>);
 
 final _coreCreateDart _coreCreate = coreLib
     .lookupFunction<_coreCreateC, _coreCreateDart>('core_create');
@@ -1348,10 +1338,10 @@ final _coreSetDeviceEndpointDart? _coreSetDeviceEndpoint = (() {
 
 final _coreSetDeviceCredentialDart? _coreSetDeviceCredential = (() {
   try {
-    return coreLib
-        .lookupFunction<_coreSetDeviceCredentialC, _coreSetDeviceCredentialDart>(
-          'core_set_device_credential',
-        );
+    return coreLib.lookupFunction<
+      _coreSetDeviceCredentialC,
+      _coreSetDeviceCredentialDart
+    >('core_set_device_credential');
   } catch (_) {
     return null;
   }
@@ -1371,10 +1361,10 @@ final _coreEstablishConnectionDart? _coreEstablishConnection = (() {
 
 final _coreEnsureConnectedDart? _coreEnsureConnected = (() {
   try {
-    return coreLib.lookupFunction<
-      _coreEnsureConnectedC,
-      _coreEnsureConnectedDart
-    >('core_ensure_connected');
+    return coreLib
+        .lookupFunction<_coreEnsureConnectedC, _coreEnsureConnectedDart>(
+          'core_ensure_connected',
+        );
   } catch (_) {
     return null;
   }
@@ -1382,10 +1372,10 @@ final _coreEnsureConnectedDart? _coreEnsureConnected = (() {
 
 final _coreDisconnectDeviceDart? _coreDisconnectDevice = (() {
   try {
-    return coreLib.lookupFunction<
-      _coreDisconnectDeviceC,
-      _coreDisconnectDeviceDart
-    >('core_disconnect_device');
+    return coreLib
+        .lookupFunction<_coreDisconnectDeviceC, _coreDisconnectDeviceDart>(
+          'core_disconnect_device',
+        );
   } catch (_) {
     return null;
   }
@@ -1393,10 +1383,10 @@ final _coreDisconnectDeviceDart? _coreDisconnectDevice = (() {
 
 final _coreGetConnectionStateDart? _coreGetConnectionState = (() {
   try {
-    return coreLib.lookupFunction<
-      _coreGetConnectionStateC,
-      _coreGetConnectionStateDart
-    >('core_get_connection_state');
+    return coreLib
+        .lookupFunction<_coreGetConnectionStateC, _coreGetConnectionStateDart>(
+          'core_get_connection_state',
+        );
   } catch (_) {
     return null;
   }
@@ -1404,10 +1394,10 @@ final _coreGetConnectionStateDart? _coreGetConnectionState = (() {
 
 final _coreDiscoverDevicesDart? _coreDiscoverDevices = (() {
   try {
-    return coreLib.lookupFunction<
-      _coreDiscoverDevicesC,
-      _coreDiscoverDevicesDart
-    >('core_discover_devices');
+    return coreLib
+        .lookupFunction<_coreDiscoverDevicesC, _coreDiscoverDevicesDart>(
+          'core_discover_devices',
+        );
   } catch (_) {
     return null;
   }
@@ -1717,7 +1707,8 @@ class Bridge {
   static final Map<String, int> _mideaApplianceIdByHost = {};
   static final Map<String, String> _mideaTokenByDevice = {};
   static final Map<String, String> _mideaKeyByDevice = {};
-  static final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  static final FlutterSecureStorage _secureStorage =
+      const FlutterSecureStorage();
 
   static const String _mideaAppId = '1010';
   static const String _mideaClientType = '1';
@@ -1740,9 +1731,9 @@ class Bridge {
     final sortedEntries = payload.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
 
-    final query = Uri(queryParameters: {
-      for (final e in sortedEntries) e.key: e.value,
-    }).query;
+    final query = Uri(
+      queryParameters: {for (final e in sortedEntries) e.key: e.value},
+    ).query;
 
     final decoded = Uri.decodeQueryComponent(query.replaceAll('+', '%20'));
     final source = '${uri.path}$decoded$_mideaSignKey';
@@ -1828,17 +1819,31 @@ class Bridge {
   }) async {
     final b = (brand ?? '').toLowerCase();
     final m = (model ?? '').toLowerCase();
-    final isMidea = b.contains('midea') || m.contains('midea') || m.contains('nethome');
+    final isMidea =
+        b.contains('midea') || m.contains('midea') || m.contains('nethome');
     if (!isMidea) return;
 
-    if (_mideaTokenByDevice.containsKey(uuid) && _mideaKeyByDevice.containsKey(uuid)) {
-      setDeviceCredential(uuid: uuid, key: 'token', value: _mideaTokenByDevice[uuid]!);
-      setDeviceCredential(uuid: uuid, key: 'key', value: _mideaKeyByDevice[uuid]!);
+    if (_mideaTokenByDevice.containsKey(uuid) &&
+        _mideaKeyByDevice.containsKey(uuid)) {
+      setDeviceCredential(
+        uuid: uuid,
+        key: 'token',
+        value: _mideaTokenByDevice[uuid]!,
+      );
+      setDeviceCredential(
+        uuid: uuid,
+        key: 'key',
+        value: _mideaKeyByDevice[uuid]!,
+      );
       return;
     }
 
-    final cachedToken = (await _secureStorage.read(key: 'vendor.midea.$uuid.token'))?.trim() ?? '';
-    final cachedKey = (await _secureStorage.read(key: 'vendor.midea.$uuid.key'))?.trim() ?? '';
+    final cachedToken =
+        (await _secureStorage.read(key: 'vendor.midea.$uuid.token'))?.trim() ??
+        '';
+    final cachedKey =
+        (await _secureStorage.read(key: 'vendor.midea.$uuid.key'))?.trim() ??
+        '';
     if (cachedToken.isNotEmpty && cachedKey.isNotEmpty) {
       _mideaTokenByDevice[uuid] = cachedToken;
       _mideaKeyByDevice[uuid] = cachedKey;
@@ -1849,7 +1854,8 @@ class Bridge {
 
     final prefs = await SharedPreferences.getInstance();
     final email = (prefs.getString('account.auth.email') ?? '').trim();
-    final password = (await _secureStorage.read(key: 'account.password'))?.trim() ?? '';
+    final password =
+        (await _secureStorage.read(key: 'account.password'))?.trim() ?? '';
     if (email.isEmpty || password.isEmpty) {
       return;
     }
@@ -1859,22 +1865,18 @@ class Bridge {
       return;
     }
 
-    final loginIdRoot = await _mideaApiRequest(
-      '/v1/user/login/id/get',
-      {'loginAccount': email},
-    );
+    final loginIdRoot = await _mideaApiRequest('/v1/user/login/id/get', {
+      'loginAccount': email,
+    });
     final loginIdData = _unwrapMideaResult(loginIdRoot);
     final loginId = (loginIdData?['loginId'] ?? '').toString().trim();
     if (loginId.isEmpty) return;
 
     final encryptedPassword = _mideaEncryptPassword(loginId, password);
-    final loginRoot = await _mideaApiRequest(
-      '/v1/user/login',
-      {
-        'loginAccount': email,
-        'password': encryptedPassword,
-      },
-    );
+    final loginRoot = await _mideaApiRequest('/v1/user/login', {
+      'loginAccount': email,
+      'password': encryptedPassword,
+    });
     final loginData = _unwrapMideaResult(loginRoot);
     final sessionId = (loginData?['sessionId'] ?? '').toString().trim();
     if (sessionId.isEmpty) return;
@@ -1885,11 +1887,9 @@ class Bridge {
     };
 
     for (final udpId in udpIds) {
-      final tokenRoot = await _mideaApiRequest(
-        '/v1/iot/secure/getToken',
-        {'udpid': udpId},
-        sessionId: sessionId,
-      );
+      final tokenRoot = await _mideaApiRequest('/v1/iot/secure/getToken', {
+        'udpid': udpId,
+      }, sessionId: sessionId);
       final tokenData = _unwrapMideaResult(tokenRoot);
       final tokenList = tokenData?['tokenlist'];
       if (tokenList is! List) continue;
@@ -1902,7 +1902,10 @@ class Bridge {
 
         _mideaTokenByDevice[uuid] = token;
         _mideaKeyByDevice[uuid] = key;
-        await _secureStorage.write(key: 'vendor.midea.$uuid.token', value: token);
+        await _secureStorage.write(
+          key: 'vendor.midea.$uuid.token',
+          value: token,
+        );
         await _secureStorage.write(key: 'vendor.midea.$uuid.key', value: key);
         setDeviceCredential(uuid: uuid, key: 'token', value: token);
         setDeviceCredential(uuid: uuid, key: 'key', value: key);
@@ -1910,14 +1913,11 @@ class Bridge {
       }
     }
   }
+
   static final Map<String, DeviceConnectionHealth> _healthByDevice = {};
   static final List<BridgeDiagnosticEntry> _diagnostics = [];
 
-  static void _setOnboardingStage(
-    String uuid,
-    String stage, {
-    String? error,
-  }) {
+  static void _setOnboardingStage(String uuid, String stage, {String? error}) {
     _onboardingStageByDevice[uuid] = stage;
     if (error != null && error.trim().isNotEmpty) {
       _onboardingErrorByDevice[uuid] = error.trim();
@@ -2192,14 +2192,19 @@ class Bridge {
   }) {
     final b = (brand ?? '').toLowerCase();
     final m = (model ?? '').toLowerCase();
-    final isMidea = b.contains('midea') || m.contains('midea') || m.contains('nethome');
+    final isMidea =
+        b.contains('midea') || m.contains('midea') || m.contains('nethome');
     if (!isMidea) return;
 
     final env = Platform.environment;
     final suffix = uuid.replaceAll(RegExp(r'[^A-Za-z0-9]'), '_').toUpperCase();
 
-    final token = (env['EASYNC_MIDEA_TOKEN_$suffix'] ?? env['EASYNC_MIDEA_TOKEN'] ?? '').trim();
-    final key = (env['EASYNC_MIDEA_KEY_$suffix'] ?? env['EASYNC_MIDEA_KEY'] ?? '').trim();
+    final token =
+        (env['EASYNC_MIDEA_TOKEN_$suffix'] ?? env['EASYNC_MIDEA_TOKEN'] ?? '')
+            .trim();
+    final key =
+        (env['EASYNC_MIDEA_KEY_$suffix'] ?? env['EASYNC_MIDEA_KEY'] ?? '')
+            .trim();
 
     if (token.isNotEmpty) {
       setDeviceCredential(uuid: uuid, key: 'token', value: token);
@@ -2390,7 +2395,10 @@ class Bridge {
             connected = await _rebindWifiEndpointFromDiscovery(uuid);
           }
           if (!connected) {
-            connected = establishProtocolConnection(uuid: uuid, protocol: protocol);
+            connected = establishProtocolConnection(
+              uuid: uuid,
+              protocol: protocol,
+            );
           }
           if (connected) break;
           await Future.delayed(const Duration(milliseconds: 1200));
@@ -2665,7 +2673,8 @@ class Bridge {
     }
     final lowerBrand = info?.brand.toLowerCase() ?? '';
     final lowerModel = info?.model.toLowerCase() ?? '';
-    final mideaLike = lowerBrand.contains('midea') ||
+    final mideaLike =
+        lowerBrand.contains('midea') ||
         lowerModel.contains('midea') ||
         lowerModel.contains('nethome') ||
         lowerModel.contains('msmart');
@@ -2765,10 +2774,9 @@ class Bridge {
         for (final addr in iface.addresses) {
           final parts = addr.address.split('.');
           if (parts.length != 4) continue;
+
           final prefix = '${parts[0]}.${parts[1]}.${parts[2]}';
 
-          // If currently connected to a SoftAP-like private subnet,
-          // prioritize that subnet gateway before generic defaults.
           if ((parts[0] == '192' && parts[1] == '168') || parts[0] == '10') {
             addDynamic('$prefix.1');
             addDynamic('$prefix.254');
@@ -3071,7 +3079,9 @@ class Bridge {
     if (protocol == CoreProtocol.CORE_PROTOCOL_WIFI) {
       final provisioned =
           wifiProvisioningState(uuid) == WifiProvisioningState.online;
-      final ok = provisioned && (ensureConnected(uuid) || refreshDeviceConnection(uuid));
+      final ok =
+          provisioned &&
+          (ensureConnected(uuid) || refreshDeviceConnection(uuid));
       _protocolConnectionByDevice[uuid] = ok
           ? ProtocolConnectionState.connected
           : ProtocolConnectionState.disconnected;
@@ -3194,29 +3204,29 @@ class Bridge {
           final host = (m['host'] ?? '').toString();
           final port = (m['port'] is num) ? (m['port'] as num).toInt() : 0;
           final proto = (m['protocol'] is num)
-            ? (m['protocol'] as num).toInt()
-            : CoreProtocol.CORE_PROTOCOL_MOCK;
+              ? (m['protocol'] as num).toInt()
+              : CoreProtocol.CORE_PROTOCOL_MOCK;
           return DiscoveredDevice(
-          icon: proto == CoreProtocol.CORE_PROTOCOL_WIFI
-            ? Icons.wifi_rounded
-            : proto == CoreProtocol.CORE_PROTOCOL_BLE
-              ? Icons.bluetooth_rounded
-              : proto == CoreProtocol.CORE_PROTOCOL_ZIGBEE
+            icon: proto == CoreProtocol.CORE_PROTOCOL_WIFI
+                ? Icons.wifi_rounded
+                : proto == CoreProtocol.CORE_PROTOCOL_BLE
+                ? Icons.bluetooth_rounded
+                : proto == CoreProtocol.CORE_PROTOCOL_ZIGBEE
                 ? Icons.rotate_90_degrees_cw_rounded
                 : Icons.sensors_rounded,
-          id: (m['uuid'] ?? '').toString().isNotEmpty
-            ? (m['uuid'] ?? '').toString()
-            : '$proto:$host:$port',
-          name: (m['name'] ?? 'Discovered Device').toString(),
-          protocol: proto,
-          host: host,
-          port: port,
-          hint: (m['hint'] ?? '').toString(),
-          confidence: (m['confidence'] is num)
-            ? (m['confidence'] as num).toDouble()
-            : 0.5,
-          vendor: (m['vendor'] ?? 'generic').toString(),
-          metadata: const {},
+            id: (m['uuid'] ?? '').toString().isNotEmpty
+                ? (m['uuid'] ?? '').toString()
+                : '$proto:$host:$port',
+            name: (m['name'] ?? 'Discovered Device').toString(),
+            protocol: proto,
+            host: host,
+            port: port,
+            hint: (m['hint'] ?? '').toString(),
+            confidence: (m['confidence'] is num)
+                ? (m['confidence'] as num).toDouble()
+                : 0.5,
+            vendor: (m['vendor'] ?? 'generic').toString(),
+            metadata: const {},
           );
         }).toList();
       } catch (e) {
@@ -3376,15 +3386,78 @@ class Bridge {
 
   static Future<List<DiscoveredDevice>> _discoverMideaLanDevices() async {
     const probe = <int>[
-      0x5a, 0x5a, 0x01, 0x11, 0x48, 0x00, 0x92, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x7f, 0x75, 0xbd, 0x6b, 0x3e, 0x4f, 0x8b, 0x76,
-      0x2e, 0x84, 0x9c, 0x6e, 0x57, 0x8d, 0x65, 0x90,
-      0x03, 0x6e, 0x9d, 0x43, 0x42, 0xa5, 0x0f, 0x1f,
-      0x56, 0x9e, 0xb8, 0xec, 0x91, 0x8e, 0x92, 0xe5,
+      0x5a,
+      0x5a,
+      0x01,
+      0x11,
+      0x48,
+      0x00,
+      0x92,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x7f,
+      0x75,
+      0xbd,
+      0x6b,
+      0x3e,
+      0x4f,
+      0x8b,
+      0x76,
+      0x2e,
+      0x84,
+      0x9c,
+      0x6e,
+      0x57,
+      0x8d,
+      0x65,
+      0x90,
+      0x03,
+      0x6e,
+      0x9d,
+      0x43,
+      0x42,
+      0xa5,
+      0x0f,
+      0x1f,
+      0x56,
+      0x9e,
+      0xb8,
+      0xec,
+      0x91,
+      0x8e,
+      0x92,
+      0xe5,
     ];
 
     final found = <String, DiscoveredDevice>{};
@@ -4247,6 +4320,12 @@ class Bridge {
       kind = 'profile_applied';
       title = 'Profile applied';
       message = '$profileName (${actions ?? 0} actions)';
+    } else if (type == 'device_control') {
+      final cap = payload?['capability']?.toString() ?? 'state';
+      final val = payload?['value']?.toString() ?? '?';
+      kind = 'device_control';
+      title = 'Device manually adjusted';
+      message = 'Changed $cap to $val';
     }
 
     if (kind == null || title == null || message == null) return;

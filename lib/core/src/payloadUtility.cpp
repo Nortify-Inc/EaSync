@@ -1,12 +1,12 @@
 /**
- * @file payload_utility.cpp
+ * @file payloadUtility.cpp
  * @brief Implements payload template loading and payload assembly from JSON files.
  * @param capability Capability key looked up in each template payload map.
  * @return Payload JSON strings with placeholders resolved.
  * @author Erick Radmann
  */
 
-#include "payload_utility.hpp"
+#include "payloadUtility.hpp"
 
 #include <algorithm>
 #include <array>

@@ -7,7 +7,7 @@
  */
 
 #include "mqtt.hpp"
-#include "payload_utility.hpp"
+#include "payloadUtility.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -581,26 +581,33 @@ void MqttDriver::parseState(
                 newState.power = parsed;
         }
 
-        if (extractRawValue(payload, {"brightness"}, raw))
-            newState.brightness = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(payload, {"brightness"}, raw)) {
+            try { newState.brightness = static_cast<uint32_t>(std::stoul(raw)); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"color"}, raw))
-            newState.color = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(payload, {"color"}, raw)) {
+            try { newState.color = static_cast<uint32_t>(std::stoul(raw)); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"temperature"}, raw))
-            newState.temperature = std::stof(raw);
+        if (extractRawValue(payload, {"temperature"}, raw)) {
+            try { newState.temperature = std::stof(raw); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"temperature_fridge", "temperatureFridge"}, raw))
-            newState.temperatureFridge = std::stof(raw);
+        if (extractRawValue(payload, {"temperature_fridge", "temperatureFridge"}, raw)) {
+            try { newState.temperatureFridge = std::stof(raw); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"temperature_freezer", "temperatureFreezer"}, raw))
-            newState.temperatureFreezer = std::stof(raw);
+        if (extractRawValue(payload, {"temperature_freezer", "temperatureFreezer"}, raw)) {
+            try { newState.temperatureFreezer = std::stof(raw); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"timestamp", "time"}, raw))
-            newState.timestamp = static_cast<uint64_t>(std::stoull(raw));
+        if (extractRawValue(payload, {"timestamp", "time"}, raw)) {
+            try { newState.timestamp = static_cast<uint64_t>(std::stoull(raw)); } catch (...) {}
+        }
 
-        if (extractRawValue(payload, {"colorTemperature", "color_temperature"}, raw))
-            newState.colorTemperature = static_cast<uint32_t>(std::stoul(raw));
+        if (extractRawValue(payload, {"colorTemperature", "color_temperature"}, raw)) {
+            try { newState.colorTemperature = static_cast<uint32_t>(std::stoul(raw)); } catch (...) {}
+        }
 
         if (extractRawValue(payload, {"lock"}, raw)) {
             bool parsed = false;

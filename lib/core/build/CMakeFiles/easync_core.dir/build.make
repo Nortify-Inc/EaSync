@@ -97,33 +97,33 @@ CMakeFiles/easync_core.dir/src/driver.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/driver.cpp.s"
 	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/core/src/driver.cpp -o CMakeFiles/easync_core.dir/src/driver.cpp.s
 
-CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: CMakeFiles/easync_core.dir/flags.make
-CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: /home/radmann/EaSync/lib/core/src/payload_utility.cpp
-CMakeFiles/easync_core.dir/src/payload_utility.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/src/payload_utility.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/payload_utility.cpp.o -MF CMakeFiles/easync_core.dir/src/payload_utility.cpp.o.d -o CMakeFiles/easync_core.dir/src/payload_utility.cpp.o -c /home/radmann/EaSync/lib/core/src/payload_utility.cpp
+CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: CMakeFiles/easync_core.dir/flags.make
+CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: /home/radmann/EaSync/lib/core/src/payloadUtility.cpp
+CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o -MF CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o.d -o CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o -c /home/radmann/EaSync/lib/core/src/payloadUtility.cpp
 
-CMakeFiles/easync_core.dir/src/payload_utility.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/payload_utility.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/core/src/payload_utility.cpp > CMakeFiles/easync_core.dir/src/payload_utility.cpp.i
+CMakeFiles/easync_core.dir/src/payloadUtility.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/payloadUtility.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/core/src/payloadUtility.cpp > CMakeFiles/easync_core.dir/src/payloadUtility.cpp.i
 
-CMakeFiles/easync_core.dir/src/payload_utility.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/payload_utility.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/core/src/payload_utility.cpp -o CMakeFiles/easync_core.dir/src/payload_utility.cpp.s
+CMakeFiles/easync_core.dir/src/payloadUtility.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/payloadUtility.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/core/src/payloadUtility.cpp -o CMakeFiles/easync_core.dir/src/payloadUtility.cpp.s
 
-CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o: CMakeFiles/easync_core.dir/flags.make
-CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o: /home/radmann/EaSync/lib/core/src/adaptive_layer.cpp
-CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o -MF CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o.d -o CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o -c /home/radmann/EaSync/lib/core/src/adaptive_layer.cpp
+CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: CMakeFiles/easync_core.dir/flags.make
+CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: /home/radmann/EaSync/lib/core/src/adaptiveLayer.cpp
+CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o: CMakeFiles/easync_core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/radmann/EaSync/lib/core/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o -MF CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o.d -o CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o -c /home/radmann/EaSync/lib/core/src/adaptiveLayer.cpp
 
-CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.i"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/core/src/adaptive_layer.cpp > CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.i
+CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.i"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/radmann/EaSync/lib/core/src/adaptiveLayer.cpp > CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.i
 
-CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.s"
-	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/core/src/adaptive_layer.cpp -o CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.s
+CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.s"
+	/usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/radmann/EaSync/lib/core/src/adaptiveLayer.cpp -o CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.s
 
 CMakeFiles/easync_core.dir/drivers/ble.cpp.o: CMakeFiles/easync_core.dir/flags.make
 CMakeFiles/easync_core.dir/drivers/ble.cpp.o: /home/radmann/EaSync/lib/core/drivers/ble.cpp
@@ -199,8 +199,8 @@ CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s: cmake_force
 easync_core_OBJECTS = \
 "CMakeFiles/easync_core.dir/src/core.cpp.o" \
 "CMakeFiles/easync_core.dir/src/driver.cpp.o" \
-"CMakeFiles/easync_core.dir/src/payload_utility.cpp.o" \
-"CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o" \
+"CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o" \
+"CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/ble.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mock.cpp.o" \
 "CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o" \
@@ -212,8 +212,8 @@ easync_core_EXTERNAL_OBJECTS =
 
 libeasync_core.so: CMakeFiles/easync_core.dir/src/core.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/src/driver.cpp.o
-libeasync_core.so: CMakeFiles/easync_core.dir/src/payload_utility.cpp.o
-libeasync_core.so: CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o
+libeasync_core.so: CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o
+libeasync_core.so: CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/ble.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mock.cpp.o
 libeasync_core.so: CMakeFiles/easync_core.dir/drivers/mqtt.cpp.o

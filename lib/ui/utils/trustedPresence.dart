@@ -27,7 +27,8 @@ class TrustedPresenceService {
   static final TrustedPresenceService instance = TrustedPresenceService._();
 
   static const String _kTrustedHostId = 'account.security.trusted.host_id';
-  static const String _kTrustedInstanceId = 'account.security.trusted.instance_id';
+  static const String _kTrustedInstanceId =
+      'account.security.trusted.instance_id';
   static const String _kAuthName = 'account.auth.name';
   static const String _kAuthPhoto = 'account.auth.photo';
 
@@ -179,7 +180,9 @@ class TrustedPresenceService {
           final currentHostIsLocal =
               currentHostId.isNotEmpty && currentHostId == localInstanceId;
           final currentHostFresh = _isPeerFresh(currentHostId, now);
-          if (currentHostId.isEmpty || currentHostIsLocal || !currentHostFresh) {
+          if (currentHostId.isEmpty ||
+              currentHostIsLocal ||
+              !currentHostFresh) {
             currentHostId = announcedHost;
             await prefs.setString(_kTrustedHostId, currentHostId);
           }
@@ -232,9 +235,7 @@ class TrustedPresenceService {
       requesterName: requesterName,
     );
     _pendingRequests[requestId] = notice;
-    _requestController.add(
-      notice,
-    );
+    _requestController.add(notice);
   }
 
   bool _isPeerFresh(String instanceId, DateTime now) {

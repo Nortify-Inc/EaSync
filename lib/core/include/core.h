@@ -106,7 +106,7 @@ typedef struct {
     char name[CORE_MAX_NAME];
 
     /** Brand of device */
-    char band[CORE_MAX_BRAND];
+    char brand[CORE_MAX_BRAND];
 
     /** Model of device */
     char model[CORE_MAX_MODEL];

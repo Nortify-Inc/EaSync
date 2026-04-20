@@ -294,29 +294,29 @@ drivers/zigbee.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/drivers/zigbee.cpp.s
 .PHONY : drivers/zigbee.cpp.s
 
-src/adaptive_layer.o: src/adaptive_layer.cpp.o
-.PHONY : src/adaptive_layer.o
+src/adaptiveLayer.o: src/adaptiveLayer.cpp.o
+.PHONY : src/adaptiveLayer.o
 
 # target to build an object file
-src/adaptive_layer.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.o
-.PHONY : src/adaptive_layer.cpp.o
+src/adaptiveLayer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.o
+.PHONY : src/adaptiveLayer.cpp.o
 
-src/adaptive_layer.i: src/adaptive_layer.cpp.i
-.PHONY : src/adaptive_layer.i
+src/adaptiveLayer.i: src/adaptiveLayer.cpp.i
+.PHONY : src/adaptiveLayer.i
 
 # target to preprocess a source file
-src/adaptive_layer.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.i
-.PHONY : src/adaptive_layer.cpp.i
+src/adaptiveLayer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.i
+.PHONY : src/adaptiveLayer.cpp.i
 
-src/adaptive_layer.s: src/adaptive_layer.cpp.s
-.PHONY : src/adaptive_layer.s
+src/adaptiveLayer.s: src/adaptiveLayer.cpp.s
+.PHONY : src/adaptiveLayer.s
 
 # target to generate assembly for a file
-src/adaptive_layer.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptive_layer.cpp.s
-.PHONY : src/adaptive_layer.cpp.s
+src/adaptiveLayer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/adaptiveLayer.cpp.s
+.PHONY : src/adaptiveLayer.cpp.s
 
 src/core.o: src/core.cpp.o
 .PHONY : src/core.o
@@ -366,29 +366,29 @@ src/driver.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/driver.cpp.s
 .PHONY : src/driver.cpp.s
 
-src/payload_utility.o: src/payload_utility.cpp.o
-.PHONY : src/payload_utility.o
+src/payloadUtility.o: src/payloadUtility.cpp.o
+.PHONY : src/payloadUtility.o
 
 # target to build an object file
-src/payload_utility.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.o
-.PHONY : src/payload_utility.cpp.o
+src/payloadUtility.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payloadUtility.cpp.o
+.PHONY : src/payloadUtility.cpp.o
 
-src/payload_utility.i: src/payload_utility.cpp.i
-.PHONY : src/payload_utility.i
+src/payloadUtility.i: src/payloadUtility.cpp.i
+.PHONY : src/payloadUtility.i
 
 # target to preprocess a source file
-src/payload_utility.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.i
-.PHONY : src/payload_utility.cpp.i
+src/payloadUtility.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payloadUtility.cpp.i
+.PHONY : src/payloadUtility.cpp.i
 
-src/payload_utility.s: src/payload_utility.cpp.s
-.PHONY : src/payload_utility.s
+src/payloadUtility.s: src/payloadUtility.cpp.s
+.PHONY : src/payloadUtility.s
 
 # target to generate assembly for a file
-src/payload_utility.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payload_utility.cpp.s
-.PHONY : src/payload_utility.cpp.s
+src/payloadUtility.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/easync_core.dir/build.make CMakeFiles/easync_core.dir/src/payloadUtility.cpp.s
+.PHONY : src/payloadUtility.cpp.s
 
 # Help Target
 help:
@@ -418,18 +418,18 @@ help:
 	@echo "... drivers/zigbee.o"
 	@echo "... drivers/zigbee.i"
 	@echo "... drivers/zigbee.s"
-	@echo "... src/adaptive_layer.o"
-	@echo "... src/adaptive_layer.i"
-	@echo "... src/adaptive_layer.s"
+	@echo "... src/adaptiveLayer.o"
+	@echo "... src/adaptiveLayer.i"
+	@echo "... src/adaptiveLayer.s"
 	@echo "... src/core.o"
 	@echo "... src/core.i"
 	@echo "... src/core.s"
 	@echo "... src/driver.o"
 	@echo "... src/driver.i"
 	@echo "... src/driver.s"
-	@echo "... src/payload_utility.o"
-	@echo "... src/payload_utility.i"
-	@echo "... src/payload_utility.s"
+	@echo "... src/payloadUtility.o"
+	@echo "... src/payloadUtility.i"
+	@echo "... src/payloadUtility.s"
 .PHONY : help
 
 

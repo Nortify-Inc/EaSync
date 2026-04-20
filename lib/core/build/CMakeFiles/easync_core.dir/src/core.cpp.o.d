@@ -205,7 +205,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/x86_64-linux-gnu/sys/time.h /usr/include/semaphore.h \
  /usr/include/x86_64-linux-gnu/bits/semaphore.h \
  /home/radmann/EaSync/lib/core/drivers/ble.hpp \
- /home/radmann/EaSync/lib/core/include/adaptive_layer.hpp \
+ /home/radmann/EaSync/lib/core/include/adaptiveLayer.hpp \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_uninitialized.h \
  /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/bits/stl_bvector.h \
@@ -241,7 +241,7 @@ CMakeFiles/easync_core.dir/src/core.cpp.o: \
  /usr/include/c++/13/bits/quoted_string.h /usr/include/c++/13/format \
  /usr/include/c++/13/charconv /usr/include/c++/13/optional \
  /usr/include/c++/13/span /usr/include/c++/13/variant \
- /home/radmann/EaSync/lib/core/include/payload_utility.hpp \
+ /home/radmann/EaSync/lib/core/include/payloadUtility.hpp \
  /home/radmann/EaSync/lib/core/drivers/mqtt.hpp \
  /usr/local/include/mqtt/async_client.h /usr/include/c++/13/list \
  /usr/include/c++/13/bits/stl_list.h /usr/include/c++/13/bits/list.tcc \

@@ -22,8 +22,7 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
   Timer? _lifeTimer;
   DateTime? _shownAt;
   StreamSubscription<HostTransferRequestNotice>? _hostRequestSub;
-  final Map<String, DateTime> _hostRequestSnackShownAt =
-      <String, DateTime>{};
+  final Map<String, DateTime> _hostRequestSnackShownAt = <String, DateTime>{};
 
   @override
   void initState() {
@@ -55,7 +54,8 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
   }
 
   void _showPendingHostRequestSnacks() {
-    final pending = TrustedPresenceService.instance.pendingHostTransferRequests();
+    final pending = TrustedPresenceService.instance
+        .pendingHostTransferRequests();
     for (final notice in pending) {
       _showHostRequestSnack(notice);
     }
@@ -91,11 +91,9 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  EaI18n.t(
-                    context,
-                    'Host transfer request from {name}',
-                    {'name': name},
-                  ),
+                  EaI18n.t(context, 'Host transfer request from {name}', {
+                    'name': name,
+                  }),
                   style: EaText.secondary.copyWith(
                     color: EaColor.textPrimary,
                     fontSize: 14,
@@ -155,8 +153,10 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
         ? const Duration(seconds: 25)
         : const Duration(minutes: 4);
 
-    _pollTimer =
-        Timer.periodic(period, (_) => _tryFetchAndShowRecommendation());
+    _pollTimer = Timer.periodic(
+      period,
+      (_) => _tryFetchAndShowRecommendation(),
+    );
   }
 
   Duration _lifeDurationForTier() {
@@ -277,7 +277,9 @@ class _RecommendationToastHostState extends State<RecommendationToastHost>
                     decoration: BoxDecoration(
                       color: EaAdaptiveColor.surface(context),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: EaAdaptiveColor.border(context)),
+                      border: Border.all(
+                        color: EaAdaptiveColor.border(context),
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.2),

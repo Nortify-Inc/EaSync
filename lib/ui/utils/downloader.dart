@@ -63,7 +63,9 @@ class Downloader {
 
     try {
       final request = await client.getUrl(Uri.parse(url));
-      final response = await request.close().timeout(const Duration(minutes: 3));
+      final response = await request.close().timeout(
+        const Duration(minutes: 3),
+      );
       if (response.statusCode != 200) {
         throw Exception('HTTP ${response.statusCode}');
       }
@@ -120,7 +122,9 @@ class Downloader {
       }
     }
 
-    throw Exception('Model download failed on all URLs: ${failures.join(' | ')}');
+    throw Exception(
+      'Model download failed on all URLs: ${failures.join(' | ')}',
+    );
   }
 
   Stream<DownloadState> ensure() async* {

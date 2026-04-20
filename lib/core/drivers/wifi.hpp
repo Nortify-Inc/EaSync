@@ -103,7 +103,8 @@ private:
         const std::string& body,
         const std::string& contentType = "application/json",
         const std::string& method = "POST",
-        std::string* outTrace = nullptr
+        std::string* outTrace = nullptr,
+        const std::vector<std::string>& extraHeaders = {}
     );
     bool httpGet(const std::string& url, std::string& out);
 

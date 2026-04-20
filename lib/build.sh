@@ -4,10 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo ""
+echo "Cloning external thirdparty dependencies..."
+if [ ! -d "$ROOT_DIR/thirdParty" ]; then
+    git submodule update --init --recursive
+else
+    echo "Already cloned. Skipping."
+fi 
+
+echo ""
 echo "Building easync_ai..."
 
 mkdir -p "$ROOT_DIR/ai/build"
-(cd "$ROOT_DIR/ai/build" && make -j"$(nproc)")
+(cd "$ROOT_DIR/ai/build" && cmake .. && make -j"$(nproc)")
 
 if [ ! -f "$ROOT_DIR/ai/build/libeasync_ai.so" ]; then
     echo "ERROR: libeasync_ai.so failed to build." >&2

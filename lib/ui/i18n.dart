@@ -54,8 +54,7 @@ class EaI18n {
   };
 
   static const Map<String, String> _enToPt = {
-    // 'Data saved locally.' already present below, removed duplicate.
-    // Pop-up IA splash
+
     'Complete experience?': 'Experiência completa?',
     'To use the AI assistant, you need to download the model (~2GB). This may be heavy on some devices. Do you want to download and enable the assistant?':
         'Para usar o assistente de IA, é necessário baixar o modelo (~2GB). Isso pode ser pesado em alguns dispositivos. Deseja baixar e ativar o assistente?',
@@ -100,6 +99,8 @@ class EaI18n {
     'Animations': 'Animações',
     'Subtle transitions across pages and tiles':
         'Transições suaves entre páginas e blocos',
+    'Hello': 'Olá',
+    'Hello, {profileName}': 'Olá, {profileName}',
     'Compact mode': 'Modo compacto',
     'Reduced paddings and denser tiles':
         'Espaçamentos reduzidos e blocos mais densos',
@@ -176,8 +177,8 @@ class EaI18n {
     'Run now': 'Executar agora',
     'Behavior insight': 'Insight de comportamento',
     'Learning in progress': 'Aprendizado em andamento',
-    'Assistant backend is still collecting behavior signals from app usage, commands and profiles.':
-        'O backend do assistente ainda está coletando sinais de comportamento de uso do app, comandos e perfis.',
+    'Assistant is still collecting behavior signals from app usage, commands and profiles.':
+        'A assistente ainda está coletando padrões de comportamento de uso do app, comandos e perfis.',
     'No devices yet': 'Nenhum dispositivo ainda',
     'No devices discovered on network.':
         'Nenhum dispositivo descoberto na rede.',

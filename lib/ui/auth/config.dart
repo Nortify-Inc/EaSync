@@ -20,15 +20,15 @@ class OAuthConfig {
   }
 
   static String get googleClientId => dotenv.env['GOOGLE_CLIENT_ID'] ?? '';
-    static String get googleIosClientId =>
+  static String get googleIosClientId =>
       dotenv.env['GOOGLE_IOS_CLIENT_ID'] ?? '';
   static String get googleAndroidClientId =>
       dotenv.env['GOOGLE_ANDROID_CLIENT_ID'] ?? _googleAndroidClientFallback;
   static String get googleClientSecret =>
       dotenv.env['GOOGLE_CLIENT_SECRET'] ?? '';
   static String get googleTokenUri => _normalizeGoogleTokenUri(
-        dotenv.env['GOOGLE_TOKEN_URI'] ?? 'https://oauth2.googleapis.com/token',
-      );
+    dotenv.env['GOOGLE_TOKEN_URI'] ?? 'https://oauth2.googleapis.com/token',
+  );
   static const googleScopes = [
     'openid',
     'email',

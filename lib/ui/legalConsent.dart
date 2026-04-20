@@ -495,7 +495,7 @@ class _LegalConsentPageState extends State<LegalConsentPage> {
               child: Text(
                 _isPtBr
                     ? 'Autenticado via ${_authLabel.isEmpty ? 'provedor' : _authLabel}'
-                    : 'Signed in via ${_authLabel.isEmpty ? 'provider' : _authLabel}',
+                    : 'Signed in with ${_authLabel.isEmpty ? 'provider' : _authLabel}',
                 style: EaText.small.copyWith(
                   color: EaAdaptiveColor.bodyText(context),
                   fontWeight: FontWeight.w700,

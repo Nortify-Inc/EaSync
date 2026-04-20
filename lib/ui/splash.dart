@@ -6,9 +6,13 @@
  * @author Erick Radmann
  */
 
+import 'dart:io';
+
 import 'handler.dart';
+import 'legalConsent.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth/security.dart';
 import 'auth/service.dart';
@@ -52,6 +56,7 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
   static const Duration _stepCharmDelay = Duration(milliseconds: 380);
   static const Duration _minSplashDuration = Duration(seconds: 6);
   static const Duration _finalCharmDelay = Duration(milliseconds: 700);
+  static const String _kLegalConsentAcceptedKey = 'legal_consent_accepted';
 
   DownloadStatus _aiStatus = DownloadStatus.checking;
   double _aiProgress = 0.0;
@@ -129,10 +134,63 @@ class _SplashState extends State<Splash> with SingleTickerProviderStateMixin {
     }
 
     if (!mounted) return;
+    if (!await _ensureLegalConsentAccepted()) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const Home()),
     );
+  }
+
+  Future<bool> _ensureLegalConsentAccepted() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_kLegalConsentAcceptedKey) == true) {
+      return true;
+    }
+
+    while (mounted) {
+      final consent = await Navigator.push<LegalConsentPayload>(
+        context,
+        MaterialPageRoute(builder: (_) => const LegalConsentPage()),
+      );
+      if (!mounted) return false;
+      if (consent != null) {
+        await prefs.setBool(_kLegalConsentAcceptedKey, true);
+        return true;
+      }
+
+      final retry = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return AlertDialog(
+            title: Text(EaI18n.t(ctx, 'Legal consent required')),
+            content: Text(
+              EaI18n.t(
+                ctx,
+                'You must accept the legal terms before using EaSync. Please review the consent screen again or close the app.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: Text(EaI18n.t(ctx, 'Close')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: Text(EaI18n.t(ctx, 'Review again')),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (retry != true) {
+        return false;
+      }
+    }
+
+    return false;
   }
 
   Future<bool> _runAndroidModelSetup() async {

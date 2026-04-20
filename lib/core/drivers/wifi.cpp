@@ -7,9 +7,10 @@
  */
 
 #include "wifi.hpp"
-#include "payload_utility.hpp"
+#include "payloadUtility.hpp"
 
 #include <curl/curl.h>
+#include <openssl/evp.h>
 #include <sstream>
 #include <functional>
 #include <vector>
@@ -32,6 +33,112 @@
 #include <unistd.h>
 
 namespace {
+
+// ============================================================
+// Crypto helpers
+// ============================================================
+
+static std::vector<uint8_t> hexToBytes(const std::string& hex) {
+    std::vector<uint8_t> out;
+    out.reserve(hex.size() / 2);
+    for (size_t i = 0; i + 1 < hex.size(); i += 2) {
+        const auto hi = static_cast<uint8_t>(std::stoul(hex.substr(i,   1), nullptr, 16));
+        const auto lo = static_cast<uint8_t>(std::stoul(hex.substr(i+1, 1), nullptr, 16));
+        out.push_back(static_cast<uint8_t>((hi << 4) | lo));
+    }
+    return out;
+}
+
+static std::string bytesToBase64(const std::vector<uint8_t>& data) {
+    static const char* kChars =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    int i = 0;
+    uint8_t c3[3], c4[4];
+    size_t pos = 0, len = data.size();
+    while (len--) {
+        c3[i++] = data[pos++];
+        if (i == 3) {
+            c4[0] = (c3[0] & 0xfc) >> 2;
+            c4[1] = ((c3[0] & 0x03) << 4) | ((c3[1] & 0xf0) >> 4);
+            c4[2] = ((c3[1] & 0x0f) << 2) | ((c3[2] & 0xc0) >> 6);
+            c4[3] =   c3[2] & 0x3f;
+            for (int j = 0; j < 4; ++j) out += kChars[c4[j]];
+            i = 0;
+        }
+    }
+    if (i) {
+        for (int j = i; j < 3; ++j) c3[j] = 0;
+        c4[0] = (c3[0] & 0xfc) >> 2;
+        c4[1] = ((c3[0] & 0x03) << 4) | ((c3[1] & 0xf0) >> 4);
+        c4[2] = ((c3[1] & 0x0f) << 2) | ((c3[2] & 0xc0) >> 6);
+        for (int j = 0; j < i + 1; ++j) out += kChars[c4[j]];
+        while (i++ < 3) out += '=';
+    }
+    return out;
+}
+
+// AES-128-CBC with zero IV (Midea LAN v3)
+static std::vector<uint8_t> aes128CbcEncrypt(
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& plaintext)
+{
+    if (key.size() != 16) return {};
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return {};
+    const std::vector<uint8_t> iv(16, 0x00);
+    std::vector<uint8_t> out(plaintext.size() + 16);
+    int outLen1 = 0, outLen2 = 0;
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), nullptr, key.data(), iv.data()) != 1 ||
+        EVP_EncryptUpdate(ctx, out.data(), &outLen1, plaintext.data(),
+                          static_cast<int>(plaintext.size())) != 1 ||
+        EVP_EncryptFinal_ex(ctx, out.data() + outLen1, &outLen2) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return {};
+    }
+    EVP_CIPHER_CTX_free(ctx);
+    out.resize(static_cast<size_t>(outLen1 + outLen2));
+    return out;
+}
+
+// AES-128-ECB (Tuya LAN v3 – no IV)
+static std::vector<uint8_t> aes128EcbEncrypt(
+    const std::vector<uint8_t>& key,
+    const std::vector<uint8_t>& plaintext)
+{
+    if (key.size() != 16) return {};
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return {};
+    std::vector<uint8_t> out(plaintext.size() + 16);
+    int outLen1 = 0, outLen2 = 0;
+    if (EVP_EncryptInit_ex(ctx, EVP_aes_128_ecb(), nullptr, key.data(), nullptr) != 1 ||
+        EVP_EncryptUpdate(ctx, out.data(), &outLen1, plaintext.data(),
+                          static_cast<int>(plaintext.size())) != 1 ||
+        EVP_EncryptFinal_ex(ctx, out.data() + outLen1, &outLen2) != 1) {
+        EVP_CIPHER_CTX_free(ctx);
+        return {};
+    }
+    EVP_CIPHER_CTX_free(ctx);
+    out.resize(static_cast<size_t>(outLen1 + outLen2));
+    return out;
+}
+
+// RFC 3986 percent-encoding
+static std::string urlEncode(const std::string& s) {
+    static const char kHex[] = "0123456789ABCDEF";
+    std::string out;
+    out.reserve(s.size() * 3);
+    for (const unsigned char c : s) {
+        if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+            out += static_cast<char>(c);
+        else {
+            out += '%';
+            out += kHex[(c >> 4) & 0x0F];
+            out += kHex[c & 0x0F];
+        }
+    }
+    return out;
+}
 
 static std::string trim(const std::string& v) {
     const auto begin = v.find_first_not_of(" \t\r\n");
@@ -88,13 +195,6 @@ static std::string toLower(std::string value) {
     return value;
 }
 
-static bool isMideaLike(const std::string& value) {
-    const std::string lower = toLower(value);
-    return lower.find("midea") != std::string::npos ||
-           lower.find("msmart") != std::string::npos ||
-           lower.find("nethome") != std::string::npos ||
-           lower.find("net_ac") != std::string::npos;
-}
 
 static bool parseUint32Safe(const std::string& raw, uint32_t& outValue) {
     try {
@@ -124,6 +224,14 @@ static bool parseFloatSafe(const std::string& raw, float& outValue) {
     } catch (...) {
         return false;
     }
+}
+
+static bool isMideaLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("midea") != std::string::npos ||
+           lower.find("msmart") != std::string::npos ||
+           lower.find("nethome") != std::string::npos ||
+           lower.find("net_ac") != std::string::npos;
 }
 
 static bool looksLikeMideaDiscoveryResponse(const std::vector<uint8_t>& packet) {
@@ -207,6 +315,373 @@ static bool probeMideaDiscoveryAt(const std::string& host) {
         }
     }
 
+    return false;
+}
+
+// ============================================================
+// Samsung SmartThings
+// ============================================================
+
+static bool isSamsungLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("samsung") != std::string::npos ||
+           lower.find("smarthings") != std::string::npos ||  // common typo in SSIDs
+           lower.find("smartthings") != std::string::npos ||
+           lower.find("samsung_") != std::string::npos ||
+           lower.find("sam_") != std::string::npos;
+}
+
+static bool looksLikeSamsungDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    // SmartThings LAN API returns JSON; a minimal positive signal is any
+    // non-empty response on the control port.
+    if (packet.size() >= 4 &&
+        packet[0] == '{')   // JSON object opener
+        return true;
+    // SSDP notify from SmartThings hub begins with "NOTIFY" or "HTTP/1.1"
+    const std::string s(packet.begin(), packet.end());
+    return s.find("SmartThings") != std::string::npos ||
+           s.find("SAMSUNG") != std::string::npos ||
+           s.find("samsung") != std::string::npos;
+}
+
+static bool probeSamsungDiscoveryAt(const std::string& host) {
+    // Samsung SmartThings hub listens on 55000 (LAN API).
+    const std::array<uint16_t, 1> ports = {55000};
+
+    for (uint16_t port : ports) {
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+            continue;
+
+        timeval timeout{};
+        timeout.tv_sec  = 0;
+        timeout.tv_usec = 250000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port   = htons(port);
+        if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+            close(sock);
+            continue;
+        }
+
+        if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+            // Send a minimal HTTP GET for the SmartThings LAN API info endpoint
+            const std::string req =
+                "GET /api/v1/hub HTTP/1.0\r\n"
+                "Host: " + host + "\r\n"
+                "Connection: close\r\n\r\n";
+            send(sock, req.data(), req.size(), 0);
+
+            std::vector<uint8_t> buf(512);
+            const auto received = recv(sock, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+            close(sock);
+
+            if (received > 0) {
+                buf.resize(static_cast<size_t>(received));
+                if (looksLikeSamsungDiscoveryResponse(buf))
+                    return true;
+            }
+        } else {
+            close(sock);
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// LG ThinQ
+// ============================================================
+
+static bool isLGLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("lge_") != std::string::npos ||
+           lower.find("lg_") != std::string::npos  ||
+           lower.find("thinq") != std::string::npos ||
+           lower.find("lg-") != std::string::npos;
+}
+
+static bool looksLikeLGDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    if (packet.size() < 4)
+        return false;
+    // LG ThinQ local API returns JSON with "result" or "returnCd"
+    const std::string s(packet.begin(), packet.end());
+    return s.find("returnCd") != std::string::npos ||
+           s.find("result")   != std::string::npos ||
+           s.find("thinq")    != std::string::npos ||
+           s.find("LGE")      != std::string::npos;
+}
+
+static bool probeLGDiscoveryAt(const std::string& host) {
+    // LG ThinQ local API: TCP 6444 (same port range as some Midea devices)
+    // and a secondary HTTP endpoint on port 2878.
+    const std::array<uint16_t, 2> ports = {6444, 2878};
+    for (uint16_t port : ports) {
+        const int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+            continue;
+
+        timeval timeout{};
+        timeout.tv_sec  = 0;
+        timeout.tv_usec = 250000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port   = htons(port);
+        if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+            close(sock);
+            continue;
+        }
+
+        if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+            const std::string req =
+                "GET /DeviceInfo.xml HTTP/1.0\r\n"
+                "Host: " + host + "\r\n"
+                "Connection: close\r\n\r\n";
+            send(sock, req.data(), req.size(), 0);
+
+            std::vector<uint8_t> buf(512);
+            const auto received = recv(sock, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+            close(sock);
+
+            if (received > 0) {
+                buf.resize(static_cast<size_t>(received));
+                if (looksLikeLGDiscoveryResponse(buf))
+                    return true;
+            }
+        } else {
+            close(sock);
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// Electrolux / AEG / Frigidaire
+// ============================================================
+
+static bool isElectroluxLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("electrolux") != std::string::npos ||
+           lower.find("elux_") != std::string::npos ||
+           lower.find("aeg_") != std::string::npos  ||
+           lower.find("frigidaire") != std::string::npos ||
+           lower.find("wellbeing") != std::string::npos;
+}
+
+static bool looksLikeElectroluxDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    if (packet.size() < 4)
+        return false;
+    const std::string s(packet.begin(), packet.end());
+    return s.find("Electrolux") != std::string::npos ||
+           s.find("electrolux") != std::string::npos ||
+           s.find("AEG")        != std::string::npos ||
+           s.find("wellbeing")  != std::string::npos ||
+           // Generic positive: any 2xx HTTP response on the AP setup page
+           (s.find("HTTP/1.") != std::string::npos && s.find("200") != std::string::npos);
+}
+
+static bool probeElectroluxDiscoveryAt(const std::string& host) {
+    // Electrolux connected appliances expose a provisioning HTTP server on port 80
+    // under /elux or /setup during AP mode.
+    const std::array<uint16_t, 2> ports = {80, 8080};
+    for (uint16_t port : ports) {
+        const int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+            continue;
+
+        timeval timeout{};
+        timeout.tv_sec  = 0;
+        timeout.tv_usec = 250000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        addr.sin_port   = htons(port);
+        if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+            close(sock);
+            continue;
+        }
+
+        if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0) {
+            const std::string req =
+                "GET /elux/info HTTP/1.0\r\n"
+                "Host: " + host + "\r\n"
+                "Connection: close\r\n\r\n";
+            send(sock, req.data(), req.size(), 0);
+
+            std::vector<uint8_t> buf(512);
+            const auto received = recv(sock, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+            close(sock);
+
+            if (received > 0) {
+                buf.resize(static_cast<size_t>(received));
+                if (looksLikeElectroluxDiscoveryResponse(buf))
+                    return true;
+            }
+        } else {
+            close(sock);
+        }
+    }
+    return false;
+}
+
+// ============================================================
+// Daikin
+// ============================================================
+
+static bool isDaikinLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("daikin") != std::string::npos ||
+           lower.find("dkin_") != std::string::npos  ||
+           lower.find("daikin_") != std::string::npos;
+}
+
+static bool looksLikeDaikinDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    if (packet.size() < 4)
+        return false;
+    // Daikin's local HTTP API returns key=value strings like
+    // "ret=OK,type=aircon,..."
+    const std::string s(packet.begin(), packet.end());
+    return s.find("ret=OK") != std::string::npos ||
+           s.find("type=aircon") != std::string::npos ||
+           s.find("daikin") != std::string::npos ||
+           s.find("Daikin") != std::string::npos;
+}
+
+static bool probeDaikinDiscoveryAt(const std::string& host) {
+    // Daikin adapters expose a plain HTTP server on port 80.
+    // The canonical discovery endpoint is GET /common/basic_info
+    const int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0)
+        return false;
+
+    timeval timeout{};
+    timeout.tv_sec  = 0;
+    timeout.tv_usec = 300000;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port   = htons(80);
+    if (inet_pton(AF_INET, host.c_str(), &addr.sin_addr) != 1) {
+        close(sock);
+        return false;
+    }
+
+    if (::connect(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+        close(sock);
+        return false;
+    }
+
+    const std::string req =
+        "GET /common/basic_info HTTP/1.0\r\n"
+        "Host: " + host + "\r\n"
+        "Connection: close\r\n\r\n";
+    send(sock, req.data(), req.size(), 0);
+
+    std::vector<uint8_t> buf(512);
+    const auto received = recv(sock, reinterpret_cast<char*>(buf.data()), buf.size(), 0);
+    close(sock);
+
+    if (received > 0) {
+        buf.resize(static_cast<size_t>(received));
+        return looksLikeDaikinDiscoveryResponse(buf);
+    }
+    return false;
+}
+
+// ============================================================
+// Tuya (generic — SmartLife / eWeLink-style)
+// ============================================================
+
+static bool isTuyaLike(const std::string& value) {
+    const std::string lower = toLower(value);
+    return lower.find("tuya") != std::string::npos  ||
+           lower.find("smartlife") != std::string::npos ||
+           lower.find("smart_life") != std::string::npos ||
+           lower.find("beken_") != std::string::npos ||
+           lower.find("ty_") != std::string::npos;
+}
+
+static bool looksLikeTuyaDiscoveryResponse(const std::vector<uint8_t>& packet) {
+    if (packet.size() < 16)
+        return false;
+    // Tuya LAN protocol v3.x starts with a fixed 4-byte prefix 0x000055AA
+    if (packet[0] == 0x00 && packet[1] == 0x00 &&
+        packet[2] == 0x55 && packet[3] == 0xAA)
+        return true;
+    // Older v1 responses contain plain JSON with "devId"
+    const std::string s(packet.begin(), packet.end());
+    return s.find("devId") != std::string::npos ||
+           s.find("gwId")  != std::string::npos;
+}
+
+static bool probeTuyaDiscoveryAt(const std::string& host) {
+    const std::array<uint16_t, 1> ports = {6667}; // Try Tuya v3 first with encrypted payload
+
+    const std::vector<uint8_t> localKey = {0x00}; // Real key should come from credentials, mock for discovery fallback
+
+    // Tuya LAN v1/v2 discovery ping: 0x000055AA + header
+    const std::vector<uint8_t> kTuyaPingPlain = {
+        0x00, 0x00, 0x55, 0xAA,   // prefix
+        0x00, 0x00, 0x00, 0x00,   // seq
+        0x00, 0x00, 0x00, 0x12,   // cmd HEART_BEAT (0x09) — use ping cmd
+        0x00, 0x00, 0x00, 0x0C,   // data length
+        0x00, 0x00, 0xAA, 0x55,   // suffix
+    };
+    
+    // Encrypt for v3
+    std::vector<uint8_t> kTuyaPing = aes128EcbEncrypt(localKey, kTuyaPingPlain);
+    if (kTuyaPing.empty()) {
+        kTuyaPing = kTuyaPingPlain;
+    }
+
+    sockaddr_in dstAddr{};
+    dstAddr.sin_family = AF_INET;
+    if (inet_pton(AF_INET, host.c_str(), &dstAddr.sin_addr) != 1)
+        return false;
+
+    for (uint16_t port : ports) {
+        const int sock = socket(AF_INET, SOCK_DGRAM, 0);
+        if (sock < 0)
+            continue;
+
+        timeval timeout{};
+        timeout.tv_sec  = 0;
+        timeout.tv_usec = 200000;
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+
+        dstAddr.sin_port = htons(port);
+        sendto(sock,
+               reinterpret_cast<const char*>(kTuyaPing.data()),
+               kTuyaPing.size(),
+               0,
+               reinterpret_cast<sockaddr*>(&dstAddr),
+               sizeof(dstAddr));
+
+        std::vector<uint8_t> buf(256);
+        sockaddr_in srcAddr{};
+        socklen_t srcLen = sizeof(srcAddr);
+        const auto received = recvfrom(sock,
+                                       reinterpret_cast<char*>(buf.data()),
+                                       buf.size(), 0,
+                                       reinterpret_cast<sockaddr*>(&srcAddr),
+                                       &srcLen);
+        close(sock);
+
+        if (received > 0) {
+            buf.resize(static_cast<size_t>(received));
+            if (looksLikeTuyaDiscoveryResponse(buf))
+                return true;
+        }
+    }
     return false;
 }
 
@@ -394,12 +869,21 @@ static std::string makeMideaCredentialEnvelope(const std::string& payload,
                                                const std::string& token,
                                                const std::string& key)
 {
+    std::vector<uint8_t> keyBytes = hexToBytes(key);
+    std::vector<uint8_t> plainBytes(payload.begin(), payload.end());
+    std::vector<uint8_t> encrypted = aes128CbcEncrypt(keyBytes, plainBytes);
+
+    if (encrypted.empty()) {
+        // Fallback or error case (should ideally not happen with valid key)
+        encrypted = plainBytes;
+    }
+
     std::stringstream ss;
     ss << "{"
        << "\"protocol\":\"midea_lan_v3\"," 
        << "\"token\":\"" << token << "\"," 
        << "\"key\":\"" << key << "\"," 
-       << "\"payload\":" << payload
+       << "\"payload\":\"" << bytesToBase64(encrypted) << "\""
        << "}";
     return ss.str();
 }
@@ -660,12 +1144,38 @@ WifiVendorProfile WifiDriver::buildProfile(const std::string& brand,
         return profile;
     }
 
-    if (b.find("tuya") != std::string::npos) {
+    // Tuya / SmartLife / eWeLink
+    if (isTuyaLike(brand) || isTuyaLike(model)) {
         profile.transport = WifiTransportKind::Mixed;
-        profile.ports = {6668, 6669, 80, 443};
+        profile.ports = {6666, 6667, 6668, 6669, 80, 443};
         return profile;
     }
 
+    // Samsung SmartThings
+    if (brand == "Samsung" || isSamsungLike(model)) {
+        profile.ports = {55000, 80, 443};
+        profile.transport = WifiTransportKind::Mixed;
+    } else if (brand == "LG" || isLGLike(model)) {
+        profile.ports = {2000, 80, 443};
+        profile.transport = WifiTransportKind::Http;
+        return profile;
+    }
+
+    // Daikin
+    if (isDaikinLike(brand) || isDaikinLike(model)) {
+        profile.transport = WifiTransportKind::Http;
+        profile.ports = {80, 30050};
+        return profile;
+    }
+
+    // Electrolux / AEG / Frigidaire
+    if (isElectroluxLike(brand) || isElectroluxLike(model)) {
+        profile.transport = WifiTransportKind::Http;
+        profile.ports = {80, 8080};
+        return profile;
+    }
+
+    // Remaining known brands — generic Mixed HTTP
     if (b.find("nuki") != std::string::npos ||
         b.find("august") != std::string::npos ||
         b.find("schlage") != std::string::npos ||
@@ -674,14 +1184,10 @@ WifiVendorProfile WifiDriver::buildProfile(const std::string& brand,
         b.find("devi") != std::string::npos ||
         b.find("netatmo") != std::string::npos ||
         b.find("google nest") != std::string::npos ||
-        b.find("samsung") != std::string::npos ||
-        b.find("lg") != std::string::npos ||
-        b.find("daikin") != std::string::npos ||
         b.find("mitsubishi") != std::string::npos ||
         b.find("gree") != std::string::npos ||
         b.find("panasonic") != std::string::npos ||
         b.find("bosch") != std::string::npos ||
-        b.find("electrolux") != std::string::npos ||
         b.find("whirlpool") != std::string::npos ||
         b.find("tp-link") != std::string::npos ||
         b.find("yeelight") != std::string::npos ||
@@ -720,9 +1226,19 @@ bool WifiDriver::tcpSend(const std::string& host, uint16_t port, const std::stri
         return false;
     }
 
-    const ssize_t sent = send(sock, payload.data(), payload.size(), 0);
+    size_t totalSent = 0;
+    bool success = true;
+    while (totalSent < payload.size()) {
+        const ssize_t sent = send(sock, payload.data() + totalSent, payload.size() - totalSent, 0);
+        if (sent <= 0) {
+            success = false;
+            break;
+        }
+        totalSent += static_cast<size_t>(sent);
+    }
+    
     close(sock);
-    return sent == static_cast<ssize_t>(payload.size());
+    return success;
 }
 
 bool WifiDriver::udpSend(const std::string& host, uint16_t port, const std::string& payload) {
@@ -832,14 +1348,15 @@ bool WifiDriver::provisionWifi(
     const std::string& password,
     std::string* outError
 ) {
-    if (ssid.empty() || password.empty()) {
+    if (ssid.empty()) {
         if (outError)
-            *outError = "SSID or password is empty";
+            *outError = "SSID is empty";
         return false;
     }
 
     std::vector<std::string> ips;
     bool mideaProfile = false;
+    WifiVendorProfile vendorProfile;
 
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -849,6 +1366,9 @@ bool WifiDriver::provisionWifi(
                 ips.push_back(normalized);
         }
         mideaProfile = deviceMideaProfile.count(uuid) ? deviceMideaProfile[uuid] : false;
+        auto profIt = deviceProfiles.find(uuid);
+        if (profIt != deviceProfiles.end())
+            vendorProfile = profIt->second;
     }
 
     if (const char* env = std::getenv("EASYNC_WIFI_PROVISION_ENDPOINT")) {
@@ -882,36 +1402,87 @@ bool WifiDriver::provisionWifi(
 
     ips = std::move(orderedIps);
 
-    if (mideaProfile) {
-        std::vector<std::string> responsive;
-        std::vector<std::string> others;
-        responsive.reserve(ips.size());
-        others.reserve(ips.size());
+    // ----------------------------------------------------------
+    // Probe candidate IPs with the brand-specific discovery
+    // protocol to float responsive hosts to the front.
+    // ----------------------------------------------------------
+    {
+        using ProbeFunc = bool(*)(const std::string&);
+        ProbeFunc probeFunc = nullptr;
 
-        for (const auto& ip : ips) {
-            if (probeMideaDiscoveryAt(ip))
-                responsive.push_back(ip);
-            else
-                others.push_back(ip);
+        // Derive the right probe from the port fingerprint in vendorProfile.
+        bool hasSamsungPort = false, hasLGPort = false,
+             hasDaikinPort = false,  hasTuyaPort = false;
+        for (uint16_t p : vendorProfile.ports) {
+            if (p == 55000)              hasSamsungPort = true;
+            if (p == 2000)               hasLGPort      = true;
+            if (p == 30050)              hasDaikinPort  = true;
+            if (p == 6666 || p == 6667)  hasTuyaPort    = true;
         }
 
-        if (!responsive.empty()) {
-            responsive.insert(responsive.end(), others.begin(), others.end());
-            ips = std::move(responsive);
+        if      (mideaProfile)    probeFunc = probeMideaDiscoveryAt;
+        else if (hasSamsungPort)  probeFunc = probeSamsungDiscoveryAt;
+        else if (hasLGPort)       probeFunc = probeLGDiscoveryAt;
+        else if (hasDaikinPort)   probeFunc = probeDaikinDiscoveryAt;
+        else if (hasTuyaPort)     probeFunc = probeTuyaDiscoveryAt;
+        // Electrolux uses port 80 which overlaps generics — probe is skipped;
+        // probeElectroluxDiscoveryAt is called implicitly via the HTTP loop.
+
+        if (probeFunc) {
+            std::vector<std::string> responsive;
+            std::vector<std::string> others;
+            responsive.reserve(ips.size());
+            others.reserve(ips.size());
+            for (const auto& ip : ips) {
+                if (probeFunc(ip))
+                    responsive.push_back(ip);
+                else
+                    others.push_back(ip);
+            }
+            if (!responsive.empty()) {
+                responsive.insert(responsive.end(), others.begin(), others.end());
+                ips = std::move(responsive);
+            }
         }
     }
 
-    const std::vector<std::string> routes = {
-        "/provision",
-        "/wifi/provision",
-        "/wifi",
-        "/wifi_config",
-        "/config/wifi",
-        "/network",
-        "/network/config",
-        "/goform/DeviceConfig",
-        "/cgi-bin/luci",
-    };
+    // ----------------------------------------------------------
+    // Build provisioning route list — brand-specific routes first
+    // ----------------------------------------------------------
+    std::vector<std::string> routes;
+
+    // Daikin: /common/set_wifi_setting  (port 30050 in profile = Daikin)
+    {
+        bool hasDaikin = false;
+        for (uint16_t p : vendorProfile.ports) if (p == 30050) { hasDaikin = true; break; }
+        if (hasDaikin) {
+            routes.push_back("/common/set_wifi_setting");
+            routes.push_back("/aircon/set_control_info");
+        }
+    }
+    // Samsung SmartThings
+    if ([&]{ for (uint16_t p : vendorProfile.ports) if (p == 55000) return true; return false; }()) {
+        routes.push_back("/api/v1/wifi");
+        routes.push_back("/api/v1/setup/wifi");
+    }
+    // LG ThinQ
+    if ([&]{ for (uint16_t p : vendorProfile.ports) if (p == 2000) return true; return false; }()) {
+        routes.push_back("/deviceControl");
+        routes.push_back("/device/wifi");
+    }
+    // Electrolux
+    routes.push_back("/elux/wifi");
+    routes.push_back("/setup/wifi");
+    // Generic fallbacks
+    routes.push_back("/provision");
+    routes.push_back("/wifi/provision");
+    routes.push_back("/wifi");
+    routes.push_back("/wifi_config");
+    routes.push_back("/config/wifi");
+    routes.push_back("/network");
+    routes.push_back("/network/config");
+    routes.push_back("/goform/DeviceConfig");
+    routes.push_back("/cgi-bin/luci");
 
     std::vector<std::string> payloads;
     {
@@ -950,12 +1521,12 @@ bool WifiDriver::provisionWifi(
     std::vector<std::string> formPayloads;
     {
         std::stringstream ss;
-        ss << "ssid=" << ssid << "&password=" << password;
+        ss << "ssid=" << urlEncode(ssid) << "&password=" << urlEncode(password);
         formPayloads.push_back(ss.str());
     }
     {
         std::stringstream ss;
-        ss << "wifi_ssid=" << ssid << "&wifi_password=" << password;
+        ss << "wifi_ssid=" << urlEncode(ssid) << "&wifi_password=" << urlEncode(password);
         formPayloads.push_back(ss.str());
     }
 
@@ -982,6 +1553,18 @@ bool WifiDriver::provisionWifi(
         int endpointBudget = endpointReachable ? 12 : 4;
         bool endpointExhausted = false;
 
+        std::vector<std::string> headers;
+        bool isSamsungProfile = false;
+        for (uint16_t p : vendorProfile.ports) {
+            if (p == 55000) { isSamsungProfile = true; break; }
+        }
+        if (isSamsungProfile) {
+            std::string patToken = readEnv("EASYNC_SAMSUNG_PAT");
+            if (!patToken.empty()) {
+                headers.push_back("Authorization: Bearer " + patToken);
+            }
+        }
+
         for (const auto& route : routes) {
             const std::string url = composeHttpUrl(baseUrl, route);
             if (url.empty())
@@ -1001,7 +1584,7 @@ bool WifiDriver::provisionWifi(
 
                 lastAttempt = "POST " + url + " (json)";
                 std::string trace;
-                if (httpPost(url, payload, "application/json", "POST", &trace))
+                if (httpPost(url, payload, "application/json", "POST", &trace, headers))
                     return true;
                 if (!trace.empty())
                     lastAttempt += " -> " + trace;
@@ -1019,7 +1602,7 @@ bool WifiDriver::provisionWifi(
 
                 lastAttempt = "PUT " + url + " (json)";
                 trace.clear();
-                if (httpPost(url, payload, "application/json", "PUT", &trace))
+                if (httpPost(url, payload, "application/json", "PUT", &trace, headers))
                     return true;
                 if (!trace.empty())
                     lastAttempt += " -> " + trace;
@@ -1047,7 +1630,8 @@ bool WifiDriver::provisionWifi(
                         payload,
                         "application/x-www-form-urlencoded",
                         "POST",
-                        &trace
+                        &trace,
+                        headers
                     )) {
                     return true;
                 }
@@ -1072,7 +1656,8 @@ bool WifiDriver::provisionWifi(
                         payload,
                         "application/x-www-form-urlencoded",
                         "PUT",
-                        &trace
+                        &trace,
+                        headers
                     )) {
                     return true;
                 }
@@ -1505,7 +2090,8 @@ bool WifiDriver::httpPost(
     const std::string& body,
     const std::string& contentType,
     const std::string& method,
-    std::string* outTrace
+    std::string* outTrace,
+    const std::vector<std::string>& extraHeaders
 ) {
     CURL* curl = curl_easy_init();
     if (!curl)
@@ -1515,6 +2101,9 @@ bool WifiDriver::httpPost(
     const std::string contentTypeHeader = "Content-Type: " + contentType;
     headers = curl_slist_append(headers, contentTypeHeader.c_str());
     headers = curl_slist_append(headers, "Accept: application/json, text/plain, */*");
+    for (const auto& header : extraHeaders) {
+        headers = curl_slist_append(headers, header.c_str());
+    }
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());

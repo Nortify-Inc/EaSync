@@ -1,3 +1,9 @@
 [submodule "lib/thirdParty/llama.cpp"]
 	path = lib/thirdParty/llama.cpp
 	url = https://github.com/ggml-org/llama.cpp
+[submodule "lib/thirdParty/whisper.cpp"]
+	path = lib/thirdParty/whisper.cpp
+	url = https://github.com/ggerganov/whisper.cpp.git
+[submodule "lib/thirdParty/piper1-gpl"]
+	path = lib/thirdParty/piper1-gpl
+	url = https://github.com/OHF-Voice/piper1-gpl

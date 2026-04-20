@@ -25,16 +25,14 @@ namespace fs = std::filesystem;
 namespace {
 
 static std::string g_data_dir_override;
-static std::string g_system_prompt =
-    "You are Agent, an AI assistant created by Nortify Inc. "
-    "Be quick and concise. Don't invent info.";
+static std::string g_system_prompt;
 
 static std::mutex g_mutex;
 static std::atomic<int> g_decode_every{6};
-static std::atomic<int> g_max_new_tokens{2048};
-static std::atomic<float> g_temperature{0.8f};
+static std::atomic<int> g_max_new_tokens{128};
+static std::atomic<float> g_temperature{0.7f};
 static std::atomic<int> g_top_k{40};
-static std::atomic<float> g_top_p{0.95f};
+static std::atomic<float> g_top_p{0.90f};
 
 static std::atomic<bool> g_backend_inited{false};
 

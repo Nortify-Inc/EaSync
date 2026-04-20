@@ -43,6 +43,7 @@ public:
 private:
     bool ensureConnected(const std::string& uuid);
     void notifyStateChange(const std::string& uuid, const CoreDeviceState& newState);
+    bool publishCommand(const std::string& uuid, const std::string& capability, const std::string& valueJson);
 
 private:
     std::mutex mutex;

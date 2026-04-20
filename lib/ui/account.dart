@@ -22,7 +22,7 @@ import 'auth/provider.dart';
 import 'auth/security.dart';
 import 'auth/service.dart';
 import 'handler.dart';
-import 'legal_consent.dart';
+import 'legalConsent.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -226,9 +226,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             EaI18n.t(context, 'Unexpected error: {error}', {'error': '$e'}),
@@ -447,7 +445,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
         return (avg - 1.8).clamp(-10, 48);
       }
     } catch (_) {}
-    return 25.0;
+    return 0.0;
   }
 
   String _buildWeatherQueryFromPrefs(SharedPreferences prefs) {
@@ -1242,15 +1240,24 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       ),
     );
   }
-
   Widget _accountSummary() {
     return Container(
       key: const ValueKey('account-summary'),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: EaAdaptiveColor.surface(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: EaAdaptiveColor.border(context)),
+        color: EaColor.back.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: EaColor.fore.withValues(alpha: 0.1),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1392,18 +1399,29 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: EaColor.fore.withValues(alpha: 0.18),
-            backgroundImage: provider,
-            onBackgroundImageError: provider == null ? null : (_, _) {},
-            child: (provider == null)
-                ? const Icon(
-                    Icons.person_outline_rounded,
-                    size: 20,
-                    color: EaColor.fore,
-                  )
-                : null,
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [EaColor.fore, Color(0xFFB155FF)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: EaColor.back,
+              backgroundImage: provider,
+              onBackgroundImageError: provider == null ? null : (_, _) {},
+              child: (provider == null)
+                  ? const Icon(
+                      Icons.person_outline_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    )
+                  : null,
+            ),
           ),
           Positioned(
             right: -1,
@@ -1412,11 +1430,13 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
               width: 15,
               height: 15,
               decoration: BoxDecoration(
-                color: EaColor.fore,
+                gradient: const LinearGradient(
+                  colors: [EaColor.fore, Color(0xFFB155FF)],
+                ),
                 shape: BoxShape.circle,
                 border: Border.all(color: EaColor.back, width: 1.2),
               ),
-              child: const Icon(Icons.edit, size: 9, color: EaColor.back),
+              child: const Icon(Icons.edit, size: 9, color: Colors.white),
             ),
           ),
         ],
@@ -1426,11 +1446,20 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   Widget _chip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: EaColor.fore.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: EaAdaptiveColor.border(context)),
+        gradient: LinearGradient(
+          colors: [
+            EaColor.fore.withValues(alpha: 0.15),
+            const Color(0xFFB155FF).withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(
+          color: EaColor.fore.withValues(alpha: 0.1),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1582,25 +1611,30 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
 
   Widget _profileUpdateButton() {
     final borderColor = EaColor.fore;
-    final button = OutlinedButton.icon(
-      onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
-      icon: Icon(Icons.air_outlined, size: 16, color: borderColor),
-      label: Text(
-        EaI18n.t(context, 'Update'),
-        style: EaText.small.copyWith(color: EaAdaptiveColor.bodyText(context)),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(
-          color: _locationRefreshing ? Colors.transparent : borderColor,
+    final button = EaGradientButtonFrame(
+      borderRadius: BorderRadius.circular(12),
+      child: OutlinedButton.icon(
+        onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
+        icon: const Icon(Icons.air_outlined, size: 16),
+        label: Text(
+          EaI18n.t(context, 'Update'),
+          style: EaText.small.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        foregroundColor: borderColor,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        style: EaButtonStyle.gradientFilled(
+          context: context,
+          borderRadius: BorderRadius.circular(12),
+        ).copyWith(
+          minimumSize: WidgetStateProperty.all(const Size(0, 32)),
+          padding: WidgetStateProperty.all(
+            const EdgeInsets.symmetric(horizontal: 16),
+          ),
+        ),
       ),
     );
 
     return SizedBox(
-      width: 118,
       height: 32,
       child: _locationRefreshing
           ? RepaintBoundary(
@@ -3400,8 +3434,8 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   final Map<String, Map<String, bool>> _policies =
       <String, Map<String, bool>>{};
   final Map<String, String> _instanceNames = <String, String>{};
-    final Map<String, int> _peerDiscoveryOrder = <String, int>{};
-    int _nextPeerOrder = 0;
+  final Map<String, int> _peerDiscoveryOrder = <String, int>{};
+  int _nextPeerOrder = 0;
   final Map<String, _HostTransferRequest> _transferRequests =
       <String, _HostTransferRequest>{};
 
@@ -3545,7 +3579,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     if (normalized.isEmpty) return EaI18n.t(context, 'Unknown session');
 
     final platform = _platformFromInstanceId(instanceId);
-    return platform.isNotEmpty ? platform : EaI18n.t(context, 'Unknown session');
+    return platform.isNotEmpty
+        ? platform
+        : EaI18n.t(context, 'Unknown session');
   }
 
   String _platformFromInstanceId(String instanceId) {
@@ -3581,7 +3617,10 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              EaI18n.t(context, 'There is already a pending host transfer request.'),
+              EaI18n.t(
+                context,
+                'There is already a pending host transfer request.',
+              ),
             ),
           ),
         );
@@ -3786,7 +3825,10 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       _resolveTransferRequest(
         req,
         accepted: false,
-        message: EaI18n.t(context, 'Transfer canceled because one session rejected.'),
+        message: EaI18n.t(
+          context,
+          'Transfer canceled because one session rejected.',
+        ),
       );
       return;
     }
@@ -3983,12 +4025,10 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       node.lastSeen = DateTime.now();
 
       final announcedHost = (packet['hostId'] ?? '').toString().trim();
-      if (
-        _shouldAcceptHelloHostClaim(
-          peerId: peerId,
-          announcedHost: announcedHost,
-        )
-      ) {
+      if (_shouldAcceptHelloHostClaim(
+        peerId: peerId,
+        announcedHost: announcedHost,
+      )) {
         _hostId = announcedHost;
         SharedPreferences.getInstance().then((prefs) {
           prefs.setString(_kTrustedHostId, _hostId);
@@ -4024,7 +4064,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
     if (type == 'host_transfer_request') {
       final requestId = (packet['requestId'] ?? '').toString().trim();
       final requesterId = (packet['requesterId'] ?? '').toString().trim();
-      if (requestId.isEmpty || requesterId.isEmpty || requesterId == _instanceId) {
+      if (requestId.isEmpty ||
+          requesterId.isEmpty ||
+          requesterId == _instanceId) {
         return;
       }
 
@@ -4347,7 +4389,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
                   ),
                 ],
               ),
-            ] 
+            ],
           ],
         ),
       ),
@@ -4355,11 +4397,16 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
   }
 
   Widget _transferRequestCard(_HostTransferRequest req) {
-    final participants = _activeSessionIds.where((id) => id != req.requesterId).toSet();
+    final participants = _activeSessionIds
+        .where((id) => id != req.requesterId)
+        .toSet();
     final needed = participants.length;
     final approvals = req.approvedBy.length;
     final rejections = req.rejectedBy.length;
-    final canVote = !req.resolved && req.requesterId != _instanceId && !req.hasVoteFrom(_instanceId);
+    final canVote =
+        !req.resolved &&
+        req.requesterId != _instanceId &&
+        !req.hasVoteFrom(_instanceId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -4375,7 +4422,11 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
           children: [
             Row(
               children: [
-                const Icon(Icons.swap_horizontal_circle_outlined, color: EaColor.fore, size: 18),
+                const Icon(
+                  Icons.swap_horizontal_circle_outlined,
+                  color: EaColor.fore,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -4411,11 +4462,11 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              EaI18n.t(
-                context,
-                'Approvals {ok}/{total} • Rejections {no}',
-                {'ok': '$approvals', 'total': '$needed', 'no': '$rejections'},
-              ),
+              EaI18n.t(context, 'Approvals {ok}/{total} • Rejections {no}', {
+                'ok': '$approvals',
+                'total': '$needed',
+                'no': '$rejections',
+              }),
               style: EaText.small.copyWith(
                 color: EaAdaptiveColor.secondaryText(context),
               ),
@@ -4541,9 +4592,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
 
   Future<_NetDiagItem> _dnsCheck(String host) async {
     try {
-      final results = await InternetAddress.lookup(host).timeout(
-        const Duration(seconds: 5),
-      );
+      final results = await InternetAddress.lookup(
+        host,
+      ).timeout(const Duration(seconds: 5));
       if (results.isEmpty) {
         return _NetDiagItem(
           label: 'DNS $host',
@@ -4552,17 +4603,9 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         );
       }
       final first = results.first.address;
-      return _NetDiagItem(
-        label: 'DNS $host',
-        ok: true,
-        detail: first,
-      );
+      return _NetDiagItem(label: 'DNS $host', ok: true, detail: first);
     } catch (e) {
-      return _NetDiagItem(
-        label: 'DNS $host',
-        ok: false,
-        detail: '$e',
-      );
+      return _NetDiagItem(label: 'DNS $host', ok: false, detail: '$e');
     }
   }
 
@@ -4579,11 +4622,7 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
         detail: 'HTTP ${res.statusCode}',
       );
     } catch (e) {
-      return _NetDiagItem(
-        label: 'HTTPS ${uri.host}',
-        ok: false,
-        detail: '$e',
-      );
+      return _NetDiagItem(label: 'HTTPS ${uri.host}', ok: false, detail: '$e');
     } finally {
       client?.close(force: true);
     }
@@ -4618,10 +4657,14 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
       await _httpsCheck(Uri.parse('https://oauth2.googleapis.com/token')),
     );
     items.add(
-      await _httpsCheck(Uri.parse('https://www.googleapis.com/oauth2/v4/token')),
+      await _httpsCheck(
+        Uri.parse('https://www.googleapis.com/oauth2/v4/token'),
+      ),
     );
     items.add(
-      await _httpsCheck(Uri.parse('https://accounts.google.com/o/oauth2/token')),
+      await _httpsCheck(
+        Uri.parse('https://accounts.google.com/o/oauth2/token'),
+      ),
     );
 
     return items;
@@ -4791,14 +4834,17 @@ class _TrustedDevicesPageState extends State<TrustedDevicesPage> {
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
               child: Center(
                 child: Text(
-                EaI18n.t(context, 'There are no other EaSync active sessions.'),
-                textAlign: TextAlign.center,
-                style: EaText.secondary.copyWith(
-                  color: EaAdaptiveColor.secondaryText(context),
-                  fontSize: 14,
+                  EaI18n.t(
+                    context,
+                    'There are no other EaSync active sessions.',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: EaText.secondary.copyWith(
+                    color: EaAdaptiveColor.secondaryText(context),
+                    fontSize: 14,
+                  ),
                 ),
               ),
-            ),
             ),
           _hostTransferTutorial(),
         ],

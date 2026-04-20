@@ -6,6 +6,8 @@
  * @author Erick Radmann
  */
 
+import 'dart:ui';
+
 import 'handler.dart';
 
 class Dashboard extends StatefulWidget {
@@ -154,7 +156,6 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   }
 
   Widget _buildCapabilityFilterBar(List<int> availableCaps) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filterSurface = EaAdaptiveColor.surface(context);
     final filterBorder = EaAdaptiveColor.border(context);
     final chipUnselectedBg = EaAdaptiveColor.field(context);
@@ -172,14 +173,26 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? EaColor.fore : chipUnselectedBg,
+            color: selected ? null : chipUnselectedBg,
+            gradient: selected ? const LinearGradient(
+              colors: [EaColor.fore, Color(0xFFB155FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ) : null,
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
-              color: selected ? EaColor.fore : filterBorder,
+              color: selected ? Colors.transparent : filterBorder,
               width: 1,
             ),
+            boxShadow: selected ? [
+              BoxShadow(
+                color: const Color(0xFFB155FF).withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              )
+            ] : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -188,7 +201,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 icon,
                 size: 15,
                 color: selected
-                    ? (isDark ? EaColor.back : Colors.white)
+                    ? Colors.white
                     : EaColor.fore,
               ),
               const SizedBox(width: 6),
@@ -196,7 +209,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 label,
                 style: EaText.small.copyWith(
                   color: selected
-                      ? (isDark ? EaColor.back : Colors.white)
+                      ? Colors.white
                       : chipUnselectedText,
                   fontWeight: FontWeight.w600,
                 ),
@@ -648,42 +661,79 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
 
   Widget _emptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: EaFadeSlideIn(
+        duration: const Duration(milliseconds: 1000),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: EaDecoration.roundOrbGradient(context),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.tungsten, size: 30, color: EaColor.back),
-                  Icon(Icons.color_lens, size: 30, color: EaColor.back),
-                  Icon(Icons.thermostat, size: 30, color: EaColor.back),
-                ],
-              ),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Outer Glow
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFFB155FF).withValues(alpha: 0.2),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+                // The Orb
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [EaColor.fore, Color(0xFFB155FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFB155FF).withValues(alpha: 0.4),
+                        blurRadius: 30,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.tungsten_rounded, size: 20, color: Colors.white),
+                      Icon(Icons.color_lens_rounded, size: 20, color: Colors.white),
+                      Icon(Icons.thermostat_rounded, size: 20, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Text(
               EaI18n.t(context, 'No devices yet'),
-              style: EaText.primary.copyWith(
+              style: const TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: EaAdaptiveColor.bodyText(context),
+                fontWeight: FontWeight.bold,
+                letterSpacing: -0.5,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              EaI18n.t(context, 'Your devices will appear here.'),
-              textAlign: TextAlign.center,
-              style: EaText.secondary.copyWith(
-                color: EaAdaptiveColor.secondaryText(context),
+            const SizedBox(height: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 60),
+              child: Text(
+                EaI18n.t(context, 'Your devices will appear here.'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 14,
+                  height: 1.4,
+                ),
               ),
             ),
           ],
@@ -951,7 +1001,10 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
           SnackBar(
             behavior: SnackBarBehavior.floating,
             content: Text(
-              EaI18n.t(context, 'Temperature control is available from Plus plan.'),
+              EaI18n.t(
+                context,
+                'Temperature control is available from Plus plan.',
+              ),
             ),
             action: SnackBarAction(
               label: EaI18n.t(context, 'Go to plan'),
@@ -1299,8 +1352,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         ),
                       if (_allowsTemperatureControl &&
                           device.capabilities.contains(
-                        CoreCapability.CORE_CAP_TEMPERATURE,
-                      ))
+                            CoreCapability.CORE_CAP_TEMPERATURE,
+                          ))
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1357,8 +1410,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         ),
                       if (_allowsTemperatureControl &&
                           device.capabilities.contains(
-                        CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
-                      ))
+                            CoreCapability.CORE_CAP_TEMPERATURE_FRIDGE,
+                          ))
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1426,8 +1479,8 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         ),
                       if (_allowsTemperatureControl &&
                           device.capabilities.contains(
-                        CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
-                      ))
+                            CoreCapability.CORE_CAP_TEMPERATURE_FREEZER,
+                          ))
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -1903,7 +1956,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       Theme.of(context).brightness == Brightness.light;
                   final ringBaseColor = isLightTheme
                       ? Colors.white
-                      : EaColor.background;
+                      : Colors.white.withValues(alpha: 0.06);
                   final effectiveRingColor = isLightTheme
                       ? EaColor.back
                       : (animatedColor ?? ringColorTarget);
@@ -2116,7 +2169,7 @@ class _RingPainter extends CustomPainter {
     if (!lightTheme) {
       final glowPaint = Paint()
         ..shader = RadialGradient(
-          colors: [EaColor.back, EaColor.background],
+          colors: [EaColor.back.withValues(alpha: 0.6), Colors.transparent],
         ).createShader(Rect.fromCircle(center: center, radius: radius * 1.2));
 
       canvas.drawCircle(center, radius * 1.2, glowPaint);

@@ -6,6 +6,8 @@
  * @author Erick Radmann
  */
 
+import 'dart:ui';
+
 import 'handler.dart';
 
 class DeviceAction {
@@ -400,38 +402,78 @@ class _ProfilesState extends State<Profiles>
 
   Widget _empty() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 90,
-              height: 90,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: EaDecoration.roundOrbGradient(context),
+      child: EaFadeSlideIn(
+        duration: const Duration(milliseconds: 1000),
+        child: GestureDetector(
+          onTap: () => _openEditor(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer Glow
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFFB155FF).withValues(alpha: 0.2),
+                          Colors.transparent,
+                            ],
+                      ),
+                    )
+                  ),
+                  // The Orb
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [EaColor.fore, Color(0xFFB155FF)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFB155FF).withValues(alpha: 0.4),
+                          blurRadius: 30,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.tune_rounded, size: 36, color: Colors.white),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.tune, size: 42, color: EaColor.back),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              EaI18n.t(context, 'No profiles yet'),
-              style: EaText.primary.copyWith(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: EaAdaptiveColor.bodyText(context),
+              const SizedBox(height: 24),
+              Text(
+                EaI18n.t(context, 'No profiles yet'),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                  color: Colors.white,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              EaI18n.t(context, 'Create profiles aligned with your mood.'),
-              textAlign: TextAlign.center,
-              style: EaText.secondary.copyWith(
-                color: EaAdaptiveColor.secondaryText(context),
+              const SizedBox(height: 10),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 60),
+                child: Text(
+                  EaI18n.t(context, 'Create profiles aligned with your mood.'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@
  */
 
 import 'dart:ui';
+import 'package:easync/ui/assistant.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'auth/service.dart';
 import 'handler.dart';
@@ -30,6 +31,7 @@ class _HomeState extends State<Home> {
     'Dashboard',
     'Profiles',
     'Manage',
+    'AI',
     'Account',
   ];
 
@@ -37,6 +39,7 @@ class _HomeState extends State<Home> {
     Dashboard(),
     Profiles(),
     Manage(),
+    Agent(),
     Account(),
   ];
 
@@ -241,15 +244,33 @@ class _HomeState extends State<Home> {
                     onTap: () {
                       _goToIndex(tabs.length - 1);
                     },
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: EaColor.fore.withValues(alpha: 0.18),
-                      backgroundImage: image,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: image == null ? const LinearGradient(
+                          colors: [EaColor.fore, Color(0xFFB155FF)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ) : null,
+                        image: image != null ? DecorationImage(
+                          image: image,
+                          fit: BoxFit.cover,
+                        ) : null,
+                        boxShadow: image == null ? [
+                          BoxShadow(
+                            color: const Color(0xFFB155FF).withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          )
+                        ] : null,
+                      ),
                       child: image == null
                           ? const Icon(
                               Icons.person_outline_rounded,
                               size: 14,
-                              color: EaColor.fore,
+                              color: Colors.white,
                             )
                           : null,
                     ),
@@ -285,13 +306,29 @@ class _HomeState extends State<Home> {
           : Duration.zero,
       curve: Curves.easeInOutSine,
       margin: const EdgeInsets.symmetric(horizontal: 6),
-      width: active ? 20 : 8,
-      height: 8,
+      width: active ? 25 : 6,
+      height: 6,
       decoration: BoxDecoration(
-        color: active
-            ? EaColor.secondaryFore
-            : EaAdaptiveColor.secondaryText(context),
+        color: active ? null : EaColor.secondaryBack,
+        gradient: active ? const LinearGradient(
+          colors: [EaColor.fore, Color(0xFFB155FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ) : const LinearGradient(
+          colors: [EaColor.back, EaColor.secondaryBack],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
+        boxShadow: active ? [
+          BoxShadow(
+            color: const Color(0xFFB155FF).withValues(alpha: 0.4),
+          )
+        ] : [
+          BoxShadow(
+            color: EaColor.secondaryBack.withValues(alpha: 0.4),
+          )
+        ],
       ),
     );
   }
@@ -301,85 +338,97 @@ class _HomeState extends State<Home> {
     final double topPadding = MediaQuery.of(context).padding.top + 56;
     const double bottomPadding = 52;
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragStart: _onHorizontalDragStart,
-              onHorizontalDragUpdate: _onHorizontalDragUpdate,
-              onHorizontalDragEnd: _onHorizontalDragEnd,
-              child: PageView.builder(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _kLoopItemCount,
-                onPageChanged: (virtualIndex) {
-                  if (!mounted) return;
-                  setState(() {
-                    _virtualPage = virtualIndex;
-                    selectedIndex = _realIndexFromVirtual(virtualIndex);
-                  });
-                  _loadProfilePhoto();
-                },
-                itemBuilder: (context, virtualIndex) {
-                  final realIndex = _realIndexFromVirtual(virtualIndex);
-                  final content = TickerMode(
-                    enabled: realIndex == _safeSelectedIndex(),
-                    child: pages[realIndex],
-                  );
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF0F0F1A), Color(0xFF1A1A2E), Color(0xFF090911)],
+        ),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: topPadding, bottom: bottomPadding),
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: _onHorizontalDragStart,
+                onHorizontalDragUpdate: _onHorizontalDragUpdate,
+                onHorizontalDragEnd: _onHorizontalDragEnd,
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _kLoopItemCount,
+                  onPageChanged: (virtualIndex) {
+                    if (!mounted) return;
+                    setState(() {
+                      _virtualPage = virtualIndex;
+                      selectedIndex = _realIndexFromVirtual(virtualIndex);
+                    });
+                    _loadProfilePhoto();
+                  },
+                  itemBuilder: (context, virtualIndex) {
+                    final realIndex = _realIndexFromVirtual(virtualIndex);
+                    final content = TickerMode(
+                      enabled: realIndex == _safeSelectedIndex(),
+                      child: pages[realIndex],
+                    );
 
-                  if (!_settings.animationsEnabled) {
-                    return RepaintBoundary(child: content);
-                  }
+                    if (!_settings.animationsEnabled) {
+                      return RepaintBoundary(child: content);
+                    }
 
-                  return RepaintBoundary(
-                    child: AnimatedBuilder(
-                      animation: _pageController,
-                      builder: (context, child) {
-                        double page = _virtualPage.toDouble();
-                        if (_pageController.hasClients &&
-                            _pageController.position.hasPixels) {
-                          page =
-                              _pageController.page ?? _virtualPage.toDouble();
-                        }
-                        final distance = (virtualIndex - page).abs().clamp(
-                          0.0,
-                          1.0,
-                        );
-                        final t =
-                            1.0 - Curves.easeInOutSine.transform(distance);
-                        final scale = 0.985 + (0.015 * t);
-                        final opacity = 0.9 + (0.1 * t);
+                    return RepaintBoundary(
+                      child: AnimatedBuilder(
+                        animation: _pageController,
+                        builder: (context, child) {
+                          double page = _virtualPage.toDouble();
+                          if (_pageController.hasClients &&
+                              _pageController.position.hasPixels) {
+                            page =
+                                _pageController.page ?? _virtualPage.toDouble();
+                          }
+                          final distance = (virtualIndex - page).abs().clamp(
+                            0.0,
+                            1.0,
+                          );
+                          final t =
+                              1.0 - Curves.easeInOutSine.transform(distance);
+                          final scale = 0.985 + (0.015 * t);
+                          final opacity = 0.9 + (0.1 * t);
 
-                        const double pageMaxBlur = 3.0;
-                        final double blurSigma = _settings.animationsEnabled
-                            ? (pageMaxBlur * distance)
-                            : 0.0;
+                          const double pageMaxBlur = 3.0;
+                          final double blurSigma = _settings.animationsEnabled
+                              ? (pageMaxBlur * distance)
+                              : 0.0;
 
-                        return ImageFiltered(
-                          imageFilter: ImageFilter.blur(
-                            sigmaX: blurSigma,
-                            sigmaY: blurSigma,
-                          ),
-                          child: Opacity(
-                            opacity: opacity,
-                            child: Transform.scale(scale: scale, child: child),
-                          ),
-                        );
-                      },
-                      child: content,
-                    ),
-                  );
-                },
+                          return ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: blurSigma,
+                              sigmaY: blurSigma,
+                            ),
+                            child: Opacity(
+                              opacity: opacity,
+                              child: Transform.scale(
+                                scale: scale,
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
+                        child: content,
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-          _buildAppBar(),
-          _buildIndicator(),
-        ],
+            _buildAppBar(),
+            _buildIndicator(),
+          ],
+        ),
       ),
     );
   }

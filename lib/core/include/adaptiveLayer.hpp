@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * @file adaptive_layer.hpp
+ * @file adaptiveLayer.hpp
  * @brief Adaptive connection layer for EaSync Core.
  *
  * Provides automatic connection management, device discovery,
@@ -156,6 +156,11 @@ public:
      */
     bool isInitialized() const { return initialized; }
 
+    /**
+     * @brief Get shutdown flag for async cancellation.
+     */
+    std::shared_ptr<std::atomic<bool>> getShutdownFlag() const { return shutdownFlag; }
+
     // ============================================================
     // Connection Management
     // ============================================================
@@ -167,6 +172,8 @@ public:
      * @return true if connection initiated successfully.
      */
     bool connect(const std::string& uuid, CoreProtocol protocol);
+    bool connect(const std::string& uuid, CoreProtocol protocol,
+                 const std::string& brand, const std::string& host = "");
 
     /**
      * @brief Disconnect from a device.
@@ -364,6 +371,7 @@ private:
     std::unordered_map<std::string, CoreDeviceState> deviceStates;
     std::unordered_map<std::string, CoreProtocol> deviceProtocols;
     std::unordered_map<std::string, std::string> deviceEndpoints;
+    std::unordered_map<std::string, std::string> deviceBrands;   ///< brand per uuid
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> deviceCredentials;
 
     // Discovery
@@ -373,6 +381,8 @@ private:
 
     // Events
     AdaptiveEventCallback eventCallback;
+
+    std::shared_ptr<std::atomic<bool>> shutdownFlag;
 };
 
 } // namespace core

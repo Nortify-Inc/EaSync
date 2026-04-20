@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * @file payload_utility.hpp
+ * @file payloadUtility.hpp
  * @brief Payload template utility used by protocol drivers.
  * @param capability Capability key (for example: power, temperature, mode).
  * @return JSON payload strings assembled from template files.
