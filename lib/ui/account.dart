@@ -1245,10 +1245,10 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       key: const ValueKey('account-summary'),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: EaColor.back.withValues(alpha: 0.4),
+        color: EaAdaptiveColor.surface(context).withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: EaColor.fore.withValues(alpha: 0.1),
+          color: EaAdaptiveColor.border(context).withValues(alpha: 0.1),
           width: 1.5,
         ),
         boxShadow: [

@@ -65,10 +65,10 @@ class AgentState extends State<Agent> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: EaColor.back.withValues(alpha: 0.35),
+          color: EaAdaptiveColor.surface(context).withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: accentColor.withValues(alpha: 0.15),
+            color: EaAdaptiveColor.border(context).withValues(alpha: 0.2),
             width: 1.5,
           ),
           boxShadow: [
@@ -120,19 +120,18 @@ class AgentState extends State<Agent> {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                          style: EaText.secondary.copyWith(
                             fontWeight: FontWeight.bold,
-                            letterSpacing: -0.2,
+                            fontSize: 16,
+                            letterSpacing: -0.3,
+                            color: EaAdaptiveColor.bodyText(context),
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
                           text,
-                          style: TextStyle(
-                            color: EaColor.textSecondary.withValues(alpha: 0.8),
-                            fontSize: 14,
+                          style: EaText.small.copyWith(
+                            color: EaAdaptiveColor.secondaryText(context),
                             height: 1.4,
                           ),
                         ),
@@ -311,8 +310,8 @@ class AgentState extends State<Agent> {
                             'profileName': _profileName,
                           }),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: EaAdaptiveColor.secondaryText(context),
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.5,

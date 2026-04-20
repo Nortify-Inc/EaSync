@@ -716,11 +716,11 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
             const SizedBox(height: 24),
             Text(
               EaI18n.t(context, 'No devices yet'),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 letterSpacing: -0.5,
-                color: Colors.white,
+                color: EaAdaptiveColor.bodyText(context),
               ),
             ),
             const SizedBox(height: 10),
@@ -730,7 +730,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 EaI18n.t(context, 'Your devices will appear here.'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
+                  color: EaAdaptiveColor.secondaryText(context),
                   fontSize: 14,
                   height: 1.4,
                 ),

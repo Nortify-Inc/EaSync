@@ -373,7 +373,7 @@ class _ProfilesState extends State<Profiles>
               icon: const Icon(Icons.add),
               label: Text(
                 EaI18n.t(context, 'New profile'),
-                style: EaText.primaryBack,
+                style: EaText.secondary,
               ),
               style: EaButtonStyle.gradientFilled(
                 context: context,
@@ -445,18 +445,18 @@ class _ProfilesState extends State<Profiles>
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.tune_rounded, size: 36, color: Colors.white),
+                    child: Icon(Icons.tune_rounded, size: 36, color: EaAdaptiveColor.surface(context)),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               Text(
                 EaI18n.t(context, 'No profiles yet'),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.5,
-                  color: Colors.white,
+                  color: EaAdaptiveColor.bodyText(context),
                 ),
               ),
               const SizedBox(height: 10),
@@ -466,7 +466,7 @@ class _ProfilesState extends State<Profiles>
                   EaI18n.t(context, 'Create profiles aligned with your mood.'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: EaAdaptiveColor.secondaryText(context),
                     fontSize: 14,
                     height: 1.4,
                   ),
@@ -1655,7 +1655,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             ),
             child: Text(
               EaI18n.t(context, 'Save Profile'),
-              style: EaText.primaryBack,
+              style: EaText.secondary,
             ),
           ),
         ),
@@ -1689,7 +1689,7 @@ class _ProfileEditorState extends State<_ProfileEditor> {
               ),
               child: Text(
                 EaI18n.t(context, 'Save Profile'),
-                style: EaText.primaryBack,
+                style: EaText.secondary,
               ),
             ),
           ),

@@ -339,12 +339,8 @@ class _HomeState extends State<Home> {
     const double bottomPadding = 52;
 
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF0F0F1A), Color(0xFF1A1A2E), Color(0xFF090911)],
-        ),
+      decoration: BoxDecoration(
+        gradient: EaAdaptiveColor.pageGradient(context),
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,

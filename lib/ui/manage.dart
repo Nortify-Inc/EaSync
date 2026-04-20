@@ -1149,7 +1149,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     icon: const Icon(Icons.add),
                     label: Text(
                       EaI18n.t(context, 'Add device'),
-                      style: EaText.primaryBack,
+                      style: EaText.secondary,
                     ),
                     style:
                         EaButtonStyle.gradientFilled(
@@ -1236,11 +1236,11 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                 const SizedBox(height: 24),
                 Text(
                   EaI18n.t(context, 'Add your first device'),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     letterSpacing: -0.5,
-                    color: Colors.white,
+                    color: EaAdaptiveColor.bodyText(context),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1250,7 +1250,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                     EaI18n.t(context, 'Let EaSync to discover him or add manually.'),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
+                      color: EaAdaptiveColor.secondaryText(context),
                       fontSize: 14,
                       height: 1.4,
                     ),
@@ -2208,7 +2208,7 @@ class _DeviceEditorState extends State<_DeviceEditor> {
                     onPressed: _save,
                     child: Text(
                       EaI18n.t(context, 'Save'),
-                      style: EaText.primaryBack.copyWith(
+                      style: EaText.secondary.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),

@@ -217,13 +217,41 @@ class EaTheme {
         behavior: SnackBarBehavior.floating,
         backgroundColor: EaColor.back,
         elevation: 0,
-        contentTextStyle: EaText.secondary.copyWith(
-          fontSize: 12,
+        contentTextStyle: GoogleFonts.poppins(
+          fontSize: 13,
           color: EaColor.textPrimary,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: EaColor.fore),
+        ),
+      ),
+      textTheme: TextTheme(
+        bodyLarge: GoogleFonts.poppins(color: EaColor.textPrimary),
+        bodyMedium: GoogleFonts.poppins(color: EaColor.textPrimary),
+        bodySmall: GoogleFonts.poppins(color: EaColor.textSecondary),
+        titleLarge: GoogleFonts.poppins(
+          color: EaColor.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: EaColor.fore,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: EaColor.fore,
+          side: const BorderSide(color: EaColor.fore),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: EaColor.fore,
         ),
       ),
     );
@@ -244,46 +272,86 @@ class EaTheme {
   static ThemeData light() {
     final base = ThemeData(
       brightness: Brightness.light,
-      scaffoldBackgroundColor: const Color(0xFFF5F7FC),
+      scaffoldBackgroundColor: const Color(0xFFF6F8FE),
       colorScheme: ColorScheme.fromSeed(
         seedColor: EaColor.fore,
         brightness: Brightness.light,
-      ).copyWith(primary: EaColor.fore, secondary: const Color(0xFF5D73DB)),
+      ).copyWith(
+        primary: EaColor.fore,
+        secondary: const Color(0xFFB155FF),
+        surface: Colors.white,
+      ),
       textSelectionTheme: const TextSelectionThemeData(
         cursorColor: EaColor.fore,
-        selectionColor: Color(0xFFCFD7FF),
+        selectionColor: Color(0xFFE0E7FF),
         selectionHandleColor: EaColor.fore,
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
-        elevation: 0,
+        elevation: 4,
+        shadowColor: const Color(0xFF1F2943).withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xFFE1E6F2)),
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFEDF2FF), width: 1.5),
         ),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        foregroundColor: const Color(0xFF1A2134),
-        titleTextStyle: EaText.primary.copyWith(
-          fontSize: 19,
-          color: const Color(0xFF1A2134),
-          fontWeight: FontWeight.w600,
+        foregroundColor: const Color(0xFF1F2943),
+        iconTheme: const IconThemeData(color: Color(0xFF1F2943)),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 20,
+          color: const Color(0xFF1F2943),
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: EaColor.back,
-        elevation: 0,
-        contentTextStyle: EaText.secondary.copyWith(
-          fontSize: 12,
-          color: EaColor.textPrimary,
+        backgroundColor: Colors.white,
+        elevation: 8,
+        contentTextStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          color: const Color(0xFF1F2943),
+          fontWeight: FontWeight.w500,
         ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFEDF2FF)),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: Color(0xFFEDF2FF),
+        thickness: 1,
+      ),
+      textTheme: TextTheme(
+        bodyLarge: GoogleFonts.poppins(color: const Color(0xFF1F2943)),
+        bodyMedium: GoogleFonts.poppins(color: const Color(0xFF1F2943)),
+        bodySmall: GoogleFonts.poppins(color: const Color(0xFF6B7AA1)),
+        titleLarge: GoogleFonts.poppins(
+          color: const Color(0xFF1F2943),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: EaColor.fore,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: EaColor.fore,
           side: const BorderSide(color: EaColor.fore),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: EaColor.fore,
         ),
       ),
     );
@@ -313,26 +381,41 @@ class EaAdaptiveColor {
       Theme.of(context).brightness == Brightness.dark;
 
   static Color pageBackground(BuildContext context) =>
-      _dark(context) ? EaColor.background : const Color(0xFFF1F4FB);
+      _dark(context) ? EaColor.background : const Color(0xFFF6F8FE);
+
+  static LinearGradient pageGradient(BuildContext context) {
+    if (_dark(context)) {
+      return const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF0F0F1A), Color(0xFF1A1A2E), Color(0xFF090911)],
+      );
+    }
+    return const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF9FAFF), Color(0xFFECEFFF), Color(0xFFF1F4FB)],
+    );
+  }
 
   static Color surface(BuildContext context) =>
       _dark(context) ? EaColor.secondaryBack : Colors.white;
 
   static Color field(BuildContext context) =>
-      _dark(context) ? EaColor.back : const Color(0xFFE9EEF8);
+      _dark(context) ? EaColor.back : const Color(0xFFEDF2FF);
 
   static Color border(BuildContext context) =>
-      _dark(context) ? EaColor.border : const Color(0xFFC9D4EA);
+      _dark(context) ? EaColor.border : const Color(0xFFDCE4F5);
 
   static Color bodyText(BuildContext context) =>
-      _dark(context) ? EaColor.textPrimary : const Color(0xFF1A2134);
+      _dark(context) ? EaColor.textPrimary : const Color(0xFF1F2943);
 
   static Color secondaryText(BuildContext context) =>
-      _dark(context) ? EaColor.textSecondary : const Color(0xFF5C667F);
+      _dark(context) ? EaColor.textSecondary : const Color(0xFF6B7AA1);
 
   static Color scrim(BuildContext context) => _dark(context)
       ? Colors.black.withValues(alpha: 0.32)
-      : const Color(0xFF2A3458).withValues(alpha: 0.18);
+      : const Color(0xFF1F2943).withValues(alpha: 0.12);
 }
 
 class EaDecoration {
@@ -429,37 +512,23 @@ class EaColor {
 
 class EaText {
   static final TextStyle primary = GoogleFonts.poppins(
-    color: EaColor.textPrimary,
     fontSize: 20,
     fontWeight: FontWeight.w600,
   );
 
   static final TextStyle primaryTranslucent = GoogleFonts.poppins(
-    color: EaColor.textPrimary.withValues(alpha: 0.5),
     fontSize: 20,
-  );
-
-  static final TextStyle primaryBack = GoogleFonts.poppins(
-    color: EaColor.back,
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w400,
   );
 
   static final TextStyle secondary = GoogleFonts.poppins(
-    color: EaColor.textPrimary,
     fontSize: 14,
     fontWeight: FontWeight.w500,
   );
 
   static final TextStyle secondaryTranslucent = GoogleFonts.poppins(
-    color: EaColor.textPrimary.withValues(alpha: 0.5),
     fontSize: 14,
-  );
-
-  static final TextStyle secondaryBack = GoogleFonts.poppins(
-    color: EaColor.back,
-    fontSize: 14,
-    fontWeight: FontWeight.w300,
+    fontWeight: FontWeight.w400,
   );
 
   static final TextStyle accent = GoogleFonts.poppins(
@@ -469,7 +538,6 @@ class EaText {
   );
 
   static final TextStyle small = GoogleFonts.poppins(
-    color: EaColor.textPrimary,
     fontSize: 12,
   );
 }
