@@ -1613,12 +1613,13 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
     final borderColor = EaColor.fore;
     final button = EaGradientButtonFrame(
       borderRadius: BorderRadius.circular(12),
-      child: OutlinedButton.icon(
+      child: ElevatedButton.icon(
         onPressed: _locationRefreshing ? null : _refreshCurrentLocation,
         icon: const Icon(Icons.air_outlined, size: 16),
         label: Text(
           EaI18n.t(context, 'Update'),
           style: EaText.small.copyWith(
+            color: EaAdaptiveColor.bodyText(context),
             fontWeight: FontWeight.bold,
           ),
         ),

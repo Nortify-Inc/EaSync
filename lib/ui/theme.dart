@@ -419,12 +419,14 @@ class EaAdaptiveColor {
 }
 
 class EaDecoration {
-  static LinearGradient primaryButtonGradient() {
-    return const LinearGradient(
+  static LinearGradient primaryButtonGradient(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      stops: [0.0, 0.52, 1.0],
-      colors: [Color(0xFF9AAEFF), EaColor.fore, Color(0xFF3E4A86)],
+      colors: dark
+          ? [const Color(0xFFB155FF), EaColor.fore]
+          : [const Color(0xFFFF85E4), const Color(0xFF7085FF)],
     );
   }
 
@@ -456,9 +458,10 @@ class EaButtonStyle {
     BorderRadius borderRadius = const BorderRadius.all(Radius.circular(12)),
     EdgeInsetsGeometry padding = const EdgeInsets.symmetric(vertical: 14),
   }) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return ElevatedButton.styleFrom(
       backgroundColor: Colors.transparent,
-      foregroundColor: EaColor.back,
+      foregroundColor: dark ? Colors.white : Colors.black,
       shadowColor: Colors.transparent,
       padding: padding,
       alignment: Alignment.centerLeft,
@@ -481,7 +484,7 @@ class EaGradientButtonFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: EaDecoration.primaryButtonGradient(),
+        gradient: EaDecoration.primaryButtonGradient(context),
         borderRadius: borderRadius,
       ),
       child: ClipRRect(borderRadius: borderRadius, child: child),
