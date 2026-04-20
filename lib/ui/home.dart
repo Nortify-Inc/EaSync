@@ -240,7 +240,7 @@ class _HomeState extends State<Home> {
                     },
                   )
                 else
-                  GestureDetector(
+                  EaBounce(
                     onTap: () {
                       _goToIndex(tabs.length - 1);
                     },
@@ -300,35 +300,38 @@ class _HomeState extends State<Home> {
 
   Widget _buildDot(int index) {
     final bool active = index == _safeSelectedIndex();
-    return AnimatedContainer(
-      duration: _settings.animationsEnabled
-          ? const Duration(milliseconds: 220)
-          : Duration.zero,
-      curve: Curves.easeInOutSine,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
-      width: active ? 25 : 6,
-      height: 6,
-      decoration: BoxDecoration(
-        color: active ? null : EaColor.secondaryBack,
-        gradient: active ? const LinearGradient(
-          colors: [EaColor.fore, Color(0xFFB155FF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ) : const LinearGradient(
-          colors: [EaColor.back, EaColor.secondaryBack],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return EaBounce(
+      onTap: () => _goToIndex(index),
+      child: AnimatedContainer(
+        duration: _settings.animationsEnabled
+            ? const Duration(milliseconds: 220)
+            : Duration.zero,
+        curve: Curves.easeInOutSine,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        width: active ? 25 : 6,
+        height: 6,
+        decoration: BoxDecoration(
+          color: active ? null : EaColor.secondaryBack,
+          gradient: active ? const LinearGradient(
+            colors: [EaColor.fore, Color(0xFFB155FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ) : const LinearGradient(
+            colors: [EaColor.back, EaColor.secondaryBack],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: active ? [
+            BoxShadow(
+              color: const Color(0xFFB155FF).withValues(alpha: 0.4),
+            )
+          ] : [
+            BoxShadow(
+              color: EaColor.secondaryBack.withValues(alpha: 0.4),
+            )
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: active ? [
-          BoxShadow(
-            color: const Color(0xFFB155FF).withValues(alpha: 0.4),
-          )
-        ] : [
-          BoxShadow(
-            color: EaColor.secondaryBack.withValues(alpha: 0.4),
-          )
-        ],
       ),
     );
   }

@@ -702,12 +702,12 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.tungsten_rounded, size: 20, color: Colors.white),
-                      Icon(Icons.color_lens_rounded, size: 20, color: Colors.white),
-                      Icon(Icons.thermostat_rounded, size: 20, color: Colors.white),
+                      Icon(Icons.tungsten_rounded, size: 20, color: EaAdaptiveColor.surface(context)),
+                      Icon(Icons.color_lens_rounded, size: 20, color: EaAdaptiveColor.surface(context)),
+                      Icon(Icons.thermostat_rounded, size: 20, color: EaAdaptiveColor.surface(context)),
                     ],
                   ),
                 ),
@@ -1995,116 +1995,118 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            _openDeviceControl(device);
-                          },
-                          onHorizontalDragStart: (d) {
-                            dragStartX = d.globalPosition.dx;
-                          },
-                          onHorizontalDragUpdate: (d) {
-                            dragDelta = d.globalPosition.dx - dragStartX;
-                          },
-                          onHorizontalDragEnd: (_) {
-                            if (dragDelta.abs() > 50) {
-                              _changeCap(device, dragDelta < 0 ? 1 : -1);
-                            }
-                          },
-                          child: Container(
-                            width: size,
-                            height: size,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: effectiveRingColor,
-                                width: 1.4,
+                        EaBounce(
+                          child: GestureDetector(
+                            onTap: () {
+                              _openDeviceControl(device);
+                            },
+                            onHorizontalDragStart: (d) {
+                              dragStartX = d.globalPosition.dx;
+                            },
+                            onHorizontalDragUpdate: (d) {
+                              dragDelta = d.globalPosition.dx - dragStartX;
+                            },
+                            onHorizontalDragEnd: (_) {
+                              if (dragDelta.abs() > 50) {
+                                _changeCap(device, dragDelta < 0 ? 1 : -1);
+                              }
+                            },
+                            child: Container(
+                              width: size,
+                              height: size,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: effectiveRingColor,
+                                  width: 1.4,
+                                ),
                               ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                SizedBox(height: 15),
-                                deviceAssetPath != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(14),
-                                        child: Image.asset(
-                                          deviceAssetPath,
-                                          width: 60,
-                                          height: 60,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, _, _) => Icon(
-                                            _capIcon(cap),
-                                            size: 28,
-                                            color: EaColor.fore,
-                                          ),
-                                        ),
-                                      )
-                                    : Icon(
-                                        _capIcon(cap),
-                                        size: 28,
-                                        color: EaColor.fore,
-                                      ),
-                                Spacer(),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 9,
-                                      ),
-                                      height: 30,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: capBadgeBg,
-                                        border: Border.all(
-                                          color: capBadgeBorder,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          if (cap ==
-                                              CoreCapability
-                                                  .CORE_CAP_COLOR) ...[
-                                            Container(
-                                              width: 30,
-                                              height: 30,
-                                              decoration: BoxDecoration(
-                                                color: Color(
-                                                  0xFF000000 |
-                                                      Bridge.getState(
-                                                        device.uuid,
-                                                      ).color,
-                                                ),
-                                                shape: BoxShape.circle,
-                                                border: Border.all(
-                                                  color: EaColor.border,
-                                                ),
-                                              ),
-                                            ),
-                                          ] else ...[
-                                            Icon(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  SizedBox(height: 15),
+                                  deviceAssetPath != null
+                                      ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(14),
+                                          child: Image.asset(
+                                            deviceAssetPath,
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) => Icon(
                                               _capIcon(cap),
-                                              size: 18,
+                                              size: 28,
                                               color: EaColor.fore,
                                             ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              _capValue(device, cap).toString(),
-                                              style: EaText.secondary.copyWith(
-                                                color: capBadgeText,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _capIcon(cap),
+                                          size: 28,
+                                          color: EaColor.fore,
+                                        ),
+                                  Spacer(),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                        ),
+                                        height: 30,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: capBadgeBg,
+                                          border: Border.all(
+                                            color: capBadgeBorder,
+                                          ),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          children: [
+                                            if (cap ==
+                                                CoreCapability
+                                                    .CORE_CAP_COLOR) ...[
+                                              Container(
+                                                width: 30,
+                                                height: 30,
+                                                decoration: BoxDecoration(
+                                                  color: Color(
+                                                    0xFF000000 |
+                                                        Bridge.getState(
+                                                          device.uuid,
+                                                        ).color,
+                                                  ),
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: EaColor.border,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
+                                            ] else ...[
+                                              Icon(
+                                                _capIcon(cap),
+                                                size: 18,
+                                                color: EaColor.fore,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                _capValue(device, cap).toString(),
+                                                style: EaText.secondary.copyWith(
+                                                  color: capBadgeText,
+                                                ),
+                                              ),
+                                            ],
                                           ],
-                                        ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 20),
-                              ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                              ),
                             ),
                           ),
                         ),

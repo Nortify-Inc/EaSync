@@ -1093,41 +1093,43 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                       marker: discovering,
                       beginBlur: 4,
                       duration: const Duration(milliseconds: 140),
-                      child: OutlinedButton.icon(
+                      child: EaBounce(
+                        child: OutlinedButton.icon(
                         onPressed: discovering ? null : _discoverDevices,
                         icon: const Icon(Icons.radar_rounded, size: 18),
                         label: discovering
-                            ? Text(
-                                EaI18n.t(context, 'Discovering...'),
-                                style: EaText.secondary.copyWith(
-                                  color: EaAdaptiveColor.bodyText(context),
-                                ),
-                              )
-                            : Text(
-                                EaI18n.t(context, 'Discover'),
-                                style: EaText.secondary.copyWith(
-                                  color: EaAdaptiveColor.bodyText(context),
-                                ),
+                          ? Text(
+                              EaI18n.t(context, 'Discovering...'),
+                              style: EaText.secondary.copyWith(
+                                color: EaAdaptiveColor.bodyText(context),
                               ),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(
-                            _kBottomActionButtonHeight,
+                            )
+                          : Text(
+                              EaI18n.t(context, 'Discover'),
+                              style: EaText.secondary.copyWith(
+                                color: EaAdaptiveColor.bodyText(context),
+                              ),
+                            ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(
+                              _kBottomActionButtonHeight,
+                            ),
+                            alignment: Alignment.center,
+                            side: BorderSide(
+                              color: discovering
+                                  ? Colors.transparent
+                                  : EaColor.fore,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            foregroundColor: EaColor.fore,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
                           ),
-                          alignment: Alignment.center,
-                          side: BorderSide(
-                            color: discovering
-                                ? Colors.transparent
-                                : EaColor.fore,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          foregroundColor: EaColor.fore,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
                         ),
                       ),
                     ),
-                  ),
+                  )
                 ],
               ),
             ),
@@ -1139,7 +1141,8 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
               duration: const Duration(milliseconds: 220),
               child: SizedBox(
                 height: _kBottomActionButtonHeight,
-                child: EaGradientButtonFrame(
+                child: EaBounce(
+                  child: EaGradientButtonFrame(
                   borderRadius: BorderRadius.circular(12),
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -1167,6 +1170,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
+              ),
             ),
           ),
         ],
@@ -1185,12 +1189,12 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
       return Center(
         child: EaFadeSlideIn(
           duration: const Duration(milliseconds: 1000),
-          child: GestureDetector(
-            onTap: () {
-              if (!_ensureCanAddDevice()) return;
-              _openEditor();
-            },
-            child: Column(
+        child: EaBounce(
+          onTap: () {
+            if (!_ensureCanAddDevice()) return;
+            _openEditor();
+          },
+          child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Stack(
@@ -1229,7 +1233,7 @@ class _ManageState extends State<Manage> with SingleTickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.add_rounded, size: 42, color: Colors.white),
+                      child: Icon(Icons.add_rounded, size: 42, color: EaAdaptiveColor.surface(context)),
                     ),
                   ],
                 ),

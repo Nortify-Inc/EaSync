@@ -7,6 +7,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -543,4 +544,83 @@ class EaText {
   static final TextStyle small = GoogleFonts.poppins(
     fontSize: 12,
   );
+}
+
+class EaBounce extends StatefulWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  final double scale;
+  final Duration duration;
+
+  const EaBounce({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.scale = 0.95,
+    this.duration = const Duration(milliseconds: 120),
+  });
+
+  @override
+  State<EaBounce> createState() => _EaBounceState();
+}
+
+class _EaBounceState extends State<EaBounce> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _animation = Tween<double>(begin: 1.0, end: widget.scale).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.elasticIn,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Widget result = AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) => Transform.scale(
+        scale: _animation.value,
+        child: child,
+      ),
+      child: widget.child,
+    );
+
+    if (widget.onTap != null) {
+      result = GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: result,
+      );
+    }
+
+    return Listener(
+      onPointerDown: (e) {
+        if (EaAppSettings.instance.hapticsEnabled) {
+          HapticFeedback.selectionClick();
+        }
+        _controller.forward();
+      },
+      onPointerUp: (e) => _controller.reverse(),
+      onPointerCancel: (e) => _controller.reverse(),
+      child: result,
+    );
+  }
 }

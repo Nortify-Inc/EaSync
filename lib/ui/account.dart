@@ -1394,7 +1394,7 @@ class _AccountState extends State<Account> with SingleTickerProviderStateMixin {
       }
     }
 
-    return GestureDetector(
+    return EaBounce(
       onTap: _pickProfileImage,
       child: Stack(
         clipBehavior: Clip.none,

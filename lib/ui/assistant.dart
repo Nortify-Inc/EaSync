@@ -62,88 +62,90 @@ class AgentState extends State<Agent> {
     return EaFadeSlideIn(
       begin: const Offset(0, 0.05),
       duration: Duration(milliseconds: 400 + (index * 100)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: EaAdaptiveColor.surface(context).withValues(alpha: 0.4),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: EaAdaptiveColor.border(context).withValues(alpha: 0.2),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+      child: EaBounce(
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: EaAdaptiveColor.surface(context).withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: EaAdaptiveColor.border(context).withValues(alpha: 0.2),
+              width: 1.5,
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: InkWell(
-            onTap: () => HapticFeedback.lightImpact(),
-            splashColor: accentColor.withValues(alpha: 0.1),
-            highlightColor: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          accentColor.withValues(alpha: 0.25),
-                          accentColor.withValues(alpha: 0.1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: InkWell(
+              onTap: () => HapticFeedback.lightImpact(),
+              splashColor: accentColor.withValues(alpha: 0.1),
+              highlightColor: Colors.transparent,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            accentColor.withValues(alpha: 0.25),
+                            accentColor.withValues(alpha: 0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: accentColor.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: accentColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: EaText.secondary.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: -0.3,
+                              color: EaAdaptiveColor.bodyText(context),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            text,
+                            style: EaText.small.copyWith(
+                              color: EaAdaptiveColor.secondaryText(context),
+                              height: 1.4,
+                            ),
+                          ),
                         ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: accentColor.withValues(alpha: 0.3),
-                        width: 1,
                       ),
                     ),
-                    child: Icon(
-                      icon,
-                      color: accentColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: EaText.secondary.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            letterSpacing: -0.3,
-                            color: EaAdaptiveColor.bodyText(context),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          text,
-                          style: EaText.small.copyWith(
-                            color: EaAdaptiveColor.secondaryText(context),
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+      )
     );
   }
 

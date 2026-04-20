@@ -404,7 +404,7 @@ class _ProfilesState extends State<Profiles>
     return Center(
       child: EaFadeSlideIn(
         duration: const Duration(milliseconds: 1000),
-        child: GestureDetector(
+        child: EaBounce(
           onTap: () => _openEditor(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -545,9 +545,11 @@ class _ProfilesState extends State<Profiles>
                   ),
                 ),
 
-                IconButton(
-                  onPressed: () => _applyProfile(p),
-                  icon: const Icon(Icons.play_arrow, color: EaColor.fore),
+                EaBounce(
+                  child: IconButton(
+                    onPressed: () => _applyProfile(p),
+                    icon: const Icon(Icons.play_arrow, color: EaColor.fore),
+                  ),
                 ),
 
                 IconButton(
@@ -1061,10 +1063,10 @@ class _ProfileEditorState extends State<_ProfileEditor> {
             const Spacer(),
 
             Text(
-              "$current",
+              "$current%",
               style: EaText.secondary.copyWith(color: EaColor.fore),
             ),
-            SizedBox(width: 10),
+            const SizedBox(width: 10),
           ],
         ),
 
